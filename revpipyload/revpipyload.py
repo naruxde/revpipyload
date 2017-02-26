@@ -1,6 +1,10 @@
 #!/usr/bin/python3
 #
-# (c) Sven Sager, License: GPLv3
+# RevPiPyLoad
+# Version: 0.2.0
+#
+# Webpage: https://revpimodio.org/
+# (c) Sven Sager, License: LGPLv3
 #
 # -*- coding: utf-8 -*-
 import proginit
@@ -170,6 +174,8 @@ class RevPiPyLoad(proginit.ProgInit):
             )
             self.xsrv.register_introspection_functions()
 
+            self.xsrv.register_function(self.xml_getapplog, "get_applog")
+            self.xsrv.register_function(self.xml_getplclog, "get_plclog")
             self.xsrv.register_function(self.xml_plcexitcode, "plcexitcode")
             self.xsrv.register_function(self.xml_plcrestart, "plcrestart")
             self.xsrv.register_function(self.xml_plcrunning, "plcrunning")
@@ -230,12 +236,22 @@ class RevPiPyLoad(proginit.ProgInit):
             self.tpe.shutdown()
             self.xsrv.server_close()
 
+    def xml_getapplog(self):
+        self.logger.debug("xmlrpc call getapplog")
+        fh = open("/var/log/revpipyloadapp")
+        return fh.read()
+
+    def xml_getplclog(self):
+        self.logger.debug("xmlrpc call getplclog")
+        fh = open("/var/log/revpipyload")
+        return fh.read()
+
     def xml_plcexitcode(self):
-        self.logger.debug("xmlrpc get plcexitcode")
+        self.logger.debug("xmlrpc call plcexitcode")
         return -1 if self.plc.is_alive() else self.plc.exitcode
 
     def xml_plcrestart(self):
-        self.logger.debug("xmlrpc get plcrestart")
+        self.logger.debug("xmlrpc call plcrestart")
         self.plc.stop()
         self.plc.join()
         exitcode = self.plc.exitcode
@@ -250,10 +266,11 @@ class RevPiPyLoad(proginit.ProgInit):
         return (exitcode, self.plc.exitcode)
 
     def xml_plcrunning(self):
-        self.logger.debug("xmlrpc get plcrunning")
+        self.logger.debug("xmlrpc call plcrunning")
         return self.plc.is_alive()
 
     def xml_plcstart(self):
+        self.logger.debug("xmlrpc call plcstart")
         if self.plc.is_alive():
             return -1
         else:
@@ -268,13 +285,13 @@ class RevPiPyLoad(proginit.ProgInit):
             return self.plc.exitcode
 
     def xml_plcstop(self):
-        self.logger.debug("xmlrpc get plcstop")
+        self.logger.debug("xmlrpc call plcstop")
         self.plc.stop()
         self.plc.join()
         return self.plc.exitcode
 
     def xml_reload(self):
-        self.logger.info("xmlrpc reload configuration")
+        self.logger.debug("xmlrpc call reload")
         self.evt_loadconfig.set()
 
 
