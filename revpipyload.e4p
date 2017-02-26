@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE Project SYSTEM "Project-5.1.dtd">
+<!-- eric project file for project revpipyload -->
+<!-- Saved: 2017-02-16, 07:47:17 -->
+<!-- Copyright (C) 2017 Sven Sager, akira@narux.de -->
+<Project version="5.1">
+  <Language>en_US</Language>
+  <Hash>89ddb4e70b339f832ee277085202b38acc6a125c</Hash>
+  <ProgLanguage mixed="0">Python3</ProgLanguage>
+  <ProjectType>Console</ProjectType>
+  <Description>Dieser Loader wird über das Init-System geladen und führt das angegebene Pythonprogramm aus. Es ist für den RevolutionPi gedacht um automatisch das SPS-Programm zu starten.</Description>
+  <Version>0.1.0</Version>
+  <Author>Sven Sager</Author>
+  <Email>akira@narux.de</Email>
+  <Eol index="-1"/>
+  <Sources>
+    <Source>revpipyload/__init__.py</Source>
+    <Source>revpipyload/proginit.py</Source>
+    <Source>setup.py</Source>
+    <Source>revpipyload/revpipyload.py</Source>
+  </Sources>
+  <Forms/>
+  <Translations/>
+  <Resources/>
+  <Interfaces/>
+  <Others>
+    <Other>data</Other>
+    <Other>MANIFEST.in</Other>
+  </Others>
+  <Vcs>
+    <VcsType>None</VcsType>
+  </Vcs>
+  <FiletypeAssociations>
+    <FiletypeAssociation pattern="*.idl" type="INTERFACES"/>
+    <FiletypeAssociation pattern="*.py" type="SOURCES"/>
+    <FiletypeAssociation pattern="*.py3" type="SOURCES"/>
+    <FiletypeAssociation pattern="*.pyw" type="SOURCES"/>
+    <FiletypeAssociation pattern="*.pyw3" type="SOURCES"/>
+  </FiletypeAssociations>
+  <Checkers>
+    <CheckersParams>
+      <dict>
+        <key>
+          <string>Pep8Checker</string>
+        </key>
+        <value>
+          <dict>
+            <key>
+              <string>DocstringType</string>
+            </key>
+            <value>
+              <string>pep257</string>
+            </value>
+            <key>
+              <string>ExcludeFiles</string>
+            </key>
+            <value>
+              <string></string>
+            </value>
+            <key>
+              <string>ExcludeMessages</string>
+            </key>
+            <value>
+              <string>E123,E226,E24</string>
+            </value>
+            <key>
+              <string>FixCodes</string>
+            </key>
+            <value>
+              <string></string>
+            </value>
+            <key>
+              <string>FixIssues</string>
+            </key>
+            <value>
+              <bool>False</bool>
+            </value>
+            <key>
+              <string>HangClosing</string>
+            </key>
+            <value>
+              <bool>False</bool>
+            </value>
+            <key>
+              <string>IncludeMessages</string>
+            </key>
+            <value>
+              <string></string>
+            </value>
+            <key>
+              <string>MaxLineLength</string>
+            </key>
+            <value>
+              <int>80</int>
+            </value>
+            <key>
+              <string>NoFixCodes</string>
+            </key>
+            <value>
+              <string>E501</string>
+            </value>
+            <key>
+              <string>RepeatMessages</string>
+            </key>
+            <value>
+              <bool>True</bool>
+            </value>
+            <key>
+              <string>ShowIgnored</string>
+            </key>
+            <value>
+              <bool>False</bool>
+            </value>
+          </dict>
+        </value>
+      </dict>
+    </CheckersParams>
+  </Checkers>
+</Project>

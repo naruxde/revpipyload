@@ -1,0 +1,7 @@
+# RevPiPyLoader
+#
+# Verbose logging add a -v or -vv
+DAEMON_ARGS="-d"
+
+# Codepage of files
+export LANG=C.UTF-8
