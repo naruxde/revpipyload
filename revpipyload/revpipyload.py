@@ -8,6 +8,7 @@
 #
 # -*- coding: utf-8 -*-
 import proginit
+import os
 import shlex
 import signal
 import subprocess
@@ -17,15 +18,79 @@ from time import sleep, asctime
 from xmlrpc.server import SimpleXMLRPCServer
 
 
+class LogReader():
+    
+    def __init__(self):
+        self.fhapp = None
+        self.logapp = "/var/log/revpipyloadapp"
+        self.posapp = 0
+        self.fhplc = None
+        self.logplc = "/var/log/revpipyload"
+        self.posplc = 0
+
+    def get_applines(self):
+        if not os.access(self.logapp, os.R_OK):
+            return None
+        else:
+            if self.fhapp is None or self.fhapp.closed:
+                self.fhapp = open(self.logapp)
+
+            lst_new = []
+            while True:
+                self.posapp = self.fhapp.tell()
+                line = self.fhapp.readline()
+                if line:
+                    lst_new.append(line)
+                else:
+                    break
+
+            return lst_new
+
+    def get_applog(self):
+        if not os.access(self.logapp, os.R_OK):
+            return None
+        else:
+            if self.fhapp is None or self.fhapp.closed:
+                self.fhapp = open(self.logapp)
+            self.fhapp.seek(0)
+            return self.fhapp.read()
+
+    def get_plclines(self):
+        if not os.access(self.logplc, os.R_OK):
+            return None
+        else:
+            if self.fhplc is None or self.fhplc.closed:
+                self.fhplc = open(self.logplc)
+
+            lst_new = []
+            while True:
+                self.posplc = self.fhplc.tell()
+                line = self.fhplc.readline()
+                if line:
+                    lst_new.append(line)
+                else:
+                    break
+
+            return lst_new
+
+    def get_plclog(self):
+        if not os.access(self.logplc, os.R_OK):
+            return None
+        else:
+            if self.fhplc is None or self.fhplc.closed:
+                self.fhplc = open(self.logplc)
+            self.fhplc.seek(0)
+            return self.fhplc.read()
+
+
 class RevPiPlc(Thread):
 
-    def __init__(self, pargs, logger, lst_proc):
+    def __init__(self, pargs, logger, program):
         super().__init__()
         self.autoreload = False
         self._evt_exit = Event()
         self.exitcode = 0
-        self._lst_proc = lst_proc
-        #self._lst_proc = ["ls", "/"]
+        self._lst_proc = shlex.split("/usr/bin/env python3 -u " + program)
         self._logger = logger
         self._pargs = pargs
         self._procplc = None
@@ -34,19 +99,22 @@ class RevPiPlc(Thread):
     def run(self):
         # Prozess starten
         self._logger.info("start plc program")
+        fh = None
         if self._pargs.daemon:
-            fh = open("/var/log/revpipyloadapp", "a")
+            if os.access("/var/log", os.R_OK | os.W_OK):
+                fh = "/var/log/revpipyloadapp"
+        elif self._pargs.logfile is not None:
+            fh = self._pargs.logfile
+
+        if fh is not None:
+            fh = open(fh, "a")
             fh.write("started {}\n".format(asctime()))
             fh.flush()
-        elif self.pargs.logfile is not None:
-            fh = open(self.pargs.logfile, "a")
-            fh.write("started {}\n".format(asctime()))
-            fh.flush()
-        else:
-            fh = None
 
         # Prozess erstellen
-        self._procplc = subprocess.Popen(self._lst_proc, bufsize=1, stdout=fh, stderr=subprocess.STDOUT)
+        self._procplc = subprocess.Popen(
+            self._lst_proc, bufsize=1, stdout=fh, stderr=subprocess.STDOUT
+        )
 
         while not self._evt_exit.is_set():
 
@@ -54,22 +122,31 @@ class RevPiPlc(Thread):
             self.exitcode = self._procplc.poll()
 
             if self.exitcode is not None:
+
                 if self.exitcode > 0:
+                    # PLC Python Programm abgestürzt
                     self._logger.error(
                         "plc program chrashed - exitcode: {}".format(
                             self.exitcode
                         )
                     )
+
                     if self.zeroonexit:
+                        # piControl0 auf NULL setzen
                         f = open("/dev/piControl0", "w+b", 0)
                         f.write(bytes(4096))
                         self._logger.warning("set piControl0 to ZERO")
+
                 else:
+                    # PLC Python Programm sauber beendet
                     self._logger.info("plc program did a clean exit")
 
                 if not self._evt_exit.is_set() and self.autoreload:
                     # Prozess neu starten
-                    self._procplc = subprocess.Popen(self._lst_proc, bufsize=1, stdout=fh, stderr=subprocess.STDOUT)
+                    self._procplc = subprocess.Popen(
+                        self._lst_proc, bufsize=1, stdout=fh,
+                        stderr=subprocess.STDOUT
+                    )
                     if self.exitcode == 0:
                         self._logger.warning(
                             "restart plc program after clean exit"
@@ -110,6 +187,7 @@ class RevPiPyLoad(proginit.ProgInit):
         self.evt_loadconfig = Event()
 
         self.autoreload = None
+        self.logr = LogReader()
         self.plc = None
         self.plcprog = None
         self.plcslave = None
@@ -151,15 +229,7 @@ class RevPiPyLoad(proginit.ProgInit):
         self.zeroonexit = int(self.globalconfig["DEFAULT"].get("zeroonexit", 1))
 
         # PLC Thread konfigurieren
-        self.logger.debug("create PLC watcher")
-        self.plc = RevPiPlc(
-            self.pargs,
-            self.logger,
-            shlex.split("/usr/bin/env python3 -u " + self.plcprog)
-        )
-        self.plc.autoreload = self.autoreload
-        self.plc.zeroonexit = self.zeroonexit
-        self.logger.debug("created PLC watcher")
+        self.plc = self.plcthread()
 
         # XMLRPC-Server Instantiieren und konfigurieren
         if self.xmlrpc:
@@ -174,13 +244,16 @@ class RevPiPyLoad(proginit.ProgInit):
             )
             self.xsrv.register_introspection_functions()
 
-            self.xsrv.register_function(self.xml_getapplog, "get_applog")
-            self.xsrv.register_function(self.xml_getplclog, "get_plclog")
+            self.xsrv.register_function(self.logr.get_applines, "get_applines")
+            self.xsrv.register_function(self.logr.get_applog, "get_applog")
+            self.xsrv.register_function(self.logr.get_plclines, "get_plclines")
+            self.xsrv.register_function(self.logr.get_plclog, "get_plclog")
+            self.xsrv.register_function(self.xml_plcdownload, "plcdownload")
             self.xsrv.register_function(self.xml_plcexitcode, "plcexitcode")
-            self.xsrv.register_function(self.xml_plcrestart, "plcrestart")
             self.xsrv.register_function(self.xml_plcrunning, "plcrunning")
             self.xsrv.register_function(self.xml_plcstart, "plcstart")
             self.xsrv.register_function(self.xml_plcstop, "plcstop")
+            self.xsrv.register_function(self.xml_plcupload, "plcupload")
             self.xsrv.register_function(self.xml_reload, "reload")
             self.logger.debug("created xmlrpc server")
 
@@ -192,15 +265,26 @@ class RevPiPyLoad(proginit.ProgInit):
 
     def _sigexit(self, signum, frame):
         """Signal handler to clean an exit program."""
-        self.logger.info("got exit signal")
+        self.logger.debug("got exit signal")
         self.stop()
 
     def _sigloadconfig(self, signum, frame):
-        self.logger.info("got reload config signal")
+        """Signal handler to load configuration."""
+        self.logger.debug("got reload config signal")
         self.evt_loadconfig.set()
 
+    def plcthread(self):
+        """Konfiguriert den PLC-Thread fuer die Ausfuehrung.
+        @returns: PLC-Thread Object"""
+        self.logger.debug("create PLC watcher")
+        th_plc = RevPiPlc(self.pargs, self.logger, self.plcprog)
+        th_plc.autoreload = self.autoreload
+        th_plc.zeroonexit = self.zeroonexit
+        self.logger.debug("created PLC watcher")
+        return th_plc
+
     def start(self):
-        """Start python program and watching it."""
+        """Start plcload and PLC python program."""
         self.logger.info("starting revpipyload")
         self._exit = False
 
@@ -222,7 +306,7 @@ class RevPiPyLoad(proginit.ProgInit):
             self._loadconfig()
 
     def stop(self):
-        """Stop python program."""
+        """Stop PLC python program and plcload."""
         self.logger.info("stopping revpipyload")
         self._exit = True
 
@@ -236,34 +320,12 @@ class RevPiPyLoad(proginit.ProgInit):
             self.tpe.shutdown()
             self.xsrv.server_close()
 
-    def xml_getapplog(self):
-        self.logger.debug("xmlrpc call getapplog")
-        fh = open("/var/log/revpipyloadapp")
-        return fh.read()
-
-    def xml_getplclog(self):
-        self.logger.debug("xmlrpc call getplclog")
-        fh = open("/var/log/revpipyload")
-        return fh.read()
+    def xml_plcdownload(self):
+        pass
 
     def xml_plcexitcode(self):
         self.logger.debug("xmlrpc call plcexitcode")
         return -1 if self.plc.is_alive() else self.plc.exitcode
-
-    def xml_plcrestart(self):
-        self.logger.debug("xmlrpc call plcrestart")
-        self.plc.stop()
-        self.plc.join()
-        exitcode = self.plc.exitcode
-        self.plc = RevPiPlc(
-            self.pargs,
-            self.logger,
-            shlex.split("/usr/bin/env python3 -u" + self.plcprog)
-        )
-        self.plc.autoreload = self.autoreload
-        self.plc.zeroonexit = self.zeroonexit
-        self.plc.start()
-        return (exitcode, self.plc.exitcode)
 
     def xml_plcrunning(self):
         self.logger.debug("xmlrpc call plcrunning")
@@ -274,13 +336,7 @@ class RevPiPyLoad(proginit.ProgInit):
         if self.plc.is_alive():
             return -1
         else:
-            self.plc = RevPiPlc(
-                self.pargs,
-                self.logger,
-                shlex.split("/usr/bin/env python3 -u" + self.plcprog)
-            )
-            self.plc.autoreload = self.autoreload
-            self.plc.zeroonexit = self.zeroonexit
+            self.plc = self.plcthread()
             self.plc.start()
             return self.plc.exitcode
 
@@ -289,6 +345,9 @@ class RevPiPyLoad(proginit.ProgInit):
         self.plc.stop()
         self.plc.join()
         return self.plc.exitcode
+
+    def xml_plcupload(self, file):
+        pass
 
     def xml_reload(self):
         self.logger.debug("xmlrpc call reload")
