@@ -8,6 +8,11 @@ from os import fork as osfork
 from os.path import exists as ospexists
 
 
+logapp = "revpipyloadapp.log"
+logplc = "revpipyload.log"
+logger = None
+pargs = None
+
 class ProgInit():
 
     """Programmfunktionen fuer Parameter und Logger."""
@@ -30,7 +35,7 @@ class ProgInit():
         )
         parser.add_argument(
             "-c", "--conffile", dest="conffile",
-            default="/etc/revpipyload/revpipyload.conf",
+            default="revpipyload.conf",
             help="Application configuration file"
         )
         parser.add_argument(
@@ -41,12 +46,13 @@ class ProgInit():
             "-v", "--verbose", action="count", dest="verbose",
             help="Switch on verbose logging"
         )
-        self.pargs = parser.parse_args()
+        global pargs
+        pargs = parser.parse_args()
 
         # Prüfen ob als Daemon ausgeführt werden soll
         self.pidfile = "/var/run/revpipyload.pid"
         self.pid = 0
-        if self.pargs.daemon:
+        if pargs.daemon:
             # Prüfen ob daemon schon läuft
             if ospexists(self.pidfile):
                 raise SystemError(
@@ -54,41 +60,48 @@ class ProgInit():
                         self.pidfile
                     )
                 )
-            else:
-                self.pid = osfork()
-                if self.pid > 0:
-                    with open(self.pidfile, "w") as f:
-                        f.write(str(self.pid))
-                    exit(0)
 
-                # Ausgaben umhängen in Logfile
-                sys.stdout = open("/var/log/revpipyload", "a")
-                sys.stderr = sys.stdout
+            self.pid = osfork()
+            if self.pid > 0:
+                with open(self.pidfile, "w") as f:
+                    f.write(str(self.pid))
+                exit(0)
+
+            global logapp
+            global logplc
+
+            # Ausgaben umhängen in Logfile
+            logapp = "/var/log/revpipyloadapp"
+            logplc = "/var/log/revpipyload"
+            pargs.conffile = "/etc/revpipyload/revpipyload.conf"
+            sys.stdout = open(logplc, "a")
+            sys.stderr = sys.stdout
 
         # Initialize configparser globalconfig
-        self.globalconffile = self.pargs.conffile
+        self.globalconffile = pargs.conffile
         self.globalconfig = ConfigParser()
-        self.globalconfig.read(self.pargs.conffile)
+        self.globalconfig.read(pargs.conffile)
 
         # Program logger
-        self.logger = logging.getLogger()
+        global logger
+        logger = logging.getLogger()
         logformat = logging.Formatter(
             "{asctime} [{levelname:8}] {message}",
             datefmt="%Y-%m-%d %H:%M:%S", style="{"
         )
         lhandler = logging.StreamHandler(sys.stdout)
         lhandler.setFormatter(logformat)
-        self.logger.addHandler(lhandler)
-        if self.pargs.logfile is not None:
-            lhandler = logging.FileHandler(filename=self.pargs.logfile)
+        logger.addHandler(lhandler)
+        if pargs.logfile is not None:
+            lhandler = logging.FileHandler(filename=pargs.logfile)
             lhandler.setFormatter(logformat)
-            self.logger.addHandler(lhandler)
+            logger.addHandler(lhandler)
 
         # Loglevel auswerten
-        if self.pargs.verbose is None:
+        if pargs.verbose is None:
             loglevel = logging.WARNING
-        elif self.pargs.verbose == 1:
+        elif pargs.verbose == 1:
             loglevel = logging.INFO
-        elif self.pargs.verbose > 1:
+        elif pargs.verbose > 1:
             loglevel = logging.DEBUG
-        self.logger.setLevel(loglevel)
+        logger.setLevel(loglevel)
