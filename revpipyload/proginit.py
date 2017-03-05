@@ -13,6 +13,7 @@ logplc = "revpipyload.log"
 logger = None
 pargs = None
 
+
 class ProgInit():
 
     """Programmfunktionen fuer Parameter und Logger."""

@@ -21,13 +21,13 @@ class MyEggInfo(distutils.command.install_egg_info.install_egg_info):
 setup(
     author="Sven Sager",
     author_email="akira@narux.de",
-    url="https://revpimodio.org",
+    url="https://revpimodio.org/revpipyplc/",
     maintainer="Sven Sager",
     maintainer_email="akira@revpimodio.org",
 
     license="LGPLv3",
     name="revpipyload",
-    version="0.2.1",
+    version="0.2.2",
 
     scripts=["data/revpipyload"],
 
