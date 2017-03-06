@@ -1,0 +1,6 @@
+syntax: glob
+*.tar.gz
+test/*
+.*
+build/*
+*.pyc

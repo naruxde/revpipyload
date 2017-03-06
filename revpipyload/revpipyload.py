@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 #
 # RevPiPyLoad
-# Version: 0.2.2
+# Version: see global var plcverion
 #
 # Webpage: https://revpimodio.org/revpipyplc/
 # (c) Sven Sager, License: LGPLv3
@@ -12,10 +12,17 @@ import os
 import shlex
 import signal
 import subprocess
+import tarfile
 from concurrent import futures
+from shutil import rmtree
+from tempfile import mktemp
 from threading import Thread, Event
 from time import sleep, asctime
+from xmlrpc.client import Binary
 from xmlrpc.server import SimpleXMLRPCServer
+
+
+pyloadverion = "0.2.2"
 
 
 class LogReader():
@@ -58,7 +65,7 @@ class LogReader():
                     self.fhapp.seek(self.posapp)
                     break
 
-            proginit.debug("got {} new log lines".format(len(lst_new)))
+            proginit.logger.debug("got {} new app log lines".format(len(lst_new)))
             return lst_new
 
     def get_applog(self):
@@ -97,7 +104,7 @@ class LogReader():
                     self.fhplc.seek(self.posplc)
                     break
 
-            proginit.debug("got {} new log lines".format(len(lst_new)))
+            proginit.logger.debug("got {} new pyloader log lines".format(len(lst_new)))
             return lst_new
 
     def get_plclog(self):
@@ -130,14 +137,14 @@ class RevPiPlc(Thread):
 
     def _zeroprocimg(self):
         """Setzt Prozessabbild auf NULL."""
-        if os.exists("/dev/piControl0"):
+        if os.path.exists("/dev/piControl0"):
             f = open("/dev/piControl0", "w+b", 0)
             f.write(bytes(4096))
             proginit.logger.warning("set piControl0 to ZERO")
 
     def run(self):
         """Fuehrt PLC-Programm aus und ueberwacht es."""
-        lst_proc = shlex.split("/usr/bin/env python3 -u " + self.program)
+        lst_proc = shlex.split("/usr/bin/env python3 -u " + self._program)
 
         # Ausgaben konfigurieren und ggf. umleiten
         fh = None
@@ -154,7 +161,7 @@ class RevPiPlc(Thread):
             fh.flush()
 
         # Prozess erstellen
-        proginit.logger.info("start plc program {}".format(self.program))
+        proginit.logger.info("start plc program {}".format(self._program))
         self._procplc = subprocess.Popen(
             lst_proc, bufsize=1, stdout=fh, stderr=subprocess.STDOUT
         )
@@ -203,7 +210,7 @@ class RevPiPlc(Thread):
 
         # Prozess beenden
         count = 0
-        proginit.logger.info("term plc program {}".format(self.program))
+        proginit.logger.info("term plc program {}".format(self._program))
         self._procplc.terminate()
         while self._procplc.poll() is None and count < 10:
             count += 1
@@ -213,7 +220,7 @@ class RevPiPlc(Thread):
             sleep(0.5)
         if self._procplc.poll() is None:
             proginit.logger.warning(
-                "can not term plc program {}".format(self.program)
+                "can not term plc program {}".format(self._program)
             )
             self._procplc.kill()
             proginit.logger.warning("killed plc program")
@@ -239,6 +246,7 @@ class RevPiPyLoad(proginit.ProgInit):
 
         self.logr = LogReader()
         self.plc = None
+        self.tfile = {}
         self.tpe = None
         self.xsrv = None
 
@@ -284,6 +292,9 @@ class RevPiPyLoad(proginit.ProgInit):
             self.globalconfig["DEFAULT"].get("zeroonexit", 1)
         )
 
+        # Workdirectory wechseln
+        os.chdir(self.plcworkdir)
+
         # PLC Thread konfigurieren
         self.plc = self._plcthread()
 
@@ -310,7 +321,9 @@ class RevPiPyLoad(proginit.ProgInit):
             self.xsrv.register_function(self.xml_plcstart, "plcstart")
             self.xsrv.register_function(self.xml_plcstop, "plcstop")
             self.xsrv.register_function(self.xml_plcupload, "plcupload")
+            self.xsrv.register_function(self.xml_plcuploadclean, "plcuploadclean")
             self.xsrv.register_function(self.xml_reload, "reload")
+            self.xsrv.register_function(lambda: pyloadverion, "version")
             proginit.logger.debug("created xmlrpc server")
 
         if pauseproc:
@@ -324,8 +337,10 @@ class RevPiPyLoad(proginit.ProgInit):
         @returns: PLC-Thread Object or None"""
 
         # Prüfen ob Programm existiert
-        if not os.exists(os.path.join(self.plcworkdir, self.plcprog)):
-            proginit.logger.error("plc file does not exists {}")
+        if not os.path.exists(os.path.join(self.plcworkdir, self.plcprog)):
+            proginit.logger.error("plc file does not exists {}".format(
+                os.path.join(self.plcworkdir, self.plcprog)
+            ))
             return
 
         proginit.logger.debug("create PLC watcher")
@@ -345,6 +360,17 @@ class RevPiPyLoad(proginit.ProgInit):
         """Signal handler to load configuration."""
         proginit.logger.debug("got reload config signal")
         self.evt_loadconfig.set()
+
+    def packplc(self):
+        """Erzeugt aus dem PLC-Programm ein TAR-File."""
+        filename = mktemp(suffix=".tar.gz", prefix="plc")
+        try:
+            fh_tar = tarfile.TarFile.open(name=filename, mode="w:gz")
+            fh_tar.add(".")
+            fh_tar.close()
+        except:
+            return ""
+        return filename
 
     def start(self):
         """Start plcload and PLC python program."""
@@ -374,9 +400,10 @@ class RevPiPyLoad(proginit.ProgInit):
         proginit.logger.info("stopping revpipyload")
         self._exit = True
 
-        proginit.logger.debug("stopping revpiplc-thread")
-        self.plc.stop()
-        self.plc.join()
+        if self.plc is not None:
+            proginit.logger.debug("stopping revpiplc-thread")
+            self.plc.stop()
+            self.plc.join()
 
         if self.xmlrpc:
             proginit.logger.info("shutting down xmlrpc-server")
@@ -384,8 +411,16 @@ class RevPiPyLoad(proginit.ProgInit):
             self.tpe.shutdown()
             self.xsrv.server_close()
 
-    def xml_plcdownload(self):
-        pass
+    def xml_plcdownload(self, file=None):
+        # TODO: Daten blockweise übertragen
+        if file is None:
+            return self.packplc()
+        elif os.path.exists(file):
+            fh = open(file, "rb")
+            xmldata = Binary(fh.read())
+            fh.close()
+            os.remove(file)
+            return xmldata
 
     def xml_plcexitcode(self):
         proginit.logger.debug("xmlrpc call plcexitcode")
@@ -413,8 +448,35 @@ class RevPiPyLoad(proginit.ProgInit):
         self.plc.join()
         return self.plc.exitcode
 
-    def xml_plcupload(self, path=None, file=None, clear=False):
-        pass
+    def xml_plcupload(self, filedata):
+        # TODO: Daten blockweise annehmen
+        if filedata is None:
+            return False
+
+        filename = mktemp(prefix="upl")
+        # Daten in tmp-file schreiben
+        fh = open(filename, "wb")
+        fh.write(filedata.data)
+        fh.close()
+
+        if tarfile.is_tarfile(filename):
+            # Archiv auspacken
+            fh_tar = tarfile.open(filename)
+            fh_tar.extractall()
+            fh_tar.close()
+            os.remove(filename)
+
+        else:
+            # Kein Archiv
+            os.remove(filename)
+            return False
+
+    def xml_plcuploadclean(self):
+        try:
+            rmtree(".", ignore_errors=True)
+        except:
+            return False
+        return True
 
     def xml_reload(self):
         proginit.logger.debug("xmlrpc call reload")
