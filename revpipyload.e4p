@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE Project SYSTEM "Project-5.1.dtd">
 <!-- eric project file for project revpipyload -->
-<!-- Saved: 2017-03-08, 17:50:16 -->
+<!-- Saved: 2017-03-09, 20:23:34 -->
 <!-- Copyright (C) 2017 Sven Sager, akira@narux.de -->
 <Project version="5.1">
   <Language>en_US</Language>
@@ -194,7 +194,7 @@
               <string>MaxLineLength</string>
             </key>
             <value>
-              <int>80</int>
+              <int>79</int>
             </value>
             <key>
               <string>NoFixCodes</string>

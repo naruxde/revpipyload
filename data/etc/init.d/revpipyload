@@ -16,7 +16,7 @@
 PATH=/sbin:/usr/sbin:/bin:/usr/bin
 DESC="RevPiPyLoad to run plc program"
 NAME=revpipyload
-DAEMON=/usr/local/share/revpipyload/revpipyload.py
+DAEMON=/usr/share/revpipyload/revpipyload.py
 DAEMON_ARGS="-d"
 PIDFILE=/var/run/$NAME.pid
 SCRIPTNAME=/etc/init.d/$NAME

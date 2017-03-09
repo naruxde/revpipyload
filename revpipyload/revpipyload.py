@@ -13,6 +13,7 @@ import shlex
 import signal
 import subprocess
 import tarfile
+import zipfile
 from concurrent import futures
 from shutil import rmtree
 from tempfile import mktemp
@@ -21,7 +22,8 @@ from time import sleep, asctime
 from xmlrpc.client import Binary
 from xmlrpc.server import SimpleXMLRPCServer
 
-
+configrsc = "/opt/KUNBUS/config.rsc"
+procimg = "/dev/piControl0"
 pyloadverion = "0.2.3"
 
 
@@ -65,7 +67,9 @@ class LogReader():
                     self.fhapp.seek(self.posapp)
                     break
 
-            proginit.logger.debug("got {} new app log lines".format(len(lst_new)))
+            proginit.logger.debug(
+                "got {} new app log lines".format(len(lst_new))
+            )
             return lst_new
 
     def get_applog(self):
@@ -104,7 +108,9 @@ class LogReader():
                     self.fhplc.seek(self.posplc)
                     break
 
-            proginit.logger.debug("got {} new pyloader log lines".format(len(lst_new)))
+            proginit.logger.debug(
+                "got {} new pyloader log lines".format(len(lst_new))
+            )
             return lst_new
 
     def get_plclog(self):
@@ -156,7 +162,7 @@ class RevPiPlc(Thread):
 
         if fh is not None:
             fh = open(fh, "a")
-            fh.write("-" * 40)
+            fh.write("-" * 45)
             fh.write("\nplc app started: {}\n".format(asctime()))
             fh.flush()
 
@@ -277,7 +283,8 @@ class RevPiPyLoad(proginit.ProgInit):
         self.globalconfig.read(self.globalconffile)
 
         # Konfiguration verarbeiten
-        self.autoreload = int(self.globalconfig["DEFAULT"].get("autoreload", 1))
+        self.autoreload = \
+            int(self.globalconfig["DEFAULT"].get("autoreload", 1))
         self.autostart = int(self.globalconfig["DEFAULT"].get("autostart", 0))
         self.plcprog = self.globalconfig["DEFAULT"].get("plcprogram", None)
         self.plcworkdir = self.globalconfig["DEFAULT"].get(
@@ -313,18 +320,26 @@ class RevPiPyLoad(proginit.ProgInit):
 
             self.xsrv.register_function(self.logr.get_applines, "get_applines")
             self.xsrv.register_function(self.logr.get_applog, "get_applog")
-            self.xsrv.register_function(self.get_config, "get_config")
             self.xsrv.register_function(self.logr.get_plclines, "get_plclines")
             self.xsrv.register_function(self.logr.get_plclog, "get_plclog")
+
+            self.xsrv.register_function(self.xml_getconfig, "get_config")
+            self.xsrv.register_function(self.xml_getfilelist, "get_filelist")
+            self.xsrv.register_function(
+                self.xml_getpictoryrsc, "get_pictoryrsc")
+            self.xsrv.register_function(self.xml_getprocimg, "get_procimg")
             self.xsrv.register_function(self.xml_plcdownload, "plcdownload")
             self.xsrv.register_function(self.xml_plcexitcode, "plcexitcode")
             self.xsrv.register_function(self.xml_plcrunning, "plcrunning")
             self.xsrv.register_function(self.xml_plcstart, "plcstart")
             self.xsrv.register_function(self.xml_plcstop, "plcstop")
             self.xsrv.register_function(self.xml_plcupload, "plcupload")
-            self.xsrv.register_function(self.xml_plcuploadclean, "plcuploadclean")
+            self.xsrv.register_function(
+                self.xml_plcuploadclean, "plcuploadclean")
             self.xsrv.register_function(self.xml_reload, "reload")
-            self.xsrv.register_function(self.set_config, "set_config")
+            self.xsrv.register_function(self.xml_setconfig, "set_config")
+            self.xsrv.register_function(
+                self.xml_setpictoryrsc, "set_pictoryrsc")
             self.xsrv.register_function(lambda: pyloadverion, "version")
             proginit.logger.debug("created xmlrpc server")
 
@@ -363,54 +378,21 @@ class RevPiPyLoad(proginit.ProgInit):
         proginit.logger.debug("got reload config signal")
         self.evt_loadconfig.set()
 
-    def get_config(self):
-        dc = {}
-        dc["autoreload"] = self.autoreload
-        dc["autostart"] = self.autostart
-        dc["plcworkdir"] = self.plcworkdir
-        dc["plcprogram"] = self.plcprog
-        dc["plcslave"] = self.plcslave
-        dc["xmlrpc"] = self.xmlrpc
-        dc["xmlrpcport"] = self.globalconfig["DEFAULT"].get("xmlrpcport", 55123)
-        dc["zeroonerror"] = self.zerooneerror
-        dc["zeroonexit"] = self.zeroonexit
-        return dc
-
-    def packapp(self):
+    def packapp(self, mode="tar"):
         """Erzeugt aus dem PLC-Programm ein TAR-File."""
-        filename = mktemp(suffix=".tar.gz", prefix="plc")
-        try:
-            fh_tar = tarfile.TarFile.open(name=filename, mode="w:gz")
-            fh_tar.add(".")
-            fh_tar.close()
-        except:
-            return ""
+        filename = mktemp(suffix=".packed", prefix="plc")
+#        try:
+        if mode == "zip":
+            fh_pack = zipfile.ZipFile(filename, mode="w")
+            wd = os.walk("./")
+            for tup_dir in wd:
+                for file in tup_dir[2]:
+                    fh_pack.write(os.path.join(tup_dir[0], file)[2:])
+        else:
+            fh_pack = tarfile.open(name=filename, mode="w:gz")
+            fh_pack.add(".")
+        fh_pack.close()
         return filename
-
-    def set_config(self, dc, loadnow=False):
-        keys = [
-            "autoreload",
-            "autostart",
-            "plcprogram",
-            "plcslave",
-            "xmlrpc",
-            "xmlrpcport",
-            "zeroonerror",
-            "zeroonexit"
-        ]
-
-        # Werte übernehmen
-        for key in keys:
-            if key in dc:
-                self.globalconfig.set("DEFAULT", key, str(dc[key]))
-        
-        # conf-Datei schreiben
-        fh = open(self.globalconffile, "w")
-        self.globalconfig.write(fh)
-
-        if loadnow:
-            # RevPiPyLoad neu konfigurieren
-            self.evt_loadconfig.set()
 
     def start(self):
         """Start plcload and PLC python program."""
@@ -451,11 +433,49 @@ class RevPiPyLoad(proginit.ProgInit):
             self.tpe.shutdown()
             self.xsrv.server_close()
 
-    def xml_plcdownload(self, file=None):
+    def xml_getconfig(self):
+        proginit.logger.debug("xmlrpc call getconfig")
+        dc = {}
+        dc["autoreload"] = self.autoreload
+        dc["autostart"] = self.autostart
+        dc["plcworkdir"] = self.plcworkdir
+        dc["plcprogram"] = self.plcprog
+        dc["plcslave"] = self.plcslave
+        dc["xmlrpc"] = self.xmlrpc
+        dc["xmlrpcport"] = \
+            self.globalconfig["DEFAULT"].get("xmlrpcport", 55123)
+        dc["zeroonerror"] = self.zerooneerror
+        dc["zeroonexit"] = self.zeroonexit
+        return dc
+
+    def xml_getfilelist(self):
+        proginit.logger.debug("xmlrpc call getfilelist")
+        lst_file = []
+        wd = os.walk("./")
+        for tup_dir in wd:
+            for file in tup_dir[2]:
+                lst_file.append(os.path.join(tup_dir[0], file)[2:])
+        return lst_file
+
+    def xml_getpictoryrsc(self):
+        """Gibt die config.rsc Datei von piCotry zurueck."""
+        proginit.logger.debug("xmlrpc call getpictoryrsc")
+        with open(configrsc, "rb") as fh:
+            buff = fh.read()
+        return Binary(buff)
+
+    def xml_getprocimg(self):
+        """Gibt die Rohdaten aus piControl0 zurueck."""
+        proginit.logger.debug("xmlrpc call getprocimg")
+        with open(procimg, "rb") as fh:
+            buff = fh.read()
+        return Binary(buff)
+
+    def xml_plcdownload(self, mode="tar"):
+        proginit.logger.debug("xmlrpc call plcdownload")
         # TODO: Daten blockweise übertragen
-        if file is None:
-            return self.packapp()
-        elif os.path.exists(file):
+        file = self.packapp(mode)
+        if os.path.exists(file):
             fh = open(file, "rb")
             xmldata = Binary(fh.read())
             fh.close()
@@ -497,6 +517,7 @@ class RevPiPyLoad(proginit.ProgInit):
             return -1
 
     def xml_plcupload(self, filedata):
+        proginit.logger.debug("xmlrpc call plcupload")
         # TODO: Daten blockweise annehmen
         if filedata is None:
             return False
@@ -507,19 +528,25 @@ class RevPiPyLoad(proginit.ProgInit):
         fh.write(filedata.data)
         fh.close()
 
+        # Packer ermitteln
+        fh_pack = None
         if tarfile.is_tarfile(filename):
-            # Archiv auspacken
-            fh_tar = tarfile.open(filename)
-            fh_tar.extractall()
-            fh_tar.close()
+            fh_pack = tarfile.open(filename)
+        elif zipfile.is_zipfile(filename):
+            fh_pack = zipfile.open(filename)
+
+        if fh_pack is not None:
+            fh_pack.extractall()
+            fh_pack.close()
             os.remove(filename)
             return True
-        else:
-            # Kein Archiv
-            os.remove(filename)
-            return False
+
+        # Kein Archiv
+        os.remove(filename)
+        return False
 
     def xml_plcuploadclean(self):
+        proginit.logger.debug("xmlrpc call plcuploadclean")
         try:
             rmtree(".", ignore_errors=True)
         except:
@@ -529,6 +556,49 @@ class RevPiPyLoad(proginit.ProgInit):
     def xml_reload(self):
         proginit.logger.debug("xmlrpc call reload")
         self.evt_loadconfig.set()
+
+    def xml_setconfig(self, dc, loadnow=False):
+        proginit.logger.debug("xmlrpc call setconfig")
+        keys = [
+            "autoreload",
+            "autostart",
+            "plcprogram",
+            "plcslave",
+            "xmlrpc",
+            "xmlrpcport",
+            "zeroonerror",
+            "zeroonexit"
+        ]
+
+        # Werte übernehmen
+        for key in keys:
+            if key in dc:
+                self.globalconfig.set("DEFAULT", key, str(dc[key]))
+
+        # conf-Datei schreiben
+        fh = open(self.globalconffile, "w")
+        self.globalconfig.write(fh)
+        proginit.logger.info(
+            "got new config and wrote ist to {}".format(self.globalconffile)
+        )
+
+        if loadnow:
+            # RevPiPyLoad neu konfigurieren
+            self.evt_loadconfig.set()
+
+    def xml_setpictoryrsc(self, filebytes, reset=False):
+        """Schreibt die config.rsc Datei von piCotry."""
+        proginit.logger.debug("xmlrpc call setpictoryrsc")
+        try:
+            with open(configrsc, "wb") as fh:
+                fh.write(filebytes.data)
+        except:
+            return -1
+        else:
+            if reset:
+                return os.system("/opt/KUNBUS/piControlReset")
+            else:
+                return 0
 
 
 if __name__ == "__main__":

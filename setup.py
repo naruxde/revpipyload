@@ -11,10 +11,10 @@ from glob import glob
 
 class MyEggInfo(distutils.command.install_egg_info.install_egg_info):
 
-    u"""Disable egg_info installation, seems pointless for a non-library."""
+    """Disable egg_info installation, seems pointless for a non-library."""
 
     def run(self):
-        u"""just pass egg_info."""
+        """just pass egg_info."""
         pass
 
 
@@ -37,6 +37,7 @@ setup(
         ("/etc/logrotate.d", ["data/etc/logrotate.d/revpipyload"]),
         ("/etc/revpipyload", ["data/etc/revpipyload/revpipyload.conf"]),
         ("share/revpipyload", glob("revpipyload/*.*")),
+        ("/var/lib/revpipyload", ["data/var/lib/revpipyload/.placeholder"])
     ],
 
     description="PLC Loader für Python-Projekte auf den RevolutionPi",
@@ -49,7 +50,8 @@ setup(
     "zur Laufzeit überwacht werden.",
 
     classifiers=[
-        "License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3)",
+        "License :: OSI Approved :: "
+        "GNU Lesser General Public License v3 (LGPLv3)",
         "Operating System :: POSIX :: Linux",
     ],
     cmdclass={"install_egg_info": MyEggInfo},
