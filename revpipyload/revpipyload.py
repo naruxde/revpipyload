@@ -15,7 +15,7 @@ import subprocess
 import tarfile
 import zipfile
 from concurrent import futures
-from shutil import rmtree
+from shutil import rmtree, copyfile
 from tempfile import mktemp
 from threading import Thread, Event
 from time import sleep, asctime
@@ -23,6 +23,7 @@ from xmlrpc.client import Binary
 from xmlrpc.server import SimpleXMLRPCServer
 
 configrsc = "/opt/KUNBUS/config.rsc"
+picontrolreset = "/opt/KUNBUS/piControlReset"
 procimg = "/dev/piControl0"
 pyloadverion = "0.2.3"
 
@@ -49,10 +50,7 @@ class LogReader():
         """Gibt neue Zeilen ab letzen Aufruf zurueck.
         @returns: list() mit neuen Zeilen"""
         if not os.access(proginit.logapp, os.R_OK):
-            proginit.logger.error(
-                "can not access logfile {}".format(proginit.logapp)
-            )
-            return None
+            return []
         else:
             if self.fhapp is None or self.fhapp.closed:
                 self.fhapp = open(proginit.logapp)
@@ -79,7 +77,7 @@ class LogReader():
             proginit.logger.error(
                 "can not access logfile {}".format(proginit.logapp)
             )
-            return None
+            return ""
         else:
             if self.fhapp is None or self.fhapp.closed:
                 self.fhapp = open(proginit.logapp)
@@ -93,7 +91,7 @@ class LogReader():
             proginit.logger.error(
                 "can not access logfile {}".format(proginit.logplc)
             )
-            return None
+            return []
         else:
             if self.fhplc is None or self.fhplc.closed:
                 self.fhplc = open(proginit.logplc)
@@ -120,7 +118,7 @@ class LogReader():
             proginit.logger.error(
                 "can not access logfile {}".format(proginit.logplc)
             )
-            return None
+            return ""
         else:
             if self.fhplc is None or self.fhplc.closed:
                 self.fhplc = open(proginit.logplc)
@@ -130,7 +128,7 @@ class LogReader():
 
 class RevPiPlc(Thread):
 
-    def __init__(self, program):
+    def __init__(self, program, pversion):
         """Instantiiert RevPiPlc-Klasse."""
         super().__init__()
         self.autoreload = False
@@ -138,6 +136,7 @@ class RevPiPlc(Thread):
         self.exitcode = None
         self._program = program
         self._procplc = None
+        self._pversion = pversion
         self.zeroonerror = False
         self.zeroonexit = False
 
@@ -146,11 +145,13 @@ class RevPiPlc(Thread):
         if os.path.exists("/dev/piControl0"):
             f = open("/dev/piControl0", "w+b", 0)
             f.write(bytes(4096))
-            proginit.logger.warning("set piControl0 to ZERO")
 
     def run(self):
         """Fuehrt PLC-Programm aus und ueberwacht es."""
-        lst_proc = shlex.split("/usr/bin/env python3 -u " + self._program)
+        if self._pversion == 2:
+            lst_proc = shlex.split("/usr/bin/env python2 -u " + self._program)
+        else:
+            lst_proc = shlex.split("/usr/bin/env python3 -u " + self._program)
 
         # Ausgaben konfigurieren und ggf. umleiten
         fh = None
@@ -169,7 +170,8 @@ class RevPiPlc(Thread):
         # Prozess erstellen
         proginit.logger.info("start plc program {}".format(self._program))
         self._procplc = subprocess.Popen(
-            lst_proc, bufsize=1, stdout=fh, stderr=subprocess.STDOUT
+            lst_proc, cwd=os.path.dirname(self._program),
+            bufsize=1, stdout=fh, stderr=subprocess.STDOUT
         )
 
         while not self._evt_exit.is_set():
@@ -188,18 +190,23 @@ class RevPiPlc(Thread):
                     )
                     if self.zeroonerror:
                         self._zeroprocimg()
+                        proginit.logger.warning(
+                            "set piControl0 to ZERO after PLC program error")
 
                 else:
                     # PLC Python Programm sauber beendet
                     proginit.logger.info("plc program did a clean exit")
                     if self.zeroonexit:
                         self._zeroprocimg()
+                        proginit.logger.info(
+                            "set piControl0 to ZERO after PLC program returns "
+                            "clean exitcode")
 
                 if not self._evt_exit.is_set() and self.autoreload:
                     # Prozess neu starten
                     self._procplc = subprocess.Popen(
-                        lst_proc, bufsize=1, stdout=fh,
-                        stderr=subprocess.STDOUT
+                        lst_proc, cwd=os.path.dirname(self._program),
+                        bufsize=1, stdout=fh, stderr=subprocess.STDOUT
                     )
                     if self.exitcode == 0:
                         proginit.logger.warning(
@@ -217,6 +224,7 @@ class RevPiPlc(Thread):
         # Prozess beenden
         count = 0
         proginit.logger.info("term plc program {}".format(self._program))
+        # TODO: Prüfen ob es überhautp noch läuft
         self._procplc.terminate()
         while self._procplc.poll() is None and count < 10:
             count += 1
@@ -288,16 +296,15 @@ class RevPiPyLoad(proginit.ProgInit):
         self.autostart = int(self.globalconfig["DEFAULT"].get("autostart", 0))
         self.plcprog = self.globalconfig["DEFAULT"].get("plcprogram", None)
         self.plcworkdir = self.globalconfig["DEFAULT"].get(
-            "plcworkdir", "/var/lib/revpipyload"
-        )
+            "plcworkdir", "/var/lib/revpipyload")
         self.plcslave = int(self.globalconfig["DEFAULT"].get("plcslave", 0))
+        self.pythonver = int(
+            self.globalconfig["DEFAULT"].get("pythonversion", 3))
         self.xmlrpc = int(self.globalconfig["DEFAULT"].get("xmlrpc", 1))
         self.zerooneerror = int(
-            self.globalconfig["DEFAULT"].get("zeroonerror", 1)
-        )
+            self.globalconfig["DEFAULT"].get("zeroonerror", 1))
         self.zeroonexit = int(
-            self.globalconfig["DEFAULT"].get("zeroonexit", 1)
-        )
+            self.globalconfig["DEFAULT"].get("zeroonexit", 1))
 
         # Workdirectory wechseln
         os.chdir(self.plcworkdir)
@@ -361,7 +368,8 @@ class RevPiPyLoad(proginit.ProgInit):
             return
 
         proginit.logger.debug("create PLC watcher")
-        th_plc = RevPiPlc(os.path.join(self.plcworkdir, self.plcprog))
+        th_plc = RevPiPlc(
+            os.path.join(self.plcworkdir, self.plcprog), self.pythonver)
         th_plc.autoreload = self.autoreload
         th_plc.zeroonerror = self.zerooneerror
         th_plc.zeroonexit = self.zeroonexit
@@ -369,7 +377,7 @@ class RevPiPyLoad(proginit.ProgInit):
         return th_plc
 
     def _sigexit(self, signum, frame):
-        """Signal handler to clean an exit program."""
+        """Signal handler to clean and exit program."""
         proginit.logger.debug("got exit signal")
         self.stop()
 
@@ -378,19 +386,28 @@ class RevPiPyLoad(proginit.ProgInit):
         proginit.logger.debug("got reload config signal")
         self.evt_loadconfig.set()
 
-    def packapp(self, mode="tar"):
-        """Erzeugt aus dem PLC-Programm ein TAR-File."""
+    def packapp(self, mode="tar", pictory=False):
+        """Erzeugt aus dem PLC-Programm ein TAR-File.
+        @param mode: Packart 'tar' oder 'zip'
+        @param pictory: piCtory Konfiguration mit einpacken"""
         filename = mktemp(suffix=".packed", prefix="plc")
-#        try:
+        # TODO: Fehlerabfang
         if mode == "zip":
             fh_pack = zipfile.ZipFile(filename, mode="w")
             wd = os.walk("./")
             for tup_dir in wd:
                 for file in tup_dir[2]:
-                    fh_pack.write(os.path.join(tup_dir[0], file)[2:])
+                    arcname = os.path.join(
+                        os.path.basename(self.plcworkdir), tup_dir[0][2:], file)
+                    fh_pack.write(os.path.join(tup_dir[0], file), arcname=arcname)
+            if pictory:
+                fh_pack.write(configrsc, arcname="config.rsc")
         else:
-            fh_pack = tarfile.open(name=filename, mode="w:gz")
-            fh_pack.add(".")
+            fh_pack = tarfile.open(
+                name=filename, mode="w:gz", dereference=True)
+            fh_pack.add(".", arcname=os.path.basename(self.plcworkdir))
+            if pictory:
+                fh_pack.add(configrsc, arcname="config.rsc")
         fh_pack.close()
         return filename
 
@@ -458,23 +475,25 @@ class RevPiPyLoad(proginit.ProgInit):
         return lst_file
 
     def xml_getpictoryrsc(self):
-        """Gibt die config.rsc Datei von piCotry zurueck."""
+        """Gibt die config.rsc Datei von piCotry zurueck.
+        @returns: xmlrpc.client.Binary()"""
         proginit.logger.debug("xmlrpc call getpictoryrsc")
         with open(configrsc, "rb") as fh:
             buff = fh.read()
         return Binary(buff)
 
     def xml_getprocimg(self):
-        """Gibt die Rohdaten aus piControl0 zurueck."""
+        """Gibt die Rohdaten aus piControl0 zurueck.
+        @returns: xmlrpc.client.Binary()"""
         proginit.logger.debug("xmlrpc call getprocimg")
         with open(procimg, "rb") as fh:
             buff = fh.read()
         return Binary(buff)
 
-    def xml_plcdownload(self, mode="tar"):
+    def xml_plcdownload(self, mode="tar", pictory=False):
         proginit.logger.debug("xmlrpc call plcdownload")
         # TODO: Daten blockweise übertragen
-        file = self.packapp(mode)
+        file = self.packapp(mode, pictory)
         if os.path.exists(file):
             fh = open(file, "rb")
             xmldata = Binary(fh.read())
@@ -516,7 +535,7 @@ class RevPiPyLoad(proginit.ProgInit):
         else:
             return -1
 
-    def xml_plcupload(self, filedata):
+    def xml_plcupload(self, filedata, pictory=False, reset=False):
         proginit.logger.debug("xmlrpc call plcupload")
         # TODO: Daten blockweise annehmen
         if filedata is None:
@@ -533,17 +552,36 @@ class RevPiPyLoad(proginit.ProgInit):
         if tarfile.is_tarfile(filename):
             fh_pack = tarfile.open(filename)
         elif zipfile.is_zipfile(filename):
-            fh_pack = zipfile.open(filename)
+            fh_pack = zipfile.ZipFile.open(filename)
 
         if fh_pack is not None:
-            fh_pack.extractall()
+            fh_pack.extractall(".")
             fh_pack.close()
             os.remove(filename)
-            return True
+
+            if pictory and os.path.exists("./config.rsc"):
+                try:
+                    # Nur Daten kopieren damit Eigenschaften gleich bleiben
+                    copyfile("./config.rsc", configrsc)
+                    os.remove("./config.rsc")
+                except:
+                    return -3
+                else:
+                    if reset:
+                        return os.system(picontrolreset)
+                    else:
+                        return 0
+
+            elif pictory:
+                return -2
+
+            else:
+                # Sauber
+                return 0
 
         # Kein Archiv
         os.remove(filename)
-        return False
+        return -1
 
     def xml_plcuploadclean(self):
         proginit.logger.debug("xmlrpc call plcuploadclean")
@@ -587,7 +625,13 @@ class RevPiPyLoad(proginit.ProgInit):
             self.evt_loadconfig.set()
 
     def xml_setpictoryrsc(self, filebytes, reset=False):
-        """Schreibt die config.rsc Datei von piCotry."""
+        """Schreibt die config.rsc Datei von piCotry.
+
+        @param filebytes: xmlrpc.client.Binary()-Objekt
+        @param reset: Reset piControl Device
+        @returns: Statuscode
+
+        """
         proginit.logger.debug("xmlrpc call setpictoryrsc")
         try:
             with open(configrsc, "wb") as fh:
@@ -596,7 +640,7 @@ class RevPiPyLoad(proginit.ProgInit):
             return -1
         else:
             if reset:
-                return os.system("/opt/KUNBUS/piControlReset")
+                return os.system(picontrolreset)
             else:
                 return 0
 

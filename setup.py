@@ -44,7 +44,7 @@ setup(
     long_description=""
     "Dieses Programm startet beim Systemstart ein angegebenes Python PLC\n"
     "Programm. Es überwacht das Programm und startet es im Fehlerfall neu.\n"
-    "Bei Abstruz kann das gesamte /dev/piControl0 auf 0x00 gesettz werden.\n"
+    "Bei Absturz kann das gesamte /dev/piControl0 auf 0x00 gesetzt werden.\n"
     "Außerdem stellt es einen XML-RPC Server bereit, über den die Software\n"
     "auf den RevPi geladen werden kann. Das Prozessabbild kann über ein Tool\n"
     "zur Laufzeit überwacht werden.",
