@@ -7,6 +7,7 @@
 # (c) Sven Sager, License: LGPLv3
 #
 # -*- coding: utf-8 -*-
+import gzip
 import proginit
 import os
 import shlex
@@ -15,7 +16,7 @@ import subprocess
 import tarfile
 import zipfile
 from concurrent import futures
-from shutil import rmtree, copyfile
+from shutil import rmtree
 from tempfile import mktemp
 from threading import Thread, Event
 from time import sleep, asctime
@@ -224,7 +225,9 @@ class RevPiPlc(Thread):
         # Prozess beenden
         count = 0
         proginit.logger.info("term plc program {}".format(self._program))
+
         # TODO: Prüfen ob es überhautp noch läuft
+
         self._procplc.terminate()
         while self._procplc.poll() is None and count < 10:
             count += 1
@@ -293,18 +296,22 @@ class RevPiPyLoad(proginit.ProgInit):
         # Konfiguration verarbeiten
         self.autoreload = \
             int(self.globalconfig["DEFAULT"].get("autoreload", 1))
-        self.autostart = int(self.globalconfig["DEFAULT"].get("autostart", 0))
-        self.plcprog = self.globalconfig["DEFAULT"].get("plcprogram", None)
-        self.plcworkdir = self.globalconfig["DEFAULT"].get(
-            "plcworkdir", "/var/lib/revpipyload")
-        self.plcslave = int(self.globalconfig["DEFAULT"].get("plcslave", 0))
-        self.pythonver = int(
-            self.globalconfig["DEFAULT"].get("pythonversion", 3))
-        self.xmlrpc = int(self.globalconfig["DEFAULT"].get("xmlrpc", 1))
-        self.zerooneerror = int(
-            self.globalconfig["DEFAULT"].get("zeroonerror", 1))
-        self.zeroonexit = int(
-            self.globalconfig["DEFAULT"].get("zeroonexit", 1))
+        self.autostart = \
+            int(self.globalconfig["DEFAULT"].get("autostart", 0))
+        self.plcprog = \
+            self.globalconfig["DEFAULT"].get("plcprogram", None)
+        self.plcworkdir = \
+            self.globalconfig["DEFAULT"].get("plcworkdir", "/var/lib/revpipyload")
+        self.plcslave = \
+            int(self.globalconfig["DEFAULT"].get("plcslave", 0))
+        self.pythonver = \
+            int(self.globalconfig["DEFAULT"].get("pythonversion", 3))
+        self.xmlrpc = \
+            int(self.globalconfig["DEFAULT"].get("xmlrpc", 1))
+        self.zerooneerror = \
+            int(self.globalconfig["DEFAULT"].get("zeroonerror", 1))
+        self.zeroonexit = \
+            int(self.globalconfig["DEFAULT"].get("zeroonexit", 1))
 
         # Workdirectory wechseln
         os.chdir(self.plcworkdir)
@@ -332,8 +339,7 @@ class RevPiPyLoad(proginit.ProgInit):
 
             self.xsrv.register_function(self.xml_getconfig, "get_config")
             self.xsrv.register_function(self.xml_getfilelist, "get_filelist")
-            self.xsrv.register_function(
-                self.xml_getpictoryrsc, "get_pictoryrsc")
+            self.xsrv.register_function(self.xml_getpictoryrsc, "get_pictoryrsc")
             self.xsrv.register_function(self.xml_getprocimg, "get_procimg")
             self.xsrv.register_function(self.xml_plcdownload, "plcdownload")
             self.xsrv.register_function(self.xml_plcexitcode, "plcexitcode")
@@ -341,12 +347,11 @@ class RevPiPyLoad(proginit.ProgInit):
             self.xsrv.register_function(self.xml_plcstart, "plcstart")
             self.xsrv.register_function(self.xml_plcstop, "plcstop")
             self.xsrv.register_function(self.xml_plcupload, "plcupload")
-            self.xsrv.register_function(
-                self.xml_plcuploadclean, "plcuploadclean")
+            self.xsrv.register_function(self.xml_plcuploadclean, "plcuploadclean")
             self.xsrv.register_function(self.xml_reload, "reload")
             self.xsrv.register_function(self.xml_setconfig, "set_config")
-            self.xsrv.register_function(
-                self.xml_setpictoryrsc, "set_pictoryrsc")
+            self.xsrv.register_function(self.xml_setpictoryrsc, "set_pictoryrsc")
+
             self.xsrv.register_function(lambda: pyloadverion, "version")
             proginit.logger.debug("created xmlrpc server")
 
@@ -391,7 +396,9 @@ class RevPiPyLoad(proginit.ProgInit):
         @param mode: Packart 'tar' oder 'zip'
         @param pictory: piCtory Konfiguration mit einpacken"""
         filename = mktemp(suffix=".packed", prefix="plc")
+
         # TODO: Fehlerabfang
+
         if mode == "zip":
             fh_pack = zipfile.ZipFile(filename, mode="w")
             wd = os.walk("./")
@@ -492,7 +499,9 @@ class RevPiPyLoad(proginit.ProgInit):
 
     def xml_plcdownload(self, mode="tar", pictory=False):
         proginit.logger.debug("xmlrpc call plcdownload")
+
         # TODO: Daten blockweise übertragen
+
         file = self.packapp(mode, pictory)
         if os.path.exists(file):
             fh = open(file, "rb")
@@ -535,53 +544,31 @@ class RevPiPyLoad(proginit.ProgInit):
         else:
             return -1
 
-    def xml_plcupload(self, filedata, pictory=False, reset=False):
+    def xml_plcupload(self, filedata, filename):
         proginit.logger.debug("xmlrpc call plcupload")
-        # TODO: Daten blockweise annehmen
-        if filedata is None:
+        noerr = False
+
+        if filedata is None or filename is None:
             return False
 
-        filename = mktemp(prefix="upl")
-        # Daten in tmp-file schreiben
-        fh = open(filename, "wb")
-        fh.write(filedata.data)
-        fh.close()
+        # Absoluten Pfad prüfen
+        dirname = os.path.join(self.plcworkdir, os.path.dirname(filename))
+        if self.plcworkdir not in os.path.abspath(dirname):
+            return False
 
-        # Packer ermitteln
-        fh_pack = None
-        if tarfile.is_tarfile(filename):
-            fh_pack = tarfile.open(filename)
-        elif zipfile.is_zipfile(filename):
-            fh_pack = zipfile.ZipFile.open(filename)
+        # Ordner erzeugen
+        if not os.path.exists(dirname):
+            os.makedirs(dirname)
 
-        if fh_pack is not None:
-            fh_pack.extractall(".")
-            fh_pack.close()
-            os.remove(filename)
+        # Datei erzeugen
+        try:
+            fh = open(filename, "wb")
+            fh.write(gzip.decompress(filedata.data))
+            noerr = True
+        finally:
+            fh.close()
 
-            if pictory and os.path.exists("./config.rsc"):
-                try:
-                    # Nur Daten kopieren damit Eigenschaften gleich bleiben
-                    copyfile("./config.rsc", configrsc)
-                    os.remove("./config.rsc")
-                except:
-                    return -3
-                else:
-                    if reset:
-                        return os.system(picontrolreset)
-                    else:
-                        return 0
-
-            elif pictory:
-                return -2
-
-            else:
-                # Sauber
-                return 0
-
-        # Kein Archiv
-        os.remove(filename)
-        return -1
+        return noerr
 
     def xml_plcuploadclean(self):
         proginit.logger.debug("xmlrpc call plcuploadclean")
@@ -633,6 +620,9 @@ class RevPiPyLoad(proginit.ProgInit):
 
         """
         proginit.logger.debug("xmlrpc call setpictoryrsc")
+
+        # TODO: Prüfen ob es wirklich eine piCtory Datei ist
+
         try:
             with open(configrsc, "wb") as fh:
                 fh.write(filebytes.data)
