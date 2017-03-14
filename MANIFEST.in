@@ -1,4 +1,5 @@
 recursive-include data *
+recursive-include debian *
 recursive-include revpipyload *
 global-exclude test/*
 global-exclude *.pyc

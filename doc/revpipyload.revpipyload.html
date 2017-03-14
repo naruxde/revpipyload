@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html><head>
+<title>revpipyload.revpipyload</title>
+<meta charset="UTF-8">
+</head>
+<body style="background-color:#FFFFFF;color:#000000"><a NAME="top" ID="top"></a>
+<h1 style="background-color:#FFFFFF;color:#0000FF">
+revpipyload.revpipyload</h1>
+
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+Global Attributes</h3>
+<table>
+<tr><td>configrsc</td></tr><tr><td>picontrolreset</td></tr><tr><td>procimg</td></tr><tr><td>pyloadverion</td></tr>
+</table>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+Classes</h3>
+<table>
+<tr>
+<td><a style="color:#0000FF" href="#LogReader">LogReader</a></td>
+<td>Ermoeglicht den Zugriff auf die Logdateien.</td>
+</tr><tr>
+<td><a style="color:#0000FF" href="#RevPiPlc">RevPiPlc</a></td>
+<td>Verwaltet das PLC Python Programm.</td>
+</tr><tr>
+<td><a style="color:#0000FF" href="#RevPiPyLoad">RevPiPyLoad</a></td>
+<td>Hauptklasse, die alle Funktionen zur Verfuegung stellt.</td>
+</tr>
+</table>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+Functions</h3>
+<table>
+<tr><td>None</td></tr>
+</table>
+<hr /><hr />
+<a NAME="LogReader" ID="LogReader"></a>
+<h2 style="background-color:#FFFFFF;color:#0000FF">LogReader</h2>
+<p>
+Ermoeglicht den Zugriff auf die Logdateien.
+</p><p>
+    Beinhaltet Funktionen fuer den Abruf der gesamten Logdatei fuer das
+    RevPiPyLoad-System und die Logdatei der PLC-Anwendung.
+    Ausserdem koennen nur neue Zeilen abgerufen werden, um eine dynamische
+    Logansicht zu ermoeglichen.
+</p><p>
+
+</p>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+Derived from</h3>
+None
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+Class Attributes</h3>
+<table>
+<tr><td>None</td></tr>
+</table>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+Class Methods</h3>
+<table>
+<tr><td>None</td></tr>
+</table>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+Methods</h3>
+<table>
+<tr>
+<td><a style="color:#0000FF" href="#LogReader.__init__">LogReader</a></td>
+<td>Instantiiert LogReader-Klasse.</td>
+</tr><tr>
+<td><a style="color:#0000FF" href="#LogReader.get_applines">get_applines</a></td>
+<td>Gibt neue Zeilen ab letzen Aufruf zurueck.</td>
+</tr><tr>
+<td><a style="color:#0000FF" href="#LogReader.get_applog">get_applog</a></td>
+<td>Gibt die gesamte Logdatei zurueck.</td>
+</tr><tr>
+<td><a style="color:#0000FF" href="#LogReader.get_plclines">get_plclines</a></td>
+<td>Gibt neue Zeilen ab letzen Aufruf zurueck.</td>
+</tr><tr>
+<td><a style="color:#0000FF" href="#LogReader.get_plclog">get_plclog</a></td>
+<td>Gibt die gesamte Logdatei zurueck.</td>
+</tr>
+</table>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+Static Methods</h3>
+<table>
+<tr><td>None</td></tr>
+</table>
+<a NAME="LogReader.__init__" ID="LogReader.__init__"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+LogReader (Constructor)</h3>
+<b>LogReader</b>(<i></i>)
+<p>
+Instantiiert LogReader-Klasse.
+</p><a NAME="LogReader.get_applines" ID="LogReader.get_applines"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+LogReader.get_applines</h3>
+<b>get_applines</b>(<i></i>)
+<p>
+Gibt neue Zeilen ab letzen Aufruf zurueck.
+</p><dl>
+<dt>Returns:</dt>
+<dd>
+list() mit neuen Zeilen
+</dd>
+</dl><a NAME="LogReader.get_applog" ID="LogReader.get_applog"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+LogReader.get_applog</h3>
+<b>get_applog</b>(<i></i>)
+<p>
+Gibt die gesamte Logdatei zurueck.
+</p><dl>
+<dt>Returns:</dt>
+<dd>
+str() mit Logdaten
+</dd>
+</dl><a NAME="LogReader.get_plclines" ID="LogReader.get_plclines"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+LogReader.get_plclines</h3>
+<b>get_plclines</b>(<i></i>)
+<p>
+Gibt neue Zeilen ab letzen Aufruf zurueck.
+</p><dl>
+<dt>Returns:</dt>
+<dd>
+list() mit neuen Zeilen
+</dd>
+</dl><a NAME="LogReader.get_plclog" ID="LogReader.get_plclog"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+LogReader.get_plclog</h3>
+<b>get_plclog</b>(<i></i>)
+<p>
+Gibt die gesamte Logdatei zurueck.
+</p><dl>
+<dt>Returns:</dt>
+<dd>
+str() mit Logdaten
+</dd>
+</dl>
+<div align="right"><a style="color:#0000FF" href="#top">Up</a></div>
+<hr /><hr />
+<a NAME="RevPiPlc" ID="RevPiPlc"></a>
+<h2 style="background-color:#FFFFFF;color:#0000FF">RevPiPlc</h2>
+<p>
+Verwaltet das PLC Python Programm.
+</p><p>
+    Dieser Thread startet das PLC Python Programm und ueberwacht es. Sollte es
+    abstuerzen kann es automatisch neu gestartet werden. Die Ausgaben des
+    Programms werden in eine Logdatei umgeleitet, damit der Entwickler sein
+    Programm analysieren und debuggen kann.
+</p><p>
+
+</p>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+Derived from</h3>
+Thread
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+Class Attributes</h3>
+<table>
+<tr><td>None</td></tr>
+</table>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+Class Methods</h3>
+<table>
+<tr><td>None</td></tr>
+</table>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+Methods</h3>
+<table>
+<tr>
+<td><a style="color:#0000FF" href="#RevPiPlc.__init__">RevPiPlc</a></td>
+<td>Instantiiert RevPiPlc-Klasse.</td>
+</tr><tr>
+<td><a style="color:#0000FF" href="#RevPiPlc._zeroprocimg">_zeroprocimg</a></td>
+<td>Setzt Prozessabbild auf NULL.</td>
+</tr><tr>
+<td><a style="color:#0000FF" href="#RevPiPlc.run">run</a></td>
+<td>Fuehrt PLC-Programm aus und ueberwacht es.</td>
+</tr><tr>
+<td><a style="color:#0000FF" href="#RevPiPlc.stop">stop</a></td>
+<td>Beendet PLC-Programm.</td>
+</tr>
+</table>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+Static Methods</h3>
+<table>
+<tr><td>None</td></tr>
+</table>
+<a NAME="RevPiPlc.__init__" ID="RevPiPlc.__init__"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+RevPiPlc (Constructor)</h3>
+<b>RevPiPlc</b>(<i>program, pversion</i>)
+<p>
+Instantiiert RevPiPlc-Klasse.
+</p><a NAME="RevPiPlc._zeroprocimg" ID="RevPiPlc._zeroprocimg"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+RevPiPlc._zeroprocimg</h3>
+<b>_zeroprocimg</b>(<i></i>)
+<p>
+Setzt Prozessabbild auf NULL.
+</p><a NAME="RevPiPlc.run" ID="RevPiPlc.run"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+RevPiPlc.run</h3>
+<b>run</b>(<i></i>)
+<p>
+Fuehrt PLC-Programm aus und ueberwacht es.
+</p><a NAME="RevPiPlc.stop" ID="RevPiPlc.stop"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+RevPiPlc.stop</h3>
+<b>stop</b>(<i></i>)
+<p>
+Beendet PLC-Programm.
+</p>
+<div align="right"><a style="color:#0000FF" href="#top">Up</a></div>
+<hr /><hr />
+<a NAME="RevPiPyLoad" ID="RevPiPyLoad"></a>
+<h2 style="background-color:#FFFFFF;color:#0000FF">RevPiPyLoad</h2>
+<p>
+Hauptklasse, die alle Funktionen zur Verfuegung stellt.
+</p><p>
+    Hier wird die gesamte Konfiguraiton eingelesen und der ggf. aktivierte
+    XML-RPC-Server gestartet.
+</p><p>
+
+</p>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+Derived from</h3>
+proginit.ProgInit
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+Class Attributes</h3>
+<table>
+<tr><td>root</td></tr>
+</table>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+Class Methods</h3>
+<table>
+<tr><td>None</td></tr>
+</table>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+Methods</h3>
+<table>
+<tr>
+<td><a style="color:#0000FF" href="#RevPiPyLoad.__init__">RevPiPyLoad</a></td>
+<td>Instantiiert RevPiPyLoad-Klasse.</td>
+</tr><tr>
+<td><a style="color:#0000FF" href="#RevPiPyLoad._loadconfig">_loadconfig</a></td>
+<td>Load configuration file and setup modul.</td>
+</tr><tr>
+<td><a style="color:#0000FF" href="#RevPiPyLoad._plcthread">_plcthread</a></td>
+<td>Konfiguriert den PLC-Thread fuer die Ausfuehrung.</td>
+</tr><tr>
+<td><a style="color:#0000FF" href="#RevPiPyLoad._sigexit">_sigexit</a></td>
+<td>Signal handler to clean and exit program.</td>
+</tr><tr>
+<td><a style="color:#0000FF" href="#RevPiPyLoad._sigloadconfig">_sigloadconfig</a></td>
+<td>Signal handler to load configuration.</td>
+</tr><tr>
+<td><a style="color:#0000FF" href="#RevPiPyLoad.packapp">packapp</a></td>
+<td>Erzeugt aus dem PLC-Programm ein TAR-File.</td>
+</tr><tr>
+<td><a style="color:#0000FF" href="#RevPiPyLoad.start">start</a></td>
+<td>Start plcload and PLC python program.</td>
+</tr><tr>
+<td><a style="color:#0000FF" href="#RevPiPyLoad.stop">stop</a></td>
+<td>Stop PLC python program and plcload.</td>
+</tr><tr>
+<td><a style="color:#0000FF" href="#RevPiPyLoad.xml_getconfig">xml_getconfig</a></td>
+<td>Uebertraegt die RevPiPyLoad Konfiguration.</td>
+</tr><tr>
+<td><a style="color:#0000FF" href="#RevPiPyLoad.xml_getfilelist">xml_getfilelist</a></td>
+<td>Uebertraegt die Dateiliste vom plcworkdir.</td>
+</tr><tr>
+<td><a style="color:#0000FF" href="#RevPiPyLoad.xml_getpictoryrsc">xml_getpictoryrsc</a></td>
+<td>Gibt die config.rsc Datei von piCotry zurueck.</td>
+</tr><tr>
+<td><a style="color:#0000FF" href="#RevPiPyLoad.xml_getprocimg">xml_getprocimg</a></td>
+<td>Gibt die Rohdaten aus piControl0 zurueck.</td>
+</tr><tr>
+<td><a style="color:#0000FF" href="#RevPiPyLoad.xml_plcdownload">xml_plcdownload</a></td>
+<td>Uebertraegt ein Archiv vom plcworkdir.</td>
+</tr><tr>
+<td><a style="color:#0000FF" href="#RevPiPyLoad.xml_plcexitcode">xml_plcexitcode</a></td>
+<td>Gibt den aktuellen exitcode vom PLC Programm zurueck.</td>
+</tr><tr>
+<td><a style="color:#0000FF" href="#RevPiPyLoad.xml_plcrunning">xml_plcrunning</a></td>
+<td>Prueft ob das PLC Programm noch lauft.</td>
+</tr><tr>
+<td><a style="color:#0000FF" href="#RevPiPyLoad.xml_plcstart">xml_plcstart</a></td>
+<td>Startet das PLC Programm.</td>
+</tr><tr>
+<td><a style="color:#0000FF" href="#RevPiPyLoad.xml_plcstop">xml_plcstop</a></td>
+<td>Stoppt das PLC Programm.</td>
+</tr><tr>
+<td><a style="color:#0000FF" href="#RevPiPyLoad.xml_plcupload">xml_plcupload</a></td>
+<td>Empfaengt Dateien fuer das PLC Programm.</td>
+</tr><tr>
+<td><a style="color:#0000FF" href="#RevPiPyLoad.xml_plcuploadclean">xml_plcuploadclean</a></td>
+<td>Loescht das gesamte plcworkdir Verzeichnis.</td>
+</tr><tr>
+<td><a style="color:#0000FF" href="#RevPiPyLoad.xml_reload">xml_reload</a></td>
+<td>Startet RevPiPyLoad neu und verwendet neue Konfiguraiton.</td>
+</tr><tr>
+<td><a style="color:#0000FF" href="#RevPiPyLoad.xml_setconfig">xml_setconfig</a></td>
+<td>Empfaengt die RevPiPyLoad Konfiguration.</td>
+</tr><tr>
+<td><a style="color:#0000FF" href="#RevPiPyLoad.xml_setpictoryrsc">xml_setpictoryrsc</a></td>
+<td>Schreibt die config.rsc Datei von piCotry.</td>
+</tr>
+</table>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+Static Methods</h3>
+<table>
+<tr><td>None</td></tr>
+</table>
+<a NAME="RevPiPyLoad.__init__" ID="RevPiPyLoad.__init__"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+RevPiPyLoad (Constructor)</h3>
+<b>RevPiPyLoad</b>(<i></i>)
+<p>
+Instantiiert RevPiPyLoad-Klasse.
+</p><a NAME="RevPiPyLoad._loadconfig" ID="RevPiPyLoad._loadconfig"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+RevPiPyLoad._loadconfig</h3>
+<b>_loadconfig</b>(<i></i>)
+<p>
+Load configuration file and setup modul.
+</p><a NAME="RevPiPyLoad._plcthread" ID="RevPiPyLoad._plcthread"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+RevPiPyLoad._plcthread</h3>
+<b>_plcthread</b>(<i></i>)
+<p>
+Konfiguriert den PLC-Thread fuer die Ausfuehrung.
+</p><dl>
+<dt>Returns:</dt>
+<dd>
+PLC-Thread Object or None
+</dd>
+</dl><a NAME="RevPiPyLoad._sigexit" ID="RevPiPyLoad._sigexit"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+RevPiPyLoad._sigexit</h3>
+<b>_sigexit</b>(<i>signum, frame</i>)
+<p>
+Signal handler to clean and exit program.
+</p><a NAME="RevPiPyLoad._sigloadconfig" ID="RevPiPyLoad._sigloadconfig"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+RevPiPyLoad._sigloadconfig</h3>
+<b>_sigloadconfig</b>(<i>signum, frame</i>)
+<p>
+Signal handler to load configuration.
+</p><a NAME="RevPiPyLoad.packapp" ID="RevPiPyLoad.packapp"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+RevPiPyLoad.packapp</h3>
+<b>packapp</b>(<i>mode="tar", pictory=False</i>)
+<p>
+Erzeugt aus dem PLC-Programm ein TAR-File.
+</p><dl>
+<dt><i>mode:</i></dt>
+<dd>
+Packart 'tar' oder 'zip'
+</dd><dt><i>pictory:</i></dt>
+<dd>
+piCtory Konfiguration mit einpacken
+</dd>
+</dl><dl>
+<dt>Returns:</dt>
+<dd>
+Dateinamen des Archivs
+</dd>
+</dl><a NAME="RevPiPyLoad.start" ID="RevPiPyLoad.start"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+RevPiPyLoad.start</h3>
+<b>start</b>(<i></i>)
+<p>
+Start plcload and PLC python program.
+</p><a NAME="RevPiPyLoad.stop" ID="RevPiPyLoad.stop"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+RevPiPyLoad.stop</h3>
+<b>stop</b>(<i></i>)
+<p>
+Stop PLC python program and plcload.
+</p><a NAME="RevPiPyLoad.xml_getconfig" ID="RevPiPyLoad.xml_getconfig"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+RevPiPyLoad.xml_getconfig</h3>
+<b>xml_getconfig</b>(<i></i>)
+<p>
+Uebertraegt die RevPiPyLoad Konfiguration.
+</p><dl>
+<dt>Returns:</dt>
+<dd>
+dict() der Konfiguration
+</dd>
+</dl><a NAME="RevPiPyLoad.xml_getfilelist" ID="RevPiPyLoad.xml_getfilelist"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+RevPiPyLoad.xml_getfilelist</h3>
+<b>xml_getfilelist</b>(<i></i>)
+<p>
+Uebertraegt die Dateiliste vom plcworkdir.
+</p><dl>
+<dt>Returns:</dt>
+<dd>
+list() mit Dateinamen
+</dd>
+</dl><a NAME="RevPiPyLoad.xml_getpictoryrsc" ID="RevPiPyLoad.xml_getpictoryrsc"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+RevPiPyLoad.xml_getpictoryrsc</h3>
+<b>xml_getpictoryrsc</b>(<i></i>)
+<p>
+Gibt die config.rsc Datei von piCotry zurueck.
+</p><dl>
+<dt>Returns:</dt>
+<dd>
+xmlrpc.client.Binary()
+</dd>
+</dl><a NAME="RevPiPyLoad.xml_getprocimg" ID="RevPiPyLoad.xml_getprocimg"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+RevPiPyLoad.xml_getprocimg</h3>
+<b>xml_getprocimg</b>(<i></i>)
+<p>
+Gibt die Rohdaten aus piControl0 zurueck.
+</p><dl>
+<dt>Returns:</dt>
+<dd>
+xmlrpc.client.Binary()
+</dd>
+</dl><a NAME="RevPiPyLoad.xml_plcdownload" ID="RevPiPyLoad.xml_plcdownload"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+RevPiPyLoad.xml_plcdownload</h3>
+<b>xml_plcdownload</b>(<i>mode="tar", pictory=False</i>)
+<p>
+Uebertraegt ein Archiv vom plcworkdir.
+</p><dl>
+<dt><i>mode:</i></dt>
+<dd>
+Archivart 'tar' 'zip'
+</dd><dt><i>pictory:</i></dt>
+<dd>
+piCtory Konfiguraiton mit einpacken
+</dd>
+</dl><dl>
+<dt>Returns:</dt>
+<dd>
+Binary() mit Archivdatei
+</dd>
+</dl><a NAME="RevPiPyLoad.xml_plcexitcode" ID="RevPiPyLoad.xml_plcexitcode"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+RevPiPyLoad.xml_plcexitcode</h3>
+<b>xml_plcexitcode</b>(<i></i>)
+<p>
+Gibt den aktuellen exitcode vom PLC Programm zurueck.
+</p><dl>
+<dt>Returns:</dt>
+<dd>
+int() exitcode oder -1 lauuft noch -2 lief nie
+</dd>
+</dl><a NAME="RevPiPyLoad.xml_plcrunning" ID="RevPiPyLoad.xml_plcrunning"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+RevPiPyLoad.xml_plcrunning</h3>
+<b>xml_plcrunning</b>(<i></i>)
+<p>
+Prueft ob das PLC Programm noch lauft.
+</p><dl>
+<dt>Returns:</dt>
+<dd>
+True, wenn das PLC Programm noch lauft
+</dd>
+</dl><a NAME="RevPiPyLoad.xml_plcstart" ID="RevPiPyLoad.xml_plcstart"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+RevPiPyLoad.xml_plcstart</h3>
+<b>xml_plcstart</b>(<i></i>)
+<p>
+Startet das PLC Programm.
+</p><dl>
+<dt>Returns:</dt>
+<dd>
+int() Status:
+            -1 Programm lauft noch
+            100 Fehler
+</dd>
+</dl><a NAME="RevPiPyLoad.xml_plcstop" ID="RevPiPyLoad.xml_plcstop"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+RevPiPyLoad.xml_plcstop</h3>
+<b>xml_plcstop</b>(<i></i>)
+<p>
+Stoppt das PLC Programm.
+</p><dl>
+<dt>Returns:</dt>
+<dd>
+int() Exitcode vom PLC Programm
+</dd>
+</dl><a NAME="RevPiPyLoad.xml_plcupload" ID="RevPiPyLoad.xml_plcupload"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+RevPiPyLoad.xml_plcupload</h3>
+<b>xml_plcupload</b>(<i>filedata, filename</i>)
+<p>
+Empfaengt Dateien fuer das PLC Programm.
+</p><dl>
+<dt><i>filedata:</i></dt>
+<dd>
+GZIP Binary data der datei
+</dd><dt><i>filename:</i></dt>
+<dd>
+Name inkl. Unterverzeichnis der Datei
+</dd>
+</dl><dl>
+<dt>Returns:</dt>
+<dd>
+Ture, wenn Datei erfolgreich gespeichert wurde
+</dd>
+</dl><a NAME="RevPiPyLoad.xml_plcuploadclean" ID="RevPiPyLoad.xml_plcuploadclean"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+RevPiPyLoad.xml_plcuploadclean</h3>
+<b>xml_plcuploadclean</b>(<i></i>)
+<p>
+Loescht das gesamte plcworkdir Verzeichnis.
+</p><dl>
+<dt>Returns:</dt>
+<dd>
+True, wenn erfolgreich
+</dd>
+</dl><a NAME="RevPiPyLoad.xml_reload" ID="RevPiPyLoad.xml_reload"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+RevPiPyLoad.xml_reload</h3>
+<b>xml_reload</b>(<i></i>)
+<p>
+Startet RevPiPyLoad neu und verwendet neue Konfiguraiton.
+</p><a NAME="RevPiPyLoad.xml_setconfig" ID="RevPiPyLoad.xml_setconfig"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+RevPiPyLoad.xml_setconfig</h3>
+<b>xml_setconfig</b>(<i>dc, loadnow=False</i>)
+<p>
+Empfaengt die RevPiPyLoad Konfiguration.
+</p><a NAME="RevPiPyLoad.xml_setpictoryrsc" ID="RevPiPyLoad.xml_setpictoryrsc"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+RevPiPyLoad.xml_setpictoryrsc</h3>
+<b>xml_setpictoryrsc</b>(<i>filebytes, reset=False</i>)
+<p>
+Schreibt die config.rsc Datei von piCotry.
+</p><dl>
+<dt><i>filebytes:</i></dt>
+<dd>
+xmlrpc.client.Binary()-Objekt
+</dd><dt><i>reset:</i></dt>
+<dd>
+Reset piControl Device
+</dd>
+</dl><dl>
+<dt>Returns:</dt>
+<dd>
+Statuscode:
+            0 Alles erfolgreich
+            -1 Kann JSON-Datei nicht laden
+            -2 piCtory Elemente in JSON-Datei nicht gefunden
+            -3 Konnte Konfiguraiton nicht schreiben
+            Positive Zahl ist exitcode von piControlReset
+</dd>
+</dl>
+<div align="right"><a style="color:#0000FF" href="#top">Up</a></div>
+<hr />
+</body></html>

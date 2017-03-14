@@ -5,8 +5,8 @@
 # -*- coding: utf-8 -*-
 """Setupscript fuer RevPiPyLoad."""
 import distutils.command.install_egg_info
-from distutils.core import setup
 from glob import glob
+from setuptools import setup
 
 
 class MyEggInfo(distutils.command.install_egg_info.install_egg_info):
@@ -27,14 +27,12 @@ setup(
 
     license="LGPLv3",
     name="revpipyload",
-    version="0.2.3",
+    version="0.2.5",
 
     scripts=["data/revpipyload"],
 
     data_files=[
         ("/etc/default", ["data/etc/default/revpipyload"]),
-        ("/etc/init.d", ["data/etc/init.d/revpipyload"]),
-        ("/etc/logrotate.d", ["data/etc/logrotate.d/revpipyload"]),
         ("/etc/revpipyload", ["data/etc/revpipyload/revpipyload.conf"]),
         ("share/revpipyload", glob("revpipyload/*.*")),
         ("/var/lib/revpipyload", ["data/var/lib/revpipyload/.placeholder"])

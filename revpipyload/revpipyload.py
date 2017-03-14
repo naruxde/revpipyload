@@ -16,6 +16,7 @@ import subprocess
 import tarfile
 import zipfile
 from concurrent import futures
+from json import loads as jloads
 from shutil import rmtree
 from tempfile import mktemp
 from threading import Thread, Event
@@ -26,7 +27,7 @@ from xmlrpc.server import SimpleXMLRPCServer
 configrsc = "/opt/KUNBUS/config.rsc"
 picontrolreset = "/opt/KUNBUS/piControlReset"
 procimg = "/dev/piControl0"
-pyloadverion = "0.2.3"
+pyloadverion = "0.2.5"
 
 
 class LogReader():
@@ -128,6 +129,15 @@ class LogReader():
 
 
 class RevPiPlc(Thread):
+
+    """Verwaltet das PLC Python Programm.
+
+    Dieser Thread startet das PLC Python Programm und ueberwacht es. Sollte es
+    abstuerzen kann es automatisch neu gestartet werden. Die Ausgaben des
+    Programms werden in eine Logdatei umgeleitet, damit der Entwickler sein
+    Programm analysieren und debuggen kann.
+
+    """
 
     def __init__(self, program, pversion):
         """Instantiiert RevPiPlc-Klasse."""
@@ -254,6 +264,13 @@ class RevPiPlc(Thread):
 
 
 class RevPiPyLoad(proginit.ProgInit):
+
+    """Hauptklasse, die alle Funktionen zur Verfuegung stellt.
+
+    Hier wird die gesamte Konfiguraiton eingelesen und der ggf. aktivierte
+    XML-RPC-Server gestartet.
+
+    """
 
     def __init__(self):
         """Instantiiert RevPiPyLoad-Klasse."""
@@ -393,8 +410,12 @@ class RevPiPyLoad(proginit.ProgInit):
 
     def packapp(self, mode="tar", pictory=False):
         """Erzeugt aus dem PLC-Programm ein TAR-File.
+
         @param mode: Packart 'tar' oder 'zip'
-        @param pictory: piCtory Konfiguration mit einpacken"""
+        @param pictory: piCtory Konfiguration mit einpacken
+        @returns: Dateinamen des Archivs
+
+        """
         filename = mktemp(suffix=".packed", prefix="plc")
 
         # TODO: Fehlerabfang
@@ -458,6 +479,8 @@ class RevPiPyLoad(proginit.ProgInit):
             self.xsrv.server_close()
 
     def xml_getconfig(self):
+        """Uebertraegt die RevPiPyLoad Konfiguration.
+        @returns: dict() der Konfiguration"""
         proginit.logger.debug("xmlrpc call getconfig")
         dc = {}
         dc["autoreload"] = self.autoreload
@@ -473,6 +496,8 @@ class RevPiPyLoad(proginit.ProgInit):
         return dc
 
     def xml_getfilelist(self):
+        """Uebertraegt die Dateiliste vom plcworkdir.
+        @returns: list() mit Dateinamen"""
         proginit.logger.debug("xmlrpc call getfilelist")
         lst_file = []
         wd = os.walk("./")
@@ -498,6 +523,13 @@ class RevPiPyLoad(proginit.ProgInit):
         return Binary(buff)
 
     def xml_plcdownload(self, mode="tar", pictory=False):
+        """Uebertraegt ein Archiv vom plcworkdir.
+
+        @param mode: Archivart 'tar' 'zip'
+        @param pictory: piCtory Konfiguraiton mit einpacken
+        @returns: Binary() mit Archivdatei
+
+        """
         proginit.logger.debug("xmlrpc call plcdownload")
 
         # TODO: Daten blockweise übertragen
@@ -511,6 +543,8 @@ class RevPiPyLoad(proginit.ProgInit):
             return xmldata
 
     def xml_plcexitcode(self):
+        """Gibt den aktuellen exitcode vom PLC Programm zurueck.
+        @returns: int() exitcode oder -1 lauuft noch -2 lief nie"""
         proginit.logger.debug("xmlrpc call plcexitcode")
         if self.plc is None:
             return -2
@@ -520,10 +554,19 @@ class RevPiPyLoad(proginit.ProgInit):
             return self.plc.exitcode
 
     def xml_plcrunning(self):
+        """Prueft ob das PLC Programm noch lauft.
+        @returns: True, wenn das PLC Programm noch lauft"""
         proginit.logger.debug("xmlrpc call plcrunning")
         return False if self.plc is None else self.plc.is_alive()
 
     def xml_plcstart(self):
+        """Startet das PLC Programm.
+
+        @returns: int() Status:
+            -1 Programm lauft noch
+            100 Fehler
+
+            """
         proginit.logger.debug("xmlrpc call plcstart")
         if self.plc is not None and self.plc.is_alive():
             return -1
@@ -536,6 +579,8 @@ class RevPiPyLoad(proginit.ProgInit):
                 return 0
 
     def xml_plcstop(self):
+        """Stoppt das PLC Programm.
+        @returns: int() Exitcode vom PLC Programm"""
         proginit.logger.debug("xmlrpc call plcstop")
         if self.plc is not None:
             self.plc.stop()
@@ -545,6 +590,13 @@ class RevPiPyLoad(proginit.ProgInit):
             return -1
 
     def xml_plcupload(self, filedata, filename):
+        """Empfaengt Dateien fuer das PLC Programm.
+
+        @param filedata: GZIP Binary data der datei
+        @param filename: Name inkl. Unterverzeichnis der Datei
+        @returns: Ture, wenn Datei erfolgreich gespeichert wurde
+
+        """
         proginit.logger.debug("xmlrpc call plcupload")
         noerr = False
 
@@ -571,6 +623,8 @@ class RevPiPyLoad(proginit.ProgInit):
         return noerr
 
     def xml_plcuploadclean(self):
+        """Loescht das gesamte plcworkdir Verzeichnis.
+        @returns: True, wenn erfolgreich"""
         proginit.logger.debug("xmlrpc call plcuploadclean")
         try:
             rmtree(".", ignore_errors=True)
@@ -579,10 +633,12 @@ class RevPiPyLoad(proginit.ProgInit):
         return True
 
     def xml_reload(self):
+        """Startet RevPiPyLoad neu und verwendet neue Konfiguraiton."""
         proginit.logger.debug("xmlrpc call reload")
         self.evt_loadconfig.set()
 
     def xml_setconfig(self, dc, loadnow=False):
+        """Empfaengt die RevPiPyLoad Konfiguration."""
         proginit.logger.debug("xmlrpc call setconfig")
         keys = [
             "autoreload",
@@ -616,18 +672,33 @@ class RevPiPyLoad(proginit.ProgInit):
 
         @param filebytes: xmlrpc.client.Binary()-Objekt
         @param reset: Reset piControl Device
-        @returns: Statuscode
+        @returns: Statuscode:
+            0 Alles erfolgreich
+            -1 Kann JSON-Datei nicht laden
+            -2 piCtory Elemente in JSON-Datei nicht gefunden
+            -3 Konnte Konfiguraiton nicht schreiben
+            Positive Zahl ist exitcode von piControlReset
 
         """
         proginit.logger.debug("xmlrpc call setpictoryrsc")
 
-        # TODO: Prüfen ob es wirklich eine piCtory Datei ist
+        # Datei als JSON laden
+        try:
+            jconfigrsc = jloads(filebytes.data.decode())
+        except:
+            return -1
+
+        # Elemente prüfen
+        lst_check = ["Devices", "Sumary", "App"]
+        for chk in lst_check:
+            if chk not in jconfigrsc:
+                return -2
 
         try:
             with open(configrsc, "wb") as fh:
                 fh.write(filebytes.data)
         except:
-            return -1
+            return -3
         else:
             if reset:
                 return os.system(picontrolreset)

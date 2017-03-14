@@ -1,0 +1,18 @@
+/var/log/revpipyload
+{
+    rotate 6
+    weekly
+    compress
+    delaycompress
+    missingok
+    notifempty
+}
+/var/log/revpipyloadapp
+{
+    rotate 6
+    weekly
+    compress
+    delaycompress
+    missingok
+    notifempty
+}
