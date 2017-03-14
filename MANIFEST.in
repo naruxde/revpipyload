@@ -1,3 +1,4 @@
+include stdeb.cfg
 recursive-include data *
 recursive-include debian *
 recursive-include revpipyload *

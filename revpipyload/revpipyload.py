@@ -324,7 +324,7 @@ class RevPiPyLoad(proginit.ProgInit):
         self.pythonver = \
             int(self.globalconfig["DEFAULT"].get("pythonversion", 3))
         self.xmlrpc = \
-            int(self.globalconfig["DEFAULT"].get("xmlrpc", 1))
+            int(self.globalconfig["DEFAULT"].get("xmlrpc", 0))
         self.zerooneerror = \
             int(self.globalconfig["DEFAULT"].get("zeroonerror", 1))
         self.zeroonexit = \
@@ -337,7 +337,7 @@ class RevPiPyLoad(proginit.ProgInit):
         self.plc = self._plcthread()
 
         # XMLRPC-Server Instantiieren und konfigurieren
-        if self.xmlrpc:
+        if self.xmlrpc >= 1:
             proginit.logger.debug("create xmlrpc server")
             self.xsrv = SimpleXMLRPCServer(
                 (
@@ -349,27 +349,34 @@ class RevPiPyLoad(proginit.ProgInit):
             )
             self.xsrv.register_introspection_functions()
 
+            # XML Modus 1 Nur Logs lesen und PLC Programm neu starten
             self.xsrv.register_function(self.logr.get_applines, "get_applines")
             self.xsrv.register_function(self.logr.get_applog, "get_applog")
             self.xsrv.register_function(self.logr.get_plclines, "get_plclines")
             self.xsrv.register_function(self.logr.get_plclog, "get_plclog")
-
-            self.xsrv.register_function(self.xml_getconfig, "get_config")
-            self.xsrv.register_function(self.xml_getfilelist, "get_filelist")
-            self.xsrv.register_function(self.xml_getpictoryrsc, "get_pictoryrsc")
-            self.xsrv.register_function(self.xml_getprocimg, "get_procimg")
-            self.xsrv.register_function(self.xml_plcdownload, "plcdownload")
             self.xsrv.register_function(self.xml_plcexitcode, "plcexitcode")
             self.xsrv.register_function(self.xml_plcrunning, "plcrunning")
             self.xsrv.register_function(self.xml_plcstart, "plcstart")
             self.xsrv.register_function(self.xml_plcstop, "plcstop")
-            self.xsrv.register_function(self.xml_plcupload, "plcupload")
-            self.xsrv.register_function(self.xml_plcuploadclean, "plcuploadclean")
             self.xsrv.register_function(self.xml_reload, "reload")
-            self.xsrv.register_function(self.xml_setconfig, "set_config")
-            self.xsrv.register_function(self.xml_setpictoryrsc, "set_pictoryrsc")
+
+            # XML Modus 2 Einstellungen lesen und Programm herunterladen
+            if self.xmlrpc >= 2:
+                self.xsrv.register_function(self.xml_getconfig, "get_config")
+                self.xsrv.register_function(self.xml_getfilelist, "get_filelist")
+                self.xsrv.register_function(self.xml_getpictoryrsc, "get_pictoryrsc")
+                self.xsrv.register_function(self.xml_getprocimg, "get_procimg")
+                self.xsrv.register_function(self.xml_plcdownload, "plcdownload")
+
+            # XML Modus 3 Programm und Konfiguration hochladen
+            if self.xmlrpc >= 3:
+                self.xsrv.register_function(self.xml_plcupload, "plcupload")
+                self.xsrv.register_function(self.xml_plcuploadclean, "plcuploadclean")
+                self.xsrv.register_function(self.xml_setconfig, "set_config")
+                self.xsrv.register_function(self.xml_setpictoryrsc, "set_pictoryrsc")
 
             self.xsrv.register_function(lambda: pyloadverion, "version")
+            self.xsrv.register_function(lambda: self.xmlrpc, "xmlmodus")
             proginit.logger.debug("created xmlrpc server")
 
         if pauseproc:
@@ -418,25 +425,34 @@ class RevPiPyLoad(proginit.ProgInit):
         """
         filename = mktemp(suffix=".packed", prefix="plc")
 
-        # TODO: Fehlerabfang
-
         if mode == "zip":
             fh_pack = zipfile.ZipFile(filename, mode="w")
             wd = os.walk("./")
-            for tup_dir in wd:
-                for file in tup_dir[2]:
-                    arcname = os.path.join(
-                        os.path.basename(self.plcworkdir), tup_dir[0][2:], file)
-                    fh_pack.write(os.path.join(tup_dir[0], file), arcname=arcname)
-            if pictory:
-                fh_pack.write(configrsc, arcname="config.rsc")
+            try:
+                for tup_dir in wd:
+                    for file in tup_dir[2]:
+                        arcname = os.path.join(
+                            os.path.basename(self.plcworkdir), tup_dir[0][2:], file)
+                        fh_pack.write(os.path.join(tup_dir[0], file), arcname=arcname)
+                if pictory:
+                    fh_pack.write(configrsc, arcname="config.rsc")
+            except:
+                filename = ""
+            finally:
+                fh_pack.close()
+
         else:
             fh_pack = tarfile.open(
                 name=filename, mode="w:gz", dereference=True)
-            fh_pack.add(".", arcname=os.path.basename(self.plcworkdir))
-            if pictory:
-                fh_pack.add(configrsc, arcname="config.rsc")
-        fh_pack.close()
+            try:
+                fh_pack.add(".", arcname=os.path.basename(self.plcworkdir))
+                if pictory:
+                    fh_pack.add(configrsc, arcname="config.rsc")
+            except:
+                filename = ""
+            finally:
+                fh_pack.close()
+
         return filename
 
     def start(self):
@@ -444,7 +460,7 @@ class RevPiPyLoad(proginit.ProgInit):
         proginit.logger.info("starting revpipyload")
         self._exit = False
 
-        if self.xmlrpc:
+        if self.xmlrpc >= 1:
             proginit.logger.info("start xmlrpc-server")
             self.tpe = futures.ThreadPoolExecutor(max_workers=1)
             self.tpe.submit(self.xsrv.serve_forever)
@@ -472,7 +488,7 @@ class RevPiPyLoad(proginit.ProgInit):
             self.plc.stop()
             self.plc.join()
 
-        if self.xmlrpc:
+        if self.xmlrpc >= 1:
             proginit.logger.info("shutting down xmlrpc-server")
             self.xsrv.shutdown()
             self.tpe.shutdown()
@@ -488,6 +504,7 @@ class RevPiPyLoad(proginit.ProgInit):
         dc["plcworkdir"] = self.plcworkdir
         dc["plcprogram"] = self.plcprog
         dc["plcslave"] = self.plcslave
+        dc["pythonversion"] = self.pythonver
         dc["xmlrpc"] = self.xmlrpc
         dc["xmlrpcport"] = \
             self.globalconfig["DEFAULT"].get("xmlrpcport", 55123)
@@ -566,7 +583,7 @@ class RevPiPyLoad(proginit.ProgInit):
             -1 Programm lauft noch
             100 Fehler
 
-            """
+        """
         proginit.logger.debug("xmlrpc call plcstart")
         if self.plc is not None and self.plc.is_alive():
             return -1
@@ -645,6 +662,7 @@ class RevPiPyLoad(proginit.ProgInit):
             "autostart",
             "plcprogram",
             "plcslave",
+            "pythonversion",
             "xmlrpc",
             "xmlrpcport",
             "zeroonerror",

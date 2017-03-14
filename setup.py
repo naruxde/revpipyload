@@ -6,7 +6,7 @@
 """Setupscript fuer RevPiPyLoad."""
 import distutils.command.install_egg_info
 from glob import glob
-from setuptools import setup
+from distutils.core import setup
 
 
 class MyEggInfo(distutils.command.install_egg_info.install_egg_info):

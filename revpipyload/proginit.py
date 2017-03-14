@@ -66,7 +66,7 @@ class ProgInit():
             if self.pid > 0:
                 with open(self.pidfile, "w") as f:
                     f.write(str(self.pid))
-                exit(0)
+                sys.exit(0)
 
             global logapp
             global logplc

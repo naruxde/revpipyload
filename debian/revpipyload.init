@@ -1,4 +1,4 @@
-#! /bin/bash
+#! /bin/sh
 ### BEGIN INIT INFO
 # Provides:          revpipyload
 # Required-Start:    $remote_fs $syslog $piControl
@@ -19,14 +19,7 @@ NAME=revpipyload
 DAEMON_ARGS="-d"
 PIDFILE=/var/run/$NAME.pid
 SCRIPTNAME=/etc/init.d/$NAME
-
-# Check install dir
-if [ -d /usr/local/share/revpipyload ]
-then
-    DAEMON=/usr/share/revpipyload/revpipyload.py
-else
-    DAEMON=/usr/share/revpipyload/revpipyload.py
-fi
+DAEMON=/usr/share/revpipyload/revpipyload.py
 
 # Exit if the package is not installed
 [ -x "$DAEMON" ] || exit 0
@@ -68,7 +61,7 @@ do_stop()
         #   1 if daemon was already stopped
         #   2 if daemon could not be stopped
         #   other if a failure occurred
-        start-stop-daemon --stop --quiet --retry=TERM/30/KILL/5 --pidfile $PIDFILE --name $NAME.py
+        start-stop-daemon --stop --quiet --retry=TERM/30/KILL/5 --pidfile $PIDFILE
         RETVAL="$?"
         [ "$RETVAL" = 2 ] && return 2
         start-stop-daemon --stop --quiet --oknodo --retry=0/30/KILL/5 --exec $DAEMON
@@ -81,7 +74,7 @@ do_stop()
 # Function that sends a SIGHUP to the daemon/service
 #
 do_reload() {
-        start-stop-daemon --stop --signal 1 --quiet --pidfile $PIDFILE --name $NAME.py
+        start-stop-daemon --stop --signal 1 --quiet --pidfile $PIDFILE
         return 0
 }
 
@@ -89,18 +82,18 @@ case "$1" in
   start)
         [ "$VERBOSE" != no ] && log_daemon_msg "Starting $DESC" "$NAME"
         do_start
-        case "$?" in
-                0|1) [ "$VERBOSE" != no ] && log_end_msg 0 ;;
-                2) [ "$VERBOSE" != no ] && log_end_msg 1 ;;
-        esac
+#        case "$?" in
+#                0|1) [ "$VERBOSE" != no ] && log_end_msg 0 ;;
+#                2) [ "$VERBOSE" != no ] && log_end_msg 1 ;;
+#        esac
         ;;
   stop)
         [ "$VERBOSE" != no ] && log_daemon_msg "Stopping $DESC" "$NAME"
         do_stop
-        case "$?" in
-                0|1) [ "$VERBOSE" != no ] && log_end_msg 0 ;;
-                2) [ "$VERBOSE" != no ] && log_end_msg 1 ;;
-        esac
+#        case "$?" in
+#                0|1) [ "$VERBOSE" != no ] && log_end_msg 0 ;;
+#                2) [ "$VERBOSE" != no ] && log_end_msg 1 ;;
+#        esac
         ;;
   status)
         status_of_proc "$DAEMON" "$NAME" && exit 0 || exit $?
