@@ -1,3 +1,4 @@
+include MANIFEST.in
 include stdeb.cfg
 recursive-include data *
 recursive-include debian *
