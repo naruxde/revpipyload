@@ -541,7 +541,7 @@ class RevPiPyLoad(proginit.ProgInit):
         proginit.logger.info("stopping revpipyload")
         self._exit = True
 
-        if self.plc is not None:
+        if self.plc is not None and self.plc.is_alive():
             proginit.logger.debug("stopping revpiplc-thread")
             self.plc.stop()
             self.plc.join()
@@ -616,17 +616,24 @@ class RevPiPyLoad(proginit.ProgInit):
             fh.close()
             os.remove(file)
             return xmldata
+        return Binary()
 
     def xml_plcexitcode(self):
         """Gibt den aktuellen exitcode vom PLC Programm zurueck.
-        @returns: int() exitcode oder -1 laeuft noch -2 lief nie"""
+
+        @returns: int() exitcode oder:
+            -1 laeuft noch
+            -2 Datei nicht gefunden
+            -3 Lief nie
+
+        """
         proginit.logger.debug("xmlrpc call plcexitcode")
         if self.plc is None:
             return -2
         elif self.plc.is_alive():
             return -1
         else:
-            return self.plc.exitcode
+            return -3 if self.plc.exitcode is None else self.plc.exitcode
 
     def xml_plcrunning(self):
         """Prueft ob das PLC Programm noch lauft.
@@ -639,7 +646,7 @@ class RevPiPyLoad(proginit.ProgInit):
 
         @returns: int() Status:
             -1 Programm lauft noch
-            100 Fehler
+            -2 Datei nicht gefunden
 
         """
         proginit.logger.debug("xmlrpc call plcstart")
@@ -648,7 +655,7 @@ class RevPiPyLoad(proginit.ProgInit):
         else:
             self.plc = self._plcthread()
             if self.plc is None:
-                return 100
+                return -2
             else:
                 self.plc.start()
                 return 0
