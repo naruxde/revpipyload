@@ -782,7 +782,7 @@ class RevPiPyLoad(proginit.ProgInit):
             return -1
 
         # Elemente prüfen
-        lst_check = ["Devices", "Sumary", "App"]
+        lst_check = ["Devices", "Summary", "App"]
         for chk in lst_check:
             if chk not in jconfigrsc:
                 return -2
