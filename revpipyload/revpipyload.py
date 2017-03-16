@@ -51,7 +51,7 @@ from xmlrpc.server import SimpleXMLRPCServer
 configrsc = "/opt/KUNBUS/config.rsc"
 picontrolreset = "/opt/KUNBUS/piControlReset"
 procimg = "/dev/piControl0"
-pyloadverion = "0.2.6"
+pyloadverion = "0.2.7"
 
 
 class LogReader():
@@ -169,11 +169,32 @@ class RevPiPlc(Thread):
         self.autoreload = False
         self._evt_exit = Event()
         self.exitcode = None
+        self._fh = None
+        self.gid = 65534
         self._program = program
         self._procplc = None
         self._pversion = pversion
+        self.uid = 65534
         self.zeroonerror = False
         self.zeroonexit = False
+
+    def _setuppopen(self):
+        """Setzt UID und GID fuer das PLC Programm."""
+        os.setgid(self.gid)
+        os.setuid(self.uid)
+
+    def _spopen(self, lst_proc):
+        """Startet das PLC Programm.
+        @param lst_proc: Prozessliste
+        @returns: subprocess"""
+        return subprocess.Popen(
+            lst_proc,
+            preexec_fn=self._setuppopen,
+            cwd=os.path.dirname(self._program),
+            bufsize=1,
+            stdout=subprocess.STDOUT if self._fh is None else self._fh,
+            stderr=subprocess.STDOUT
+        )
 
     def _zeroprocimg(self):
         """Setzt Prozessabbild auf NULL."""
@@ -189,25 +210,24 @@ class RevPiPlc(Thread):
             lst_proc = shlex.split("/usr/bin/env python3 -u " + self._program)
 
         # Ausgaben konfigurieren und ggf. umleiten
-        fh = None
+        logfile = None
         if proginit.pargs.daemon:
             if os.access(os.path.dirname(proginit.logapp), os.R_OK | os.W_OK):
-                fh = proginit.logapp
+                logfile = proginit.logapp
         elif proginit.pargs.logfile is not None:
-            fh = proginit.pargs.logfile
+            logfile = proginit.pargs.logfile
 
-        if fh is not None:
-            fh = open(fh, "a")
-            fh.write("-" * 45)
-            fh.write("\nplc app started: {}\n".format(asctime()))
-            fh.flush()
+        if logfile is not None:
+            self._fh = open(logfile, "a")
+            self._fh.write("-" * 55)
+            self._fh.write("\nplc: {} started: {}\n".format(
+                os.path.basename(self._program), asctime()
+            ))
+            self._fh.flush()
 
         # Prozess erstellen
         proginit.logger.info("start plc program {}".format(self._program))
-        self._procplc = subprocess.Popen(
-            lst_proc, cwd=os.path.dirname(self._program),
-            bufsize=1, stdout=fh, stderr=subprocess.STDOUT
-        )
+        self._procplc = self._spopen(lst_proc)
 
         while not self._evt_exit.is_set():
 
@@ -215,7 +235,6 @@ class RevPiPlc(Thread):
             self.exitcode = self._procplc.poll()
 
             if self.exitcode is not None:
-
                 if self.exitcode > 0:
                     # PLC Python Programm abgestürzt
                     proginit.logger.error(
@@ -239,10 +258,7 @@ class RevPiPlc(Thread):
 
                 if not self._evt_exit.is_set() and self.autoreload:
                     # Prozess neu starten
-                    self._procplc = subprocess.Popen(
-                        lst_proc, cwd=os.path.dirname(self._program),
-                        bufsize=1, stdout=fh, stderr=subprocess.STDOUT
-                    )
+                    self._procplc = self._spopen(lst_proc)
                     if self.exitcode == 0:
                         proginit.logger.warning(
                             "restart plc program after clean exit"
@@ -256,13 +272,15 @@ class RevPiPlc(Thread):
 
             self._evt_exit.wait(1)
 
+        # Prüfen ob es einen subprocess gibt
+        if self._procplc is None:
+            return
+
         # Prozess beenden
         count = 0
         proginit.logger.info("term plc program {}".format(self._program))
-
-        # TODO: Prüfen ob es überhautp noch läuft
-
         self._procplc.terminate()
+
         while self._procplc.poll() is None and count < 10:
             count += 1
             proginit.logger.info(
@@ -340,9 +358,9 @@ class RevPiPyLoad(proginit.ProgInit):
         self.autostart = \
             int(self.globalconfig["DEFAULT"].get("autostart", 0))
         self.plcprog = \
-            self.globalconfig["DEFAULT"].get("plcprogram", None)
+            self.globalconfig["DEFAULT"].get("plcprogram", "none.py")
         self.plcworkdir = \
-            self.globalconfig["DEFAULT"].get("plcworkdir", "/var/lib/revpipyload")
+            self.globalconfig["DEFAULT"].get("plcworkdir", ".")
         self.plcslave = \
             int(self.globalconfig["DEFAULT"].get("plcslave", 0))
         self.pythonver = \
@@ -427,12 +445,14 @@ class RevPiPyLoad(proginit.ProgInit):
             proginit.logger.error("plc file does not exists {}".format(
                 os.path.join(self.plcworkdir, self.plcprog)
             ))
-            return
+            return None
 
         proginit.logger.debug("create PLC watcher")
         th_plc = RevPiPlc(
             os.path.join(self.plcworkdir, self.plcprog), self.pythonver)
         th_plc.autoreload = self.autoreload
+        th_plc.gid = int(self.globalconfig["DEFAULT"].get("plcgid", 65534))
+        th_plc.uid = int(self.globalconfig["DEFAULT"].get("plcuid", 65534))
         th_plc.zeroonerror = self.zerooneerror
         th_plc.zeroonexit = self.zeroonexit
         proginit.logger.debug("created PLC watcher")
@@ -724,7 +744,7 @@ class RevPiPyLoad(proginit.ProgInit):
         fh = open(self.globalconffile, "w")
         self.globalconfig.write(fh)
         proginit.logger.info(
-            "got new config and wrote ist to {}".format(self.globalconffile)
+            "got new config and wrote it to {}".format(self.globalconffile)
         )
 
         if loadnow:
