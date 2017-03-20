@@ -51,7 +51,7 @@ from xmlrpc.server import SimpleXMLRPCServer
 configrsc = "/opt/KUNBUS/config.rsc"
 picontrolreset = "/opt/KUNBUS/piControlReset"
 procimg = "/dev/piControl0"
-pyloadverion = "0.2.7"
+pyloadverion = "0.2.8"
 
 
 class LogReader():
@@ -163,10 +163,11 @@ class RevPiPlc(Thread):
 
     """
 
-    def __init__(self, program, pversion):
+    def __init__(self, program, arguments, pversion):
         """Instantiiert RevPiPlc-Klasse."""
         super().__init__()
         self.autoreload = False
+        self._arguments = arguments
         self._evt_exit = Event()
         self.exitcode = None
         self._fh = None
@@ -205,9 +206,13 @@ class RevPiPlc(Thread):
     def run(self):
         """Fuehrt PLC-Programm aus und ueberwacht es."""
         if self._pversion == 2:
-            lst_proc = shlex.split("/usr/bin/env python2 -u " + self._program)
+            lst_proc = shlex.split("/usr/bin/env python2 -u {} {}".format(
+                self._program, self._arguments
+            ))
         else:
-            lst_proc = shlex.split("/usr/bin/env python3 -u " + self._program)
+            lst_proc = shlex.split("/usr/bin/env python3 -u {} {}".format(
+                self._program, self._arguments
+            ))
 
         # Ausgaben konfigurieren und ggf. umleiten
         logfile = None
@@ -359,6 +364,8 @@ class RevPiPyLoad(proginit.ProgInit):
             int(self.globalconfig["DEFAULT"].get("autostart", 0))
         self.plcprog = \
             self.globalconfig["DEFAULT"].get("plcprogram", "none.py")
+        self.plcarguments = \
+            self.globalconfig["DEFAULT"].get("plcarguments", "")
         self.plcworkdir = \
             self.globalconfig["DEFAULT"].get("plcworkdir", ".")
         self.plcslave = \
@@ -449,7 +456,10 @@ class RevPiPyLoad(proginit.ProgInit):
 
         proginit.logger.debug("create PLC watcher")
         th_plc = RevPiPlc(
-            os.path.join(self.plcworkdir, self.plcprog), self.pythonver)
+            os.path.join(self.plcworkdir, self.plcprog),
+            self.plcarguments,
+            self.pythonver
+        )
         th_plc.autoreload = self.autoreload
         th_plc.gid = int(self.globalconfig["DEFAULT"].get("plcgid", 65534))
         th_plc.uid = int(self.globalconfig["DEFAULT"].get("plcuid", 65534))
@@ -561,6 +571,7 @@ class RevPiPyLoad(proginit.ProgInit):
         dc["autostart"] = self.autostart
         dc["plcworkdir"] = self.plcworkdir
         dc["plcprogram"] = self.plcprog
+        dc["plcarguments"] = self.plcarguments
         dc["plcslave"] = self.plcslave
         dc["pythonversion"] = self.pythonver
         dc["xmlrpc"] = self.xmlrpc
@@ -727,6 +738,7 @@ class RevPiPyLoad(proginit.ProgInit):
             "autoreload": "[01]",
             "autostart": "[01]",
             "plcprogram": ".+",
+            "plcarguments": ".*",
             "plcslave": "[01]",
             "pythonversion": "[23]",
             "xmlrpc": "[0-3]",
