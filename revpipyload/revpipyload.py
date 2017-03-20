@@ -51,7 +51,7 @@ from xmlrpc.server import SimpleXMLRPCServer
 configrsc = "/opt/KUNBUS/config.rsc"
 picontrolreset = "/opt/KUNBUS/piControlReset"
 procimg = "/dev/piControl0"
-pyloadverion = "0.2.8"
+pyloadverion = "0.2.9"
 
 
 class LogReader():
@@ -302,7 +302,7 @@ class RevPiPlc(Thread):
         # Exitcode auswerten
         self.exitcode = self._procplc.poll()
         if self.zeroonexit and self.exitcode == 0 \
-                or self.zeroonerror and self.exitcode > 0:
+                or self.zeroonerror and self.exitcode != 0:
             self._zeroprocimg()
 
     def stop(self):
