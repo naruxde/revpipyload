@@ -1,12 +1,4 @@
 /var/log/revpipyload
-{
-    rotate 6
-    weekly
-    compress
-    delaycompress
-    missingok
-    notifempty
-}
 /var/log/revpipyloadapp
 {
     rotate 6
@@ -15,4 +7,7 @@
     delaycompress
     missingok
     notifempty
+    postrotate
+        kill -SIGUSR1 `cat /var/run/revpipyload.pid` > /dev/null 2>&1 || true
+    endscript
 }
