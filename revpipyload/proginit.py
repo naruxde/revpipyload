@@ -7,10 +7,10 @@
 # -*- coding: utf-8 -*-
 """Main functions of our program."""
 import logging
+import os.path
 import sys
 from argparse import ArgumentParser
 from os import fork as osfork
-from os.path import exists as ospexists
 
 
 forked = False
@@ -19,6 +19,7 @@ logapp = "revpipyloadapp.log"
 logplc = "revpipyload.log"
 logger = None
 pargs = None
+startdir = None
 
 
 def cleanup():
@@ -54,13 +55,22 @@ def configure():
     global pargs
     pargs = parser.parse_args()
 
+    # Pfade absolut umschreiben
+    global startdir
+    if startdir is None:
+        startdir = os.path.abspath(".")
+    if pargs.conffile is not None and os.path.dirname(pargs.conffile) == "":
+        pargs.conffile = os.path.join(startdir, pargs.confffile)
+    if pargs.logfile is not None and os.path.dirname(pargs.logfile) == "":
+        pargs.logfile = os.path.join(startdir, pargs.logfile)
+    
     # Prüfen ob als Daemon ausgeführt werden soll
     global forked
     pidfile = "/var/run/revpipyload.pid"
     pid = 0
     if pargs.daemon and not forked:
         # Prüfen ob daemon schon läuft
-        if ospexists(pidfile):
+        if os.path.exists(pidfile):
             raise SystemError(
                 "program already running as daemon. check {}".format(pidfile)
             )
@@ -74,16 +84,17 @@ def configure():
         else:
             forked = True
 
+    global logapp
+    global logplc
     if pargs.daemon:
-        global logapp
-        global logplc
-
         # Ausgaben umhängen in Logfile
         logapp = "/var/log/revpipyloadapp"
         logplc = "/var/log/revpipyload"
         pargs.conffile = "/etc/revpipyload/revpipyload.conf"
         sys.stdout = open(logplc, "a")
         sys.stderr = sys.stdout
+    elif pargs.logfile is not None:
+        logplc = pargs.logfile
 
     # Initialize configparser globalconfig
     global globalconffile

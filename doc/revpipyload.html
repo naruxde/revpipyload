@@ -42,7 +42,7 @@ Classes</h3>
 <td>Ermoeglicht den Zugriff auf die Logdateien.</td>
 </tr><tr>
 <td><a style="color:#0000FF" href="#PipeLogwriter">PipeLogwriter</a></td>
-<td></td>
+<td>File PIPE fuer das Schreiben des APP Log.</td>
 </tr><tr>
 <td><a style="color:#0000FF" href="#RevPiPlc">RevPiPlc</a></td>
 <td>Verwaltet das PLC Python Programm.</td>
@@ -171,7 +171,16 @@ str() mit Logdaten
 <hr /><hr />
 <a NAME="PipeLogwriter" ID="PipeLogwriter"></a>
 <h2 style="background-color:#FFFFFF;color:#0000FF">PipeLogwriter</h2>
+<p>
+File PIPE fuer das Schreiben des APP Log.
+</p><p>
+    Spezieller LogFile-Handler fuer die Ausgabe des subprocess fuer das Python
+    PLC Programm. Die Ausgabe kann nicht auf einen neuen FileHandler
+    umgeschrieben werden. Dadurch waere es nicht moeglich nach einem logrotate
+    die neue Datei zu verwenden. Ueber die PIPE wird dies umgangen.
+</p><p>
 
+</p>
 <h3 style="background-color:#FFFFFF;color:#FF0000">
 Derived from</h3>
 Thread
@@ -190,13 +199,25 @@ Methods</h3>
 <table>
 <tr>
 <td><a style="color:#0000FF" href="#PipeLogwriter.__init__">PipeLogwriter</a></td>
+<td>Instantiiert PipeLogwriter-Klasse.</td>
+</tr><tr>
+<td><a style="color:#0000FF" href="#PipeLogwriter.__del__">__del__</a></td>
 <td></td>
+</tr><tr>
+<td><a style="color:#0000FF" href="#PipeLogwriter._configurefh">_configurefh</a></td>
+<td>Konfiguriert den FileHandler fuer Ausgaben der PLCAPP.</td>
+</tr><tr>
+<td><a style="color:#0000FF" href="#PipeLogwriter.logline">logline</a></td>
+<td>Schreibt eine Zeile in die Logdatei oder stdout.</td>
+</tr><tr>
+<td><a style="color:#0000FF" href="#PipeLogwriter.newlogfile">newlogfile</a></td>
+<td>Konfiguriert den FileHandler auf eine neue Logdatei.</td>
 </tr><tr>
 <td><a style="color:#0000FF" href="#PipeLogwriter.run">run</a></td>
-<td></td>
+<td>Prueft auf neue Logzeilen und schreibt diese.</td>
 </tr><tr>
 <td><a style="color:#0000FF" href="#PipeLogwriter.stop">stop</a></td>
-<td></td>
+<td>Beendetden Thread und die FileHandler werden geschlossen.</td>
 </tr>
 </table>
 <h3 style="background-color:#FFFFFF;color:#FF0000">
@@ -207,16 +228,59 @@ Static Methods</h3>
 <a NAME="PipeLogwriter.__init__" ID="PipeLogwriter.__init__"></a>
 <h3 style="background-color:#FFFFFF;color:#FF0000">
 PipeLogwriter (Constructor)</h3>
-<b>PipeLogwriter</b>(<i>fh</i>)
-<a NAME="PipeLogwriter.run" ID="PipeLogwriter.run"></a>
+<b>PipeLogwriter</b>(<i>logfilename</i>)
+<p>
+Instantiiert PipeLogwriter-Klasse.
+</p><dl>
+<dt><i>logfilename:</i></dt>
+<dd>
+Dateiname fuer Logdatei
+</dd>
+</dl><a NAME="PipeLogwriter.__del__" ID="PipeLogwriter.__del__"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+PipeLogwriter.__del__</h3>
+<b>__del__</b>(<i></i>)
+<a NAME="PipeLogwriter._configurefh" ID="PipeLogwriter._configurefh"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+PipeLogwriter._configurefh</h3>
+<b>_configurefh</b>(<i></i>)
+<p>
+Konfiguriert den FileHandler fuer Ausgaben der PLCAPP.
+</p><dl>
+<dt>Returns:</dt>
+<dd>
+FileHandler-Objekt
+</dd>
+</dl><a NAME="PipeLogwriter.logline" ID="PipeLogwriter.logline"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+PipeLogwriter.logline</h3>
+<b>logline</b>(<i>message</i>)
+<p>
+Schreibt eine Zeile in die Logdatei oder stdout.
+</p><dl>
+<dt><i>message:</i></dt>
+<dd>
+Logzeile zum Schreiben
+</dd>
+</dl><a NAME="PipeLogwriter.newlogfile" ID="PipeLogwriter.newlogfile"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+PipeLogwriter.newlogfile</h3>
+<b>newlogfile</b>(<i></i>)
+<p>
+Konfiguriert den FileHandler auf eine neue Logdatei.
+</p><a NAME="PipeLogwriter.run" ID="PipeLogwriter.run"></a>
 <h3 style="background-color:#FFFFFF;color:#FF0000">
 PipeLogwriter.run</h3>
 <b>run</b>(<i></i>)
-<a NAME="PipeLogwriter.stop" ID="PipeLogwriter.stop"></a>
+<p>
+Prueft auf neue Logzeilen und schreibt diese.
+</p><a NAME="PipeLogwriter.stop" ID="PipeLogwriter.stop"></a>
 <h3 style="background-color:#FFFFFF;color:#FF0000">
 PipeLogwriter.stop</h3>
 <b>stop</b>(<i></i>)
-
+<p>
+Beendetden Thread und die FileHandler werden geschlossen.
+</p>
 <div align="right"><a style="color:#0000FF" href="#top">Up</a></div>
 <hr /><hr />
 <a NAME="RevPiPlc" ID="RevPiPlc"></a>
@@ -251,8 +315,8 @@ Methods</h3>
 <td><a style="color:#0000FF" href="#RevPiPlc.__init__">RevPiPlc</a></td>
 <td>Instantiiert RevPiPlc-Klasse.</td>
 </tr><tr>
-<td><a style="color:#0000FF" href="#RevPiPlc._configurefh">_configurefh</a></td>
-<td></td>
+<td><a style="color:#0000FF" href="#RevPiPlc._configureplw">_configureplw</a></td>
+<td>Konfiguriert den PipeLogwriter fuer Ausgaben der PLCAPP.</td>
 </tr><tr>
 <td><a style="color:#0000FF" href="#RevPiPlc._setuppopen">_setuppopen</a></td>
 <td>Setzt UID und GID fuer das PLC Programm.</td>
@@ -264,7 +328,7 @@ Methods</h3>
 <td>Setzt Prozessabbild auf NULL.</td>
 </tr><tr>
 <td><a style="color:#0000FF" href="#RevPiPlc.newlogfile">newlogfile</a></td>
-<td></td>
+<td>Konfiguriert die FileHandler auf neue Logdatei.</td>
 </tr><tr>
 <td><a style="color:#0000FF" href="#RevPiPlc.run">run</a></td>
 <td>Fuehrt PLC-Programm aus und ueberwacht es.</td>
@@ -284,11 +348,18 @@ RevPiPlc (Constructor)</h3>
 <b>RevPiPlc</b>(<i>program, arguments, pversion</i>)
 <p>
 Instantiiert RevPiPlc-Klasse.
-</p><a NAME="RevPiPlc._configurefh" ID="RevPiPlc._configurefh"></a>
+</p><a NAME="RevPiPlc._configureplw" ID="RevPiPlc._configureplw"></a>
 <h3 style="background-color:#FFFFFF;color:#FF0000">
-RevPiPlc._configurefh</h3>
-<b>_configurefh</b>(<i></i>)
-<a NAME="RevPiPlc._setuppopen" ID="RevPiPlc._setuppopen"></a>
+RevPiPlc._configureplw</h3>
+<b>_configureplw</b>(<i></i>)
+<p>
+Konfiguriert den PipeLogwriter fuer Ausgaben der PLCAPP.
+</p><dl>
+<dt>Returns:</dt>
+<dd>
+PipeLogwriter()
+</dd>
+</dl><a NAME="RevPiPlc._setuppopen" ID="RevPiPlc._setuppopen"></a>
 <h3 style="background-color:#FFFFFF;color:#FF0000">
 RevPiPlc._setuppopen</h3>
 <b>_setuppopen</b>(<i></i>)
@@ -297,7 +368,7 @@ Setzt UID und GID fuer das PLC Programm.
 </p><a NAME="RevPiPlc._spopen" ID="RevPiPlc._spopen"></a>
 <h3 style="background-color:#FFFFFF;color:#FF0000">
 RevPiPlc._spopen</h3>
-<b>_spopen</b>(<i>lst_proc, filenum=None</i>)
+<b>_spopen</b>(<i>lst_proc</i>)
 <p>
 Startet das PLC Programm.
 </p><dl>
@@ -320,7 +391,9 @@ Setzt Prozessabbild auf NULL.
 <h3 style="background-color:#FFFFFF;color:#FF0000">
 RevPiPlc.newlogfile</h3>
 <b>newlogfile</b>(<i></i>)
-<a NAME="RevPiPlc.run" ID="RevPiPlc.run"></a>
+<p>
+Konfiguriert die FileHandler auf neue Logdatei.
+</p><a NAME="RevPiPlc.run" ID="RevPiPlc.run"></a>
 <h3 style="background-color:#FFFFFF;color:#FF0000">
 RevPiPlc.run</h3>
 <b>run</b>(<i></i>)

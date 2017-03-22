@@ -43,8 +43,9 @@ from configparser import ConfigParser
 from json import loads as jloads
 from re import match as rematch
 from shutil import rmtree
+from sys import stdout as sysstdout
 from tempfile import mktemp
-from threading import Thread, Event
+from threading import Thread, Event, Lock
 from time import sleep, asctime
 from xmlrpc.client import Binary
 from xmlrpc.server import SimpleXMLRPCServer
@@ -162,35 +163,107 @@ class LogReader():
 
 class PipeLogwriter(Thread):
 
-    def __init__(self, fh):
+    """File PIPE fuer das Schreiben des APP Log.
+
+    Spezieller LogFile-Handler fuer die Ausgabe des subprocess fuer das Python
+    PLC Programm. Die Ausgabe kann nicht auf einen neuen FileHandler
+    umgeschrieben werden. Dadurch waere es nicht moeglich nach einem logrotate
+    die neue Datei zu verwenden. Ueber die PIPE wird dies umgangen.
+
+    """
+
+    def __init__(self, logfilename):
+        """Instantiiert PipeLogwriter-Klasse.
+        @param logfilename: Dateiname fuer Logdatei"""
         super().__init__()
         self._exit = Event()
-        self.fh = fh
-        if fh is None:
-            self.pipeout = None
+        self._fh = None
+        self._lckfh = Lock()
+        self.logfile = logfilename
+
+        # Logdatei öffnen
+        self._fh = self._configurefh()
+
+        # Pipes öffnen
+        self._fdr, self.fdw = os.pipe()
+        proginit.logger.debug("pipe fd read: {} / write: {}".format(
+            self._fdr, self.fdw
+        ))
+
+    def __del__(self):
+        if self._fh is not None:
+            self._fh.close()
+
+    def _configurefh(self):
+        """Konfiguriert den FileHandler fuer Ausgaben der PLCAPP.
+        @returns: FileHandler-Objekt"""
+        proginit.logger.debug("enter PipeLogwriter._configurefh()")
+
+        dirname = os.path.dirname(self.logfile)
+
+        proginit.logger.debug("dirname = {}".format(os.path.abspath(dirname)))
+
+        if os.access(dirname, os.R_OK | os.W_OK):
+            logfile = open(self.logfile, "a")
         else:
-            self._pipein, self.pipeout = os.pipe()
+            raise RuntimeError("can not open logfile {}".format(self.logfile))
+
+        proginit.logger.debug("leave PipeLogwriter._configurefh()")
+        return logfile
+
+    def logline(self, message):
+        """Schreibt eine Zeile in die Logdatei oder stdout.
+        @param message: Logzeile zum Schreiben"""
+        with self._lckfh:
+            self._fh.write("{}\n".format(message))
+            self._fh.flush()
+
+    def newlogfile(self):
+        """Konfiguriert den FileHandler auf eine neue Logdatei."""
+        proginit.logger.debug("enter RevPiPlc.newlogfile()")
+        with self._lckfh:
+            self._fh.close()
+            self._fh = self._configurefh()
+        proginit.logger.debug("leave RevPiPlc.newlogfile()")
 
     def run(self):
-        if self.fh is not None:
-            fhread = os.fdopen(self._pipein)
-            proginit.logger.debug("enter logreader pipe")
-            while not self._exit.is_set():
-                line = fhread.readline()
-                try:
-                    self.fh.write(line)
-                    self.fh.flush()
-                except:
-                    pass
-            proginit.logger.debug("leave logreader pipe")
+        """Prueft auf neue Logzeilen und schreibt diese."""
+        proginit.logger.debug("enter PipeLogwriter.run()")
+
+        fhread = os.fdopen(self._fdr)
+        proginit.logger.debug("enter logreader pipe loop")
+        while not self._exit.is_set():
+            line = fhread.readline()
+            self._lckfh.acquire()
+            try:
+                self._fh.write(line)
+                self._fh.flush()
+            except:
+                proginit.logger.exception("PipeLogwriter write log line")
+            finally:
+                self._lckfh.release()
+        proginit.logger.debug("leave logreader pipe loop")
+
+        proginit.logger.debug("close all pipes")
+        os.close(self._fdr)
+        os.close(self.fdw)
+        proginit.logger.debug("closed all pipes")
+
+        proginit.logger.debug("leave PipeLogwriter.run()")
 
     def stop(self):
-        proginit.logger.debug("quit pipe logreader")
+        """Beendetden Thread und die FileHandler werden geschlossen."""
+        proginit.logger.debug("enter PipeLogwriter.stop()")
         self._exit.set()
-        if self.pipeout is not None:
-            os.write(self.pipeout, b"\n")
-            os.close(self.pipeout)
-            os.close(self._pipein)
+        self._lckfh.acquire()
+        try:
+            os.write(self.fdw, b"\n")
+        except:
+            pass
+        finally:
+            self._lckfh.release()
+
+        proginit.logger.debug("leave PipeLogwriter.stop()")
 
 
 class RevPiPlc(Thread):
@@ -211,9 +284,8 @@ class RevPiPlc(Thread):
         self._arguments = arguments
         self._evt_exit = Event()
         self.exitcode = None
-        self._fh = self._configurefh()
         self.gid = 65534
-        self.plw = None
+        self._plw = self._configureplw()
         self._program = program
         self._procplc = None
         self._pversion = pversion
@@ -221,9 +293,10 @@ class RevPiPlc(Thread):
         self.zeroonerror = False
         self.zeroonexit = False
 
-    def _configurefh(self):
-        # Ausgaben konfigurieren und ggf. umleiten
-        proginit.logger.debug("configure fh applog")
+    def _configureplw(self):
+        """Konfiguriert den PipeLogwriter fuer Ausgaben der PLCAPP.
+        @returns: PipeLogwriter()"""
+        proginit.logger.debug("enter RevPiPlc._configureplw()")
         logfile = None
         if proginit.pargs.daemon:
             if os.access(os.path.dirname(proginit.logapp), os.R_OK | os.W_OK):
@@ -231,10 +304,11 @@ class RevPiPlc(Thread):
         elif proginit.pargs.logfile is not None:
             logfile = proginit.pargs.logfile
 
-        if logfile is not None:
-            return open(logfile, "a")
-        else:
-            return None
+        if not logfile is None:
+            logfile = PipeLogwriter(logfile)
+
+        proginit.logger.debug("leave RevPiPlc._configureplw()")
+        return logfile
 
     def _setuppopen(self):
         """Setzt UID und GID fuer das PLC Programm."""
@@ -243,19 +317,21 @@ class RevPiPlc(Thread):
         os.setgid(self.gid)
         os.setuid(self.uid)
 
-    def _spopen(self, lst_proc, filenum=None):
+    def _spopen(self, lst_proc):
         """Startet das PLC Programm.
         @param lst_proc: Prozessliste
         @returns: subprocess"""
-        proginit.logger.debug("configure subprocess")
-        return subprocess.Popen(
+        proginit.logger.debug("enter RevPiPlc._spopen({})".format(lst_proc))
+        sp = subprocess.Popen(
             lst_proc,
             preexec_fn=self._setuppopen,
             cwd=os.path.dirname(self._program),
             bufsize=1,
-            stdout=subprocess.STDOUT if filenum is None else filenum,
+            stdout=sysstdout if self._plw is None else self._plw.fdw,
             stderr=subprocess.STDOUT
         )
+        proginit.logger.debug("leave RevPiPlc._spopen()")
+        return sp
 
     def _zeroprocimg(self):
         """Setzt Prozessabbild auf NULL."""
@@ -264,21 +340,18 @@ class RevPiPlc(Thread):
             f.write(bytes(4096))
 
     def newlogfile(self):
-        if self._fh is not None:
-            self._fh.close()
+        """Konfiguriert die FileHandler auf neue Logdatei."""
+        proginit.logger.debug("enter RevPiPlc.newlogfile()")
+        if self._plw is not None:
+            self._plw.newlogfile()
+            self._plw.logline("-" * 55)
+            self._plw.logline("start new logfile: {}".format(asctime()))
 
-            self._fh = self._configurefh()
-            if self.plw is not None:
-                self.plw.fh = self._fh
-
-            self._fh.write("-" * 55)
-            self._fh.write("\nstart new logfile: {}\n".format(asctime()))
-            self._fh.flush()
-
-            proginit.logger.info("new plc logfile")
+        proginit.logger.debug("leave RevPiPlc.newlogfile()")
 
     def run(self):
         """Fuehrt PLC-Programm aus und ueberwacht es."""
+        proginit.logger.debug("enter RevPiPlc.run()")
         if self._pversion == 2:
             lst_proc = shlex.split("/usr/bin/env python2 -u {} {}".format(
                 self._program, self._arguments
@@ -288,21 +361,17 @@ class RevPiPlc(Thread):
                 self._program, self._arguments
             ))
 
-        # Logausgabe
-        if self._fh is not None:
-            self._fh.write("-" * 55)
-            self._fh.write("\nplc: {} started: {}\n".format(
-                os.path.basename(self._program), asctime()
-            ))
-            self._fh.flush()
-
-        # LogWriter
-        self.plw = PipeLogwriter(self._fh)
-        self.plw.start()
-
         # Prozess erstellen
         proginit.logger.info("start plc program {}".format(self._program))
-        self._procplc = self._spopen(lst_proc, self.plw.pipeout)
+        self._procplc = self._spopen(lst_proc)
+
+        # LogWriter starten und Logausgaben schreiben
+        if self._plw is not None:
+            self._plw.logline("-" * 55)
+            self._plw.logline("plc: {} started: {}".format(
+                os.path.basename(self._program), asctime()
+            ))
+            self._plw.start()
 
         while not self._evt_exit.is_set():
 
@@ -333,7 +402,7 @@ class RevPiPlc(Thread):
 
                 if not self._evt_exit.is_set() and self.autoreload:
                     # Prozess neu starten
-                    self._procplc = self._spopen(lst_proc, self.plw.pipeout)
+                    self._procplc = self._spopen(lst_proc)
                     if self.exitcode == 0:
                         proginit.logger.warning(
                             "restart plc program after clean exit"
@@ -347,15 +416,23 @@ class RevPiPlc(Thread):
 
             self._evt_exit.wait(1)
 
+        proginit.logger.debug("leave RevPiPlc.run()")
+
     def stop(self):
         """Beendet PLC-Programm."""
+        proginit.logger.debug("enter RevPiPlc.stop()")
         proginit.logger.info("stop revpiplc thread")
         self._evt_exit.set()
 
         # Prüfen ob es einen subprocess gibt
         if self._procplc is None:
-            if self.plw is not None:
-                self.plw.stop()
+            if self._plw is not None:
+                self._plw.stop()
+                proginit.logger.debug("join after NONE pipe thread")
+                self._plw.join()
+                proginit.logger.debug("joined after NONE pipe thread")
+
+            proginit.logger.debug("leave RevPiPlc.stop()")
             return
 
         # Prozess beenden
@@ -382,8 +459,13 @@ class RevPiPlc(Thread):
                 or self.zeroonerror and self.exitcode != 0:
             self._zeroprocimg()
 
-        if self.plw is not None:
-            self.plw.stop()
+        if self._plw is not None:
+            self._plw.stop()
+            proginit.logger.debug("join pipe thread")
+            self._plw.join()
+            proginit.logger.debug("joined pipe thread")
+
+        proginit.logger.debug("leave RevPiPlc.stop()")
 
 
 class RevPiPyLoad():
@@ -553,6 +635,8 @@ class RevPiPyLoad():
 
         # Programm aufräumen
         proginit.cleanup()
+
+        proginit.logger.debug("end revpipyload program")
 
     def _sigloadconfig(self, signum, frame):
         """Signal handler to load configuration."""
