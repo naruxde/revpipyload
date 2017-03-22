@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE Project SYSTEM "Project-5.1.dtd">
 <!-- eric project file for project revpipyload -->
-<!-- Saved: 2017-03-21, 18:11:09 -->
+<!-- Saved: 2017-03-22, 12:24:46 -->
 <!-- Copyright (C) 2017 Sven Sager, akira@narux.de -->
 <Project version="5.1">
   <Language>en_US</Language>
@@ -27,6 +27,7 @@
     <Other>MANIFEST.in</Other>
     <Other>doc</Other>
     <Other>debian</Other>
+    <Other>revpipyload.api</Other>
   </Others>
   <Vcs>
     <VcsType>Mercurial</VcsType>
@@ -145,6 +146,47 @@
     <DocumentationParams>
       <dict>
         <key>
+          <string>ERIC4API</string>
+        </key>
+        <value>
+          <dict>
+            <key>
+              <string>ignoreFilePatterns</string>
+            </key>
+            <value>
+              <list>
+                <string>setup.py</string>
+              </list>
+            </value>
+            <key>
+              <string>includePrivate</string>
+            </key>
+            <value>
+              <bool>True</bool>
+            </value>
+            <key>
+              <string>languages</string>
+            </key>
+            <value>
+              <list>
+                <string>Python3</string>
+              </list>
+            </value>
+            <key>
+              <string>outputFile</string>
+            </key>
+            <value>
+              <string>revpipyload.api</string>
+            </value>
+            <key>
+              <string>useRecursion</string>
+            </key>
+            <value>
+              <bool>True</bool>
+            </value>
+          </dict>
+        </value>
+        <key>
           <string>ERIC4DOC</string>
         </key>
         <value>
@@ -164,7 +206,7 @@
             </key>
             <value>
               <list>
-                <string></string>
+                <string>setup.py</string>
               </list>
             </value>
             <key>

@@ -60,7 +60,7 @@ def configure():
     if startdir is None:
         startdir = os.path.abspath(".")
     if pargs.conffile is not None and os.path.dirname(pargs.conffile) == "":
-        pargs.conffile = os.path.join(startdir, pargs.confffile)
+        pargs.conffile = os.path.join(startdir, pargs.conffile)
     if pargs.logfile is not None and os.path.dirname(pargs.logfile) == "":
         pargs.logfile = os.path.join(startdir, pargs.logfile)
     
