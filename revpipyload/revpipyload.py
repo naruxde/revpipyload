@@ -33,8 +33,10 @@ begrenzt werden!
 import gzip
 import proginit
 import os
+import pickle
 import shlex
 import signal
+import socket
 import subprocess
 import tarfile
 import zipfile
@@ -53,7 +55,14 @@ from xmlrpc.server import SimpleXMLRPCServer
 configrsc = "/opt/KUNBUS/config.rsc"
 picontrolreset = "/opt/KUNBUS/piControlReset"
 procimg = "/dev/piControl0"
-pyloadverion = "0.2.10"
+pyloadverion = "0.3.0"
+
+
+def _zeroprocimg():
+    """Setzt Prozessabbild auf NULL."""
+    if os.path.exists(procimg):
+        f = open(procimg, "w+b", 0)
+        f.write(bytes(4096))
 
 
 class LogReader():
@@ -304,7 +313,7 @@ class RevPiPlc(Thread):
         elif proginit.pargs.logfile is not None:
             logfile = proginit.pargs.logfile
 
-        if not logfile is None:
+        if logfile is not None:
             logfile = PipeLogwriter(logfile)
 
         proginit.logger.debug("leave RevPiPlc._configureplw()")
@@ -332,12 +341,6 @@ class RevPiPlc(Thread):
         )
         proginit.logger.debug("leave RevPiPlc._spopen()")
         return sp
-
-    def _zeroprocimg(self):
-        """Setzt Prozessabbild auf NULL."""
-        if os.path.exists("/dev/piControl0"):
-            f = open("/dev/piControl0", "w+b", 0)
-            f.write(bytes(4096))
 
     def newlogfile(self):
         """Konfiguriert die FileHandler auf neue Logdatei."""
@@ -387,7 +390,7 @@ class RevPiPlc(Thread):
                         )
                     )
                     if self.zeroonerror:
-                        self._zeroprocimg()
+                        _zeroprocimg()
                         proginit.logger.warning(
                             "set piControl0 to ZERO after PLC program error")
 
@@ -395,7 +398,7 @@ class RevPiPlc(Thread):
                     # PLC Python Programm sauber beendet
                     proginit.logger.info("plc program did a clean exit")
                     if self.zeroonexit:
-                        self._zeroprocimg()
+                        _zeroprocimg()
                         proginit.logger.info(
                             "set piControl0 to ZERO after PLC program returns "
                             "clean exitcode")
@@ -457,7 +460,7 @@ class RevPiPlc(Thread):
         self.exitcode = self._procplc.poll()
         if self.zeroonexit and self.exitcode == 0 \
                 or self.zeroonerror and self.exitcode != 0:
-            self._zeroprocimg()
+            _zeroprocimg()
 
         if self._plw is not None:
             self._plw.stop()
@@ -466,6 +469,100 @@ class RevPiPlc(Thread):
             proginit.logger.debug("joined pipe thread")
 
         proginit.logger.debug("leave RevPiPlc.stop()")
+
+
+class RevPiSlave(Thread):
+
+    def __init__(self):
+        """Instantiiert RevPiSlave-Klasse."""
+        super().__init__()
+        self._evt_exit = Event()
+        self.zeroonerror = False
+        self.zeroonexit = False
+
+    def run(self):
+        proginit.logger.debug("enter RevPiSlave.run()")
+
+        msgcli = [b'DATA', b'PICT', b'SEND']
+
+        # Socket öffnen und konfigurieren
+        self.so = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.so.bind(("", 55234))
+        self.so.listen(1)
+
+        self.rpi = None
+
+        while not self._evt_exit.is_set():
+
+            # Verbindung annehmen
+            proginit.logger.info("starte accept")
+            try:
+                self.rpi, addr = self.so.accept()
+            except:
+                proginit.logger.exception("after accept")
+                continue
+
+            # Prozessabbild öffnen
+            fh_proc = open(procimg, "r+b", 0)
+
+            # Erste Meldung erhalten
+            meldung = self.rpi.recv(4)
+
+            while meldung in msgcli:
+
+                if meldung == b'PICT':
+                    # piCtory Konfiguration senden
+                    fh_pic = open(configrsc, "rb")
+                    while True:
+                        data = fh_pic.read(1024)
+                        if data:
+                            self.rpi.send(data)
+                        else:
+                            fh_pic.close()
+                            break
+
+                    # Abschlussmeldung
+                    self.rpi.send(b'PICOK')
+                    proginit.logger.debug("pictory ende")
+
+                if meldung == b'DATA':
+                    # Processabbild übertragen
+                    block = 0
+                    fh_proc.seek(0)
+                    while block < 4:
+                        self.rpi.send(fh_proc.read(1024))
+                        block += 1
+                    proginit.logger.debug("procimg ende")
+
+                if meldung == b'SEND':
+                    # Ausgänge empfangen
+                    block = self.rpi.recv(1024)
+                    test = pickle.loads(block)
+                    fh_proc.seek(test[0])
+                    fh_proc.write(test[1])
+                    proginit.logger.debug(test)
+
+                # Nächste Meldung erhalten
+                meldung = self.rpi.recv(4)
+
+            fh_proc.close()
+            self.rpi.shutdown(socket.SHUT_RDWR)
+            self.rpi.close()
+
+        # Socket schließen
+        self.so.close()
+
+        proginit.logger.debug("leave RevPiSlave.run()")
+
+    def stop(self):
+        """Beendet Slaveausfuehrung."""
+        proginit.logger.debug("enter RevPiSlave.stop()")
+        self._evt_exit.set()
+
+        if self.rpi is not None:
+            self.rpi.close()
+        self.so.shutdown(socket.SHUT_RDWR)
+        proginit.logger.debug("leave RevPiSlave.stop()")
 
 
 class RevPiPyLoad():
@@ -606,26 +703,35 @@ class RevPiPyLoad():
     def _plcthread(self):
         """Konfiguriert den PLC-Thread fuer die Ausfuehrung.
         @returns: PLC-Thread Object or None"""
+        th_plc = None
 
-        # Prüfen ob Programm existiert
-        if not os.path.exists(os.path.join(self.plcworkdir, self.plcprog)):
-            proginit.logger.error("plc file does not exists {}".format(
-                os.path.join(self.plcworkdir, self.plcprog)
-            ))
-            return None
+        if self.plcslave:
+            # Slaveausfuehrung übergeben
+            th_plc = RevPiSlave()
+            th_plc.zeroonerror = self.zerooneerror
+            th_plc.zeroonexit = self.zeroonexit
 
-        proginit.logger.debug("create PLC watcher")
-        th_plc = RevPiPlc(
-            os.path.join(self.plcworkdir, self.plcprog),
-            self.plcarguments,
-            self.pythonver
-        )
-        th_plc.autoreload = self.autoreload
-        th_plc.gid = int(self.globalconfig["DEFAULT"].get("plcgid", 65534))
-        th_plc.uid = int(self.globalconfig["DEFAULT"].get("plcuid", 65534))
-        th_plc.zeroonerror = self.zerooneerror
-        th_plc.zeroonexit = self.zeroonexit
-        proginit.logger.debug("created PLC watcher")
+        else:
+            # Prüfen ob Programm existiert
+            if not os.path.exists(os.path.join(self.plcworkdir, self.plcprog)):
+                proginit.logger.error("plc file does not exists {}".format(
+                    os.path.join(self.plcworkdir, self.plcprog)
+                ))
+                return None
+
+            proginit.logger.debug("create PLC watcher")
+            th_plc = RevPiPlc(
+                os.path.join(self.plcworkdir, self.plcprog),
+                self.plcarguments,
+                self.pythonver
+            )
+            th_plc.autoreload = self.autoreload
+            th_plc.gid = int(self.globalconfig["DEFAULT"].get("plcgid", 65534))
+            th_plc.uid = int(self.globalconfig["DEFAULT"].get("plcuid", 65534))
+            th_plc.zeroonerror = self.zerooneerror
+            th_plc.zeroonexit = self.zeroonexit
+            proginit.logger.debug("created PLC watcher")
+
         return th_plc
 
     def _sigexit(self, signum, frame):
