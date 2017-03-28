@@ -649,7 +649,7 @@ class RevPiPyLoad():
 
         # Logger neu konfigurieren
         proginit.configure()
-        proginit.logger.info("start new logfile: {}".format(asctime()))
+        proginit.logger.warning("start new logfile: {}".format(asctime()))
 
         # stdout für revpipyplc
         if self.plc is not None:
