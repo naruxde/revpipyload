@@ -514,7 +514,10 @@ class RevPiSlave(Thread):
             fh_proc = open(procimg, "r+b", 0)
 
             # Erste Meldung erhalten
-            meldung = self.rpi.recv(12)
+            try:
+                meldung = self.rpi.recv(12)
+            except:
+                continue
 
             comtime = 0
             while meldung[:4] in msgcli:
@@ -548,35 +551,48 @@ class RevPiSlave(Thread):
 
                 if command == b'DATA':
                     # Processabbild übertragen
-                    bcount = 0
-                    blength = lenval
                     fh_proc.seek(startval)
-                    while bcount < blength:
-                        self.rpi.send(fh_proc.read(1024))
-                        bcount += 1024
+
+                    sendcount = lenval
+                    try:
+                        while sendcount > 1024:
+                            sendcount -= self.rpi.send(fh_proc.read(1024))
+                        self.rpi.send(fh_proc.read(sendcount))
+
+                    except:
+                        break
 
                 if command == b'SEND':
                     # Ausgänge empfangen
-                    block = self.rpi.recv(lenval)
+                    try:
+                        block = self.rpi.recv(lenval)
+                    except:
+                        break
                     fh_proc.seek(startval)
                     fh_proc.write(block)
 
                 # Nächste Meldung erhalten
-                meldung = self.rpi.recv(12)
+                try:
+                    meldung = self.rpi.recv(12)
+                except:
+                    break
 
                 # Verarbeitungszeit prüfen
                 comtime = default_timer() - ot
                 if comtime > self.deadtime:
-                    proginit.logger.error(
+                    proginit.logger.warning(
                         "runtime more than {} ms: {}".format(
                             int(self.deadtime * 1000), int(comtime * 1000)
                         )
                     )
-                    break
+                    #break
 
             fh_proc.close()
-            self.rpi.shutdown(socket.SHUT_RDWR)
-            self.rpi.close()
+            try:
+                self.rpi.shutdown(socket.SHUT_RDWR)
+                self.rpi.close()
+            except:
+                pass
 
             if self.zeroonexit or comtime > self.deadtime and self.zeroonerror:
                 _zeroprocimg()
@@ -741,7 +757,7 @@ class RevPiPyLoad():
         if self.plcslave:
             # Slaveausfuehrung übergeben
             th_plc = RevPiSlave()
-            th_plc.zeroonerror = self.zerooneerror
+            th_plc.zeroonerror = self.zeroonerror
             th_plc.zeroonexit = self.zeroonexit
 
         else:
@@ -761,7 +777,7 @@ class RevPiPyLoad():
             th_plc.autoreload = self.autoreload
             th_plc.gid = int(self.globalconfig["DEFAULT"].get("plcgid", 65534))
             th_plc.uid = int(self.globalconfig["DEFAULT"].get("plcuid", 65534))
-        th_plc.zeroonerror = self.zeroonerror
+            th_plc.zeroonerror = self.zeroonerror
             th_plc.zeroonexit = self.zeroonexit
             proginit.logger.debug("created PLC watcher")
 
