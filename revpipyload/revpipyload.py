@@ -39,6 +39,7 @@ import signal
 import socket
 import subprocess
 import tarfile
+import warnings
 import zipfile
 from concurrent import futures
 from configparser import ConfigParser
@@ -49,6 +50,7 @@ from sys import stdout as sysstdout
 from tempfile import mktemp
 from threading import Thread, Event, Lock
 from time import sleep, asctime
+from timeit import default_timer
 from xmlrpc.client import Binary
 from xmlrpc.server import SimpleXMLRPCServer
 
@@ -476,6 +478,7 @@ class RevPiSlave(Thread):
     def __init__(self):
         """Instantiiert RevPiSlave-Klasse."""
         super().__init__()
+        self.deadtime = 0.5
         self._evt_exit = Event()
         self.zeroonerror = False
         self.zeroonexit = False
@@ -487,11 +490,17 @@ class RevPiSlave(Thread):
 
         # Socket öffnen und konfigurieren
         self.so = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.so.bind(("", 55234))
+        while not self._evt_exit.is_set():
+            try:
+                self.so.bind(("", 55234))
+            except:
+                warnings.warn("can not bind socket - retry", Warning)
+                self._evt_exit.wait(1)
+            else:
+                break
         self.so.listen(1)
 
         self.rpi = None
-
         while not self._evt_exit.is_set():
 
             # Verbindung annehmen
@@ -508,10 +517,13 @@ class RevPiSlave(Thread):
             # Erste Meldung erhalten
             meldung = self.rpi.recv(4)
 
+            comtime = 0
             while meldung in msgcli:
+                ot = default_timer()
 
                 if meldung == b'PICT':
                     # piCtory Konfiguration senden
+                    proginit.logger.debug("transfair pictory configuration")
                     fh_pic = open(configrsc, "rb")
                     while True:
                         data = fh_pic.read(1024)
@@ -523,31 +535,45 @@ class RevPiSlave(Thread):
 
                     # Abschlussmeldung
                     self.rpi.send(b'PICOK')
-                    proginit.logger.debug("pictory ende")
 
                 if meldung == b'DATA':
+                    proginit.logger.debug("read process image")
+
                     # Processabbild übertragen
                     block = 0
                     fh_proc.seek(0)
                     while block < 4:
                         self.rpi.send(fh_proc.read(1024))
                         block += 1
-                    proginit.logger.debug("procimg ende")
 
                 if meldung == b'SEND':
+                    proginit.logger.debug("write to process image")
+
                     # Ausgänge empfangen
                     block = self.rpi.recv(1024)
                     test = pickle.loads(block)
                     fh_proc.seek(test[0])
                     fh_proc.write(test[1])
-                    proginit.logger.debug(test)
 
                 # Nächste Meldung erhalten
                 meldung = self.rpi.recv(4)
 
+                # Verarbeitungszeit prüfen
+                comtime = default_timer() - ot
+                if comtime > self.deadtime:
+                    proginit.logger.error(
+                        "runtime more than {} ms: {}".format(
+                            int(self.deadtime * 1000), int(comtime * 1000)
+                        )
+                    )
+                    break
+
             fh_proc.close()
             self.rpi.shutdown(socket.SHUT_RDWR)
             self.rpi.close()
+
+            if self.zeroonexit or comtime > self.deadtime and self.zeroonerror:
+                _zeroprocimg()
 
         # Socket schließen
         self.so.close()
@@ -562,6 +588,7 @@ class RevPiSlave(Thread):
         if self.rpi is not None:
             self.rpi.close()
         self.so.shutdown(socket.SHUT_RDWR)
+
         proginit.logger.debug("leave RevPiSlave.stop()")
 
 
