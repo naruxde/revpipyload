@@ -33,7 +33,6 @@ begrenzt werden!
 import gzip
 import proginit
 import os
-import pickle
 import shlex
 import signal
 import socket
@@ -515,13 +514,24 @@ class RevPiSlave(Thread):
             fh_proc = open(procimg, "r+b", 0)
 
             # Erste Meldung erhalten
-            meldung = self.rpi.recv(4)
+            meldung = self.rpi.recv(12)
 
             comtime = 0
-            while meldung in msgcli:
+            while meldung[:4] in msgcli:
                 ot = default_timer()
 
-                if meldung == b'PICT':
+                # Meldung zerlegen
+                command = meldung[:4]
+                try:
+                    startval = int(meldung[4:-4])
+                except:
+                    startval = 0
+                try:
+                    lenval = int(meldung[-4:])
+                except:
+                    lenval = 0
+
+                if command == b'PICT':
                     # piCtory Konfiguration senden
                     proginit.logger.debug("transfair pictory configuration")
                     fh_pic = open(configrsc, "rb")
@@ -536,27 +546,23 @@ class RevPiSlave(Thread):
                     # Abschlussmeldung
                     self.rpi.send(b'PICOK')
 
-                if meldung == b'DATA':
-                    proginit.logger.debug("read process image")
-
+                if command == b'DATA':
                     # Processabbild übertragen
-                    block = 0
-                    fh_proc.seek(0)
-                    while block < 4:
+                    bcount = 0
+                    blength = lenval
+                    fh_proc.seek(startval)
+                    while bcount < blength:
                         self.rpi.send(fh_proc.read(1024))
-                        block += 1
+                        bcount += 1024
 
-                if meldung == b'SEND':
-                    proginit.logger.debug("write to process image")
-
+                if command == b'SEND':
                     # Ausgänge empfangen
-                    block = self.rpi.recv(1024)
-                    test = pickle.loads(block)
-                    fh_proc.seek(test[0])
-                    fh_proc.write(test[1])
+                    block = self.rpi.recv(lenval)
+                    fh_proc.seek(startval)
+                    fh_proc.write(block)
 
                 # Nächste Meldung erhalten
-                meldung = self.rpi.recv(4)
+                meldung = self.rpi.recv(12)
 
                 # Verarbeitungszeit prüfen
                 comtime = default_timer() - ot
