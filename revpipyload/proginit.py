@@ -63,7 +63,7 @@ def configure():
         pargs.conffile = os.path.join(startdir, pargs.conffile)
     if pargs.logfile is not None and os.path.dirname(pargs.logfile) == "":
         pargs.logfile = os.path.join(startdir, pargs.logfile)
-    
+
     # Prüfen ob als Daemon ausgeführt werden soll
     global forked
     pidfile = "/var/run/revpipyload.pid"
