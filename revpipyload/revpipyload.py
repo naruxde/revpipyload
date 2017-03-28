@@ -53,7 +53,7 @@ from xmlrpc.server import SimpleXMLRPCServer
 configrsc = "/opt/KUNBUS/config.rsc"
 picontrolreset = "/opt/KUNBUS/piControlReset"
 procimg = "/dev/piControl0"
-pyloadverion = "0.2.10"
+pyloadverion = "0.2.11"
 
 
 class LogReader():
@@ -534,7 +534,7 @@ class RevPiPyLoad():
             int(self.globalconfig["DEFAULT"].get("pythonversion", 3))
         self.xmlrpc = \
             int(self.globalconfig["DEFAULT"].get("xmlrpc", 0))
-        self.zerooneerror = \
+        self.zeroonerror = \
             int(self.globalconfig["DEFAULT"].get("zeroonerror", 1))
         self.zeroonexit = \
             int(self.globalconfig["DEFAULT"].get("zeroonexit", 1))
@@ -623,7 +623,7 @@ class RevPiPyLoad():
         th_plc.autoreload = self.autoreload
         th_plc.gid = int(self.globalconfig["DEFAULT"].get("plcgid", 65534))
         th_plc.uid = int(self.globalconfig["DEFAULT"].get("plcuid", 65534))
-        th_plc.zeroonerror = self.zerooneerror
+        th_plc.zeroonerror = self.zeroonerror
         th_plc.zeroonexit = self.zeroonexit
         proginit.logger.debug("created PLC watcher")
         return th_plc
@@ -757,7 +757,7 @@ class RevPiPyLoad():
         dc["xmlrpc"] = self.xmlrpc
         dc["xmlrpcport"] = \
             self.globalconfig["DEFAULT"].get("xmlrpcport", 55123)
-        dc["zeroonerror"] = self.zerooneerror
+        dc["zeroonerror"] = self.zeroonerror
         dc["zeroonexit"] = self.zeroonexit
         return dc
 

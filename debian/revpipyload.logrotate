@@ -7,7 +7,8 @@
     delaycompress
     missingok
     notifempty
+    sharedscripts
     postrotate
-        kill -SIGUSR1 `cat /var/run/revpipyload.pid` > /dev/null 2>&1 || true
+        /bin/kill -s USR1 `cat /var/run/revpipyload.pid` > /dev/null 2>&1 || true
     endscript
 }
