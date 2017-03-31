@@ -479,13 +479,12 @@ class RevPiSlave(Thread):
         super().__init__()
         self.deadtime = 0.5
         self._evt_exit = Event()
+        self.th_dev = []
         self.zeroonerror = False
         self.zeroonexit = False
 
     def run(self):
         proginit.logger.debug("enter RevPiSlave.run()")
-
-        msgcli = [b'DATA', b'PICT', b'SEND']
 
         # Socket öffnen und konfigurieren
         self.so = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -497,105 +496,22 @@ class RevPiSlave(Thread):
                 self._evt_exit.wait(1)
             else:
                 break
-        self.so.listen(1)
+        self.so.listen(15)
 
-        self.rpi = None
         while not self._evt_exit.is_set():
 
             # Verbindung annehmen
             proginit.logger.info("starte accept")
             try:
-                self.rpi, addr = self.so.accept()
+                tup_sock = self.so.accept()
             except:
                 proginit.logger.exception("after accept")
                 continue
 
-            # Prozessabbild öffnen
-            fh_proc = open(procimg, "r+b", 0)
-
-            # Erste Meldung erhalten
-            try:
-                meldung = self.rpi.recv(12)
-            except:
-                continue
-
-            comtime = 0
-            while meldung[:4] in msgcli:
-                ot = default_timer()
-
-                # Meldung zerlegen
-                command = meldung[:4]
-                try:
-                    startval = int(meldung[4:-4])
-                except:
-                    startval = 0
-                try:
-                    lenval = int(meldung[-4:])
-                except:
-                    lenval = 0
-
-                if command == b'PICT':
-                    # piCtory Konfiguration senden
-                    proginit.logger.debug("transfair pictory configuration")
-                    fh_pic = open(configrsc, "rb")
-                    while True:
-                        data = fh_pic.read(1024)
-                        if data:
-                            self.rpi.send(data)
-                        else:
-                            fh_pic.close()
-                            break
-
-                    # Abschlussmeldung
-                    self.rpi.send(b'PICOK')
-
-                if command == b'DATA':
-                    # Processabbild übertragen
-                    fh_proc.seek(startval)
-
-                    sendcount = lenval
-                    try:
-                        while sendcount > 1024:
-                            sendcount -= self.rpi.send(fh_proc.read(1024))
-                        self.rpi.send(fh_proc.read(sendcount))
-
-                    except:
-                        break
-
-                if command == b'SEND':
-                    # Ausgänge empfangen
-                    try:
-                        block = self.rpi.recv(lenval)
-                    except:
-                        break
-                    fh_proc.seek(startval)
-                    fh_proc.write(block)
-
-                # Nächste Meldung erhalten
-                try:
-                    meldung = self.rpi.recv(12)
-                except:
-                    break
-
-                # Verarbeitungszeit prüfen
-                comtime = default_timer() - ot
-                if comtime > self.deadtime:
-                    proginit.logger.warning(
-                        "runtime more than {} ms: {}".format(
-                            int(self.deadtime * 1000), int(comtime * 1000)
-                        )
-                    )
-                    #break
-
-            fh_proc.close()
-            try:
-                self.rpi.shutdown(socket.SHUT_RDWR)
-                self.rpi.close()
-            except:
-                pass
-
-            if self.zeroonexit or comtime > self.deadtime and self.zeroonerror:
-                _zeroprocimg()
+            # Thread starten
+            th = RevPiSlaveDev(tup_sock, self.deadtime)
+            th.start()
+            self.th_dev.append(th)
 
         # Socket schließen
         self.so.close()
@@ -606,12 +522,125 @@ class RevPiSlave(Thread):
         """Beendet Slaveausfuehrung."""
         proginit.logger.debug("enter RevPiSlave.stop()")
         self._evt_exit.set()
-
-        if self.rpi is not None:
-            self.rpi.close()
         self.so.shutdown(socket.SHUT_RDWR)
 
+        # Alle Threads beenden
+        for th in self.th_dev:
+            th.stop()
+
         proginit.logger.debug("leave RevPiSlave.stop()")
+
+
+class RevPiSlaveDev(Thread):
+
+    def __init__(self, devcon, deadtime):
+        super().__init__()
+        self.daemon = True
+        self._deadtime = deadtime
+        self._devcon, self._addr = devcon
+        self._evt_exit = Event()
+        self._startvalr = 0
+        self._lenvalr = 0
+        self._startvalw = 0
+        self._lenvalw = 0
+
+    def run(self):
+        msgcli = [b'DATA', b'PICT', b'SEND', b'CONF']
+
+        # Prozessabbild öffnen
+        fh_proc = open(procimg, "r+b", 0)
+
+        while not self._evt_exit.is_set():
+            ot = default_timer()
+
+            # Meldung erhalten
+            try:
+                netcmd = self._devcon.recv(4)
+                #proginit.logger.debug("command {}".format(netcmd))
+            except:
+                break
+
+            # Wenn Meldung ungültig ist aussteigen
+            if netcmd not in msgcli:
+                break
+
+            if netcmd == b'PICT':
+                # piCtory Konfiguration senden
+                proginit.logger.debug("transfair pictory configuration")
+                fh_pic = open(configrsc, "rb")
+                while True:
+                    data = fh_pic.read(1024)
+                    if data:
+                        self._devcon.send(data)
+                    else:
+                        fh_pic.close()
+                        break
+
+                # Abschlussmeldung
+                self._devcon.send(b'PICOK')
+                continue
+
+            if netcmd == b'CONF':
+                meldung = self._devcon.recv(16)
+
+                # Konfiguraiton zerlegen
+                try:
+                    self._startvalr = int(meldung[0:4])
+                except:
+                    self._devcon.send(b'CFGXX')
+                    continue
+                try:
+                    self._lenvalr = int(meldung[4:8])
+                except:
+                    self._devcon.send(b'CFGXX')
+                    continue
+                try:
+                    self._startvalw = int(meldung[8:12])
+                except:
+                    self._devcon.send(b'CFGXX')
+                    continue
+                try:
+                    self._lenvalw = int(meldung[12:16])
+                except:
+                    self._devcon.send(b'CFGXX')
+                    continue
+                self._devcon.send(b'CFGOK')
+
+            if netcmd == b'DATA':
+                # Processabbild übertragen
+                fh_proc.seek(self._startvalr)
+                try:
+                    self._devcon.sendall(fh_proc.read(self._lenvalr))
+                except:
+                    break
+
+            if netcmd == b'SEND':
+                # Ausgänge empfangen
+                try:
+                    block = self._devcon.recv(self._lenvalw)
+                except:
+                    break
+                fh_proc.seek(self._startvalw)
+                fh_proc.write(block)
+
+            # Verarbeitungszeit prüfen
+            comtime = default_timer() - ot
+            if comtime > self._deadtime:
+                proginit.logger.warning(
+                    "runtime more than {} ms: {}".format(
+                        int(self._deadtime * 1000), int(comtime * 1000)
+                    )
+                )
+                #break
+
+        fh_proc.close()
+        self._devcon.close()
+        self._devcon = None
+
+    def stop(self):
+        self._evt_exit.set()
+        if self._devcon is not None:
+            self._devcon.shutdown(socket.SHUT_RDWR)
 
 
 class RevPiPyLoad():
