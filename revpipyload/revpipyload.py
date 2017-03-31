@@ -501,7 +501,7 @@ class RevPiSlave(Thread):
         while not self._evt_exit.is_set():
 
             # Verbindung annehmen
-            proginit.logger.info("starte accept")
+            proginit.logger.debug("accept new connection")
             try:
                 tup_sock = self.so.accept()
             except:
@@ -545,20 +545,24 @@ class RevPiSlaveDev(Thread):
         self._lenvalw = 0
 
     def run(self):
+        proginit.logger.debug("enter RevPiSlaveDev.run()")
+
         msgcli = [b'DATA', b'PICT', b'SEND', b'CONF']
+        proginit.logger.info("connected from {}".format(self._addr))
 
         # Prozessabbild öffnen
         fh_proc = open(procimg, "r+b", 0)
 
         while not self._evt_exit.is_set():
-            ot = default_timer()
-
             # Meldung erhalten
             try:
                 netcmd = self._devcon.recv(4)
                 #proginit.logger.debug("command {}".format(netcmd))
             except:
                 break
+
+            # Laufzeitberechnung starten
+            ot = default_timer()
 
             # Wenn Meldung ungültig ist aussteigen
             if netcmd not in msgcli:
@@ -637,10 +641,17 @@ class RevPiSlaveDev(Thread):
         self._devcon.close()
         self._devcon = None
 
+        proginit.logger.info("disconnected from {}".format(self._addr))
+        proginit.logger.debug("leave RevPiSlaveDev.run()")
+
     def stop(self):
+        proginit.logger.debug("enter RevPiSlaveDev.stop()")
+
         self._evt_exit.set()
         if self._devcon is not None:
             self._devcon.shutdown(socket.SHUT_RDWR)
+
+        proginit.logger.debug("leave RevPiSlaveDev.stop()")
 
 
 class RevPiPyLoad():
