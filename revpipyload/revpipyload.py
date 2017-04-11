@@ -33,6 +33,7 @@ begrenzt werden!
 import gzip
 import proginit
 import os
+import pickle
 import shlex
 import signal
 import subprocess
@@ -53,7 +54,7 @@ from xmlrpc.server import SimpleXMLRPCServer
 configrsc = "/opt/KUNBUS/config.rsc"
 picontrolreset = "/opt/KUNBUS/piControlReset"
 procimg = "/dev/piControl0"
-pyloadverion = "0.2.11"
+pyloadverion = "0.2.12"
 
 
 class LogReader():
@@ -85,7 +86,7 @@ class LogReader():
         """Gibt neue Zeilen ab letzen Aufruf zurueck.
         @returns: list() mit neuen Zeilen"""
         if not os.access(proginit.logapp, os.R_OK):
-            return []
+            return Binary(pickle.dumps([]))
         else:
             if self.fhapp is None or self.fhapp.closed:
                 self.fhapp = open(proginit.logapp)
@@ -103,7 +104,7 @@ class LogReader():
             proginit.logger.debug(
                 "got {} new app log lines".format(len(lst_new))
             )
-            return lst_new
+            return Binary(pickle.dumps(lst_new))
 
     def get_applog(self):
         """Gibt die gesamte Logdatei zurueck.
@@ -112,12 +113,12 @@ class LogReader():
             proginit.logger.error(
                 "can not access logfile {}".format(proginit.logapp)
             )
-            return ""
+            return Binary(pickle.dumps(""))
         else:
             if self.fhapp is None or self.fhapp.closed:
                 self.fhapp = open(proginit.logapp)
             self.fhapp.seek(0)
-            return self.fhapp.read()
+            return Binary(pickle.dumps(self.fhapp.read()))
 
     def get_plclines(self):
         """Gibt neue Zeilen ab letzen Aufruf zurueck.
@@ -126,7 +127,7 @@ class LogReader():
             proginit.logger.error(
                 "can not access logfile {}".format(proginit.logplc)
             )
-            return []
+            return Binary(pickle.dumps([]))
         else:
             if self.fhplc is None or self.fhplc.closed:
                 self.fhplc = open(proginit.logplc)
@@ -144,7 +145,7 @@ class LogReader():
             proginit.logger.debug(
                 "got {} new pyloader log lines".format(len(lst_new))
             )
-            return lst_new
+            return Binary(pickle.dumps(lst_new))
 
     def get_plclog(self):
         """Gibt die gesamte Logdatei zurueck.
@@ -153,12 +154,12 @@ class LogReader():
             proginit.logger.error(
                 "can not access logfile {}".format(proginit.logplc)
             )
-            return ""
+            return Binary(pickle.dumps(""))
         else:
             if self.fhplc is None or self.fhplc.closed:
                 self.fhplc = open(proginit.logplc)
             self.fhplc.seek(0)
-            return self.fhplc.read()
+            return Binary(pickle.dumps(self.fhplc.read()))
 
 
 class PipeLogwriter(Thread):
@@ -588,6 +589,8 @@ class RevPiPyLoad():
                     self.xml_plcupload, "plcupload")
                 self.xsrv.register_function(
                     self.xml_plcuploadclean, "plcuploadclean")
+                self.xsrv.register_function(
+                    lambda: os.system(picontrolreset), "resetpicontrol")
                 self.xsrv.register_function(
                     self.xml_setconfig, "set_config")
                 self.xsrv.register_function(
