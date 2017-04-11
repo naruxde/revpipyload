@@ -192,6 +192,7 @@ class PipeLogwriter(Thread):
         ))
 
     def __del__(self):
+        """Close file handler."""
         if self._fh is not None:
             self._fh.close()
 
@@ -305,7 +306,7 @@ class RevPiPlc(Thread):
         elif proginit.pargs.logfile is not None:
             logfile = proginit.pargs.logfile
 
-        if not logfile is None:
+        if logfile is not None:
             logfile = PipeLogwriter(logfile)
 
         proginit.logger.debug("leave RevPiPlc._configureplw()")
