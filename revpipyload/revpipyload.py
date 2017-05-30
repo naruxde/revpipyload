@@ -51,10 +51,10 @@ from time import sleep, asctime
 from xmlrpc.client import Binary
 from xmlrpc.server import SimpleXMLRPCServer
 
-configrsc = "/opt/KUNBUS/config.rsc"
+configrsc = None
 picontrolreset = "/opt/KUNBUS/piControlReset"
 procimg = "/dev/piControl0"
-pyloadverion = "0.2.12"
+pyloadverion = "0.3.0"
 
 
 class LogReader():
@@ -483,6 +483,27 @@ class RevPiPyLoad():
         """Instantiiert RevPiPyLoad-Klasse."""
         proginit.configure()
 
+        # Globale Werte anpassen
+        global configrsc
+        global picontrolreset
+
+        # piCtory Konfiguration an bekannten Stellen prüfen
+        lst_rsc = ["/etc/revpi/config.rsc", "/opt/KUNBUS/config.rsc"]
+        for rscfile in lst_rsc:
+            if os.access(rscfile, os.F_OK | os.R_OK):
+                configrsc = rscfile
+                break
+        if configrsc is None:
+            raise RuntimeError(
+                "can not access known pictory configurations at {}"
+                "".format(", ".join(lst_rsc))
+            )
+
+        # piControlReset suchen
+        if not os.access(picontrolreset, os.F_OK | os.X_OK):
+            picontrolreset = "/usr/bin/piTest -x"
+
+        # Klassenattribute
         self._exit = True
         self.evt_loadconfig = Event()
         self.globalconfig = ConfigParser()
