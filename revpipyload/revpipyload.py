@@ -33,6 +33,7 @@ begrenzt werden!
 import gzip
 import proginit
 import os
+import pickle
 import shlex
 import signal
 import socket
@@ -53,7 +54,7 @@ from timeit import default_timer
 from xmlrpc.client import Binary
 from xmlrpc.server import SimpleXMLRPCServer
 
-configrsc = "/opt/KUNBUS/config.rsc"
+configrsc = None
 picontrolreset = "/opt/KUNBUS/piControlReset"
 procimg = "/dev/piControl0"
 pyloadverion = "0.3.0"
@@ -95,7 +96,7 @@ class LogReader():
         """Gibt neue Zeilen ab letzen Aufruf zurueck.
         @returns: list() mit neuen Zeilen"""
         if not os.access(proginit.logapp, os.R_OK):
-            return []
+            return Binary(pickle.dumps([]))
         else:
             if self.fhapp is None or self.fhapp.closed:
                 self.fhapp = open(proginit.logapp)
@@ -113,7 +114,7 @@ class LogReader():
             proginit.logger.debug(
                 "got {} new app log lines".format(len(lst_new))
             )
-            return lst_new
+            return Binary(pickle.dumps(lst_new))
 
     def get_applog(self):
         """Gibt die gesamte Logdatei zurueck.
@@ -122,12 +123,12 @@ class LogReader():
             proginit.logger.error(
                 "can not access logfile {}".format(proginit.logapp)
             )
-            return ""
+            return Binary(pickle.dumps(""))
         else:
             if self.fhapp is None or self.fhapp.closed:
                 self.fhapp = open(proginit.logapp)
             self.fhapp.seek(0)
-            return self.fhapp.read()
+            return Binary(pickle.dumps(self.fhapp.read()))
 
     def get_plclines(self):
         """Gibt neue Zeilen ab letzen Aufruf zurueck.
@@ -136,7 +137,7 @@ class LogReader():
             proginit.logger.error(
                 "can not access logfile {}".format(proginit.logplc)
             )
-            return []
+            return Binary(pickle.dumps([]))
         else:
             if self.fhplc is None or self.fhplc.closed:
                 self.fhplc = open(proginit.logplc)
@@ -154,7 +155,7 @@ class LogReader():
             proginit.logger.debug(
                 "got {} new pyloader log lines".format(len(lst_new))
             )
-            return lst_new
+            return Binary(pickle.dumps(lst_new))
 
     def get_plclog(self):
         """Gibt die gesamte Logdatei zurueck.
@@ -163,12 +164,12 @@ class LogReader():
             proginit.logger.error(
                 "can not access logfile {}".format(proginit.logplc)
             )
-            return ""
+            return Binary(pickle.dumps(""))
         else:
             if self.fhplc is None or self.fhplc.closed:
                 self.fhplc = open(proginit.logplc)
             self.fhplc.seek(0)
-            return self.fhplc.read()
+            return Binary(pickle.dumps(self.fhplc.read()))
 
 
 class PipeLogwriter(Thread):
@@ -201,6 +202,7 @@ class PipeLogwriter(Thread):
         ))
 
     def __del__(self):
+        """Close file handler."""
         if self._fh is not None:
             self._fh.close()
 
@@ -667,6 +669,27 @@ class RevPiPyLoad():
         """Instantiiert RevPiPyLoad-Klasse."""
         proginit.configure()
 
+        # Globale Werte anpassen
+        global configrsc
+        global picontrolreset
+
+        # piCtory Konfiguration an bekannten Stellen prüfen
+        lst_rsc = ["/etc/revpi/config.rsc", "/opt/KUNBUS/config.rsc"]
+        for rscfile in lst_rsc:
+            if os.access(rscfile, os.F_OK | os.R_OK):
+                configrsc = rscfile
+                break
+        if configrsc is None:
+            raise RuntimeError(
+                "can not access known pictory configurations at {}"
+                "".format(", ".join(lst_rsc))
+            )
+
+        # piControlReset suchen
+        if not os.access(picontrolreset, os.F_OK | os.X_OK):
+            picontrolreset = "/usr/bin/piTest -x"
+
+        # Klassenattribute
         self._exit = True
         self.evt_loadconfig = Event()
         self.globalconfig = ConfigParser()
@@ -774,6 +797,8 @@ class RevPiPyLoad():
                     self.xml_plcupload, "plcupload")
                 self.xsrv.register_function(
                     self.xml_plcuploadclean, "plcuploadclean")
+                self.xsrv.register_function(
+                    lambda: os.system(picontrolreset), "resetpicontrol")
                 self.xsrv.register_function(
                     self.xml_setconfig, "set_config")
                 self.xsrv.register_function(
