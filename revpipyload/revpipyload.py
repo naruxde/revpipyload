@@ -572,7 +572,9 @@ class RevPiSlaveDev(Thread):
 
             if netcmd == b'PICT':
                 # piCtory Konfiguration senden
-                proginit.logger.debug("transfair pictory configuration")
+                proginit.logger.debug(
+                    "transfair pictory configuration: {}".format(configrsc)
+                )
                 fh_pic = open(configrsc, "rb")
                 while True:
                     data = fh_pic.read(1024)
