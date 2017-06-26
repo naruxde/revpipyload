@@ -481,6 +481,7 @@ class RevPiSlave(Thread):
         super().__init__()
         self.deadtime = 0.5
         self._evt_exit = Event()
+        self.exitcode = None
         self.th_dev = []
         self.zeroonerror = False
         self.zeroonexit = False
@@ -495,12 +496,14 @@ class RevPiSlave(Thread):
                 self.so.bind(("", 55234))
             except:
                 warnings.warn("can not bind socket - retry", Warning)
+                proginit.logger.warning("can not bind socket - retry")
                 self._evt_exit.wait(1)
             else:
                 break
         self.so.listen(15)
 
         while not self._evt_exit.is_set():
+            self.exitcode = -1
 
             # Verbindung annehmen
             proginit.logger.debug("accept new connection")
@@ -515,9 +518,15 @@ class RevPiSlave(Thread):
             th.start()
             self.th_dev.append(th)
 
+        # Alle Threads beenden
+        for th in self.th_dev:
+            th.stop()
+
         # Socket schließen
         self.so.close()
+        self.exitcode = 0
 
+        warnings.resetwarnings()
         proginit.logger.debug("leave RevPiSlave.run()")
 
     def stop(self):
@@ -525,10 +534,6 @@ class RevPiSlave(Thread):
         proginit.logger.debug("enter RevPiSlave.stop()")
         self._evt_exit.set()
         self.so.shutdown(socket.SHUT_RDWR)
-
-        # Alle Threads beenden
-        for th in self.th_dev:
-            th.stop()
 
         proginit.logger.debug("leave RevPiSlave.stop()")
 
