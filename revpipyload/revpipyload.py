@@ -45,7 +45,7 @@ from json import loads as jloads
 from re import match as rematch
 from shutil import rmtree
 from sys import stdout as sysstdout
-from tempfile import mktemp
+from tempfile import mkstemp
 from threading import Thread, Event, Lock
 from time import sleep, asctime
 from xmlrpc.client import Binary
@@ -54,7 +54,7 @@ from xmlrpc.server import SimpleXMLRPCServer
 configrsc = None
 picontrolreset = "/opt/KUNBUS/piControlReset"
 procimg = "/dev/piControl0"
-pyloadverion = "0.3.0"
+pyloadverion = "0.4.0"
 
 
 class LogReader():
@@ -512,6 +512,7 @@ class RevPiPyLoad():
         self.tfile = {}
         self.tpe = None
         self.xsrv = None
+        self.xml_ps = None
 
         # Load config
         self._loadconfig()
@@ -591,6 +592,23 @@ class RevPiPyLoad():
             self.xsrv.register_function(self.xml_plcstart, "plcstart")
             self.xsrv.register_function(self.xml_plcstop, "plcstop")
             self.xsrv.register_function(self.xml_reload, "reload")
+
+            # Erweiterte Funktionen anmelden
+            try:
+                import procimgserver
+                self.xml_ps = procimgserver.ProcimgServer(
+                    proginit.logger, self.xsrv, configrsc, procimg, self.xmlrpc
+                )
+                self.xsrv.register_function(self.xml_psstart, "psstart")
+                self.xsrv.register_function(self.xml_psstop, "psstop")
+            except:
+                self.xml_ps = None
+                proginit.logger.warning(
+                    "can not load revpimodio module. maybe its not installed "
+                    "or an old version (required at least 0.11.0). if you "
+                    "like to use the process monitor feature, update/install "
+                    "revpimodio: 'apt-get install python3-revpimodio'"
+                )
 
             # XML Modus 2 Einstellungen lesen und Programm herunterladen
             if self.xmlrpc >= 2:
@@ -691,7 +709,7 @@ class RevPiPyLoad():
         @returns: Dateinamen des Archivs
 
         """
-        filename = mktemp(suffix=".packed", prefix="plc")
+        filename = mkstemp(suffix=".packed", prefix="plc")
 
         if mode == "zip":
             fh_pack = zipfile.ZipFile(filename, mode="w")
@@ -1008,6 +1026,8 @@ class RevPiPyLoad():
             if chk not in jconfigrsc:
                 return -2
 
+        # TODO: Module prüfen, ob sie existieren
+
         try:
             with open(configrsc, "wb") as fh:
                 fh.write(filebytes.data)
@@ -1018,6 +1038,24 @@ class RevPiPyLoad():
                 return os.system(picontrolreset)
             else:
                 return 0
+
+    def xml_psstart(self):
+        """Starten den Prozessabbildserver.
+        @returns: True, wenn start erfolgreich"""
+        if self.xml_ps is not None:
+            self.xml_ps.start()
+            return True
+        else:
+            return False
+
+    def xml_psstop(self):
+        """Stoppt den Prozessabbildserver.
+        @returns: True, wenn stop erfolgreich"""
+        if self.xml_ps is not None:
+            self.xml_ps.stop()
+            return True
+        else:
+            return False
 
 
 if __name__ == "__main__":

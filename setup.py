@@ -27,9 +27,11 @@ setup(
 
     license="LGPLv3",
     name="revpipyload",
-    version="0.3.0",
+    version="0.4.0",
 
     scripts=["data/revpipyload"],
+
+    install_requires=["revpimodio"],
 
     data_files=[
         ("/etc/default", ["data/etc/default/revpipyload"]),
