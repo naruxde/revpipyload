@@ -121,8 +121,10 @@ class ProcimgServer():
         if type(value) == bytes or type(value) == bool:
             self.rpi.devices[device][io].set_value(value)
         else:
-            self.rpi.devices[device][io].value = value.to_bytes(
-                self.rpi.devices[device][io].length, byteorder="little"
+            self.rpi.devices[device][io].set_value(
+                value.to_bytes(
+                    self.rpi.devices[device][io].length, byteorder="little"
+                )
             )
 
         self.rpi.devices.writeprocimg(device=device)

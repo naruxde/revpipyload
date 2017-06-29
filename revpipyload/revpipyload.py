@@ -33,7 +33,6 @@ begrenzt werden!
 import gzip
 import proginit
 import os
-import pickle
 import shlex
 import signal
 import subprocess
@@ -54,7 +53,7 @@ from xmlrpc.server import SimpleXMLRPCServer
 configrsc = None
 picontrolreset = "/opt/KUNBUS/piControlReset"
 procimg = "/dev/piControl0"
-pyloadverion = "0.4.0"
+pyloadverion = "0.4.1"
 
 
 class LogReader():
@@ -71,9 +70,9 @@ class LogReader():
     def __init__(self):
         """Instantiiert LogReader-Klasse."""
         self.fhapp = None
-        self.posapp = 0
+        self.fhapplk = Lock()
         self.fhplc = None
-        self.posplc = 0
+        self.fhplclk = Lock()
 
     def closeall(self):
         """Fuehrt close auf File Handler durch."""
@@ -82,84 +81,45 @@ class LogReader():
         if self.fhplc is not None:
             self.fhplc.close()
 
-    def get_applines(self):
-        """Gibt neue Zeilen ab letzen Aufruf zurueck.
-        @returns: list() mit neuen Zeilen"""
+    def load_applog(self, start, count):
+        """Uebertraegt Logdaten Binaer.
+
+        @param start: Startbyte
+        @param count: Max. Byteanzahl zum uebertragen
+        @returns: Binary() der Logdatei
+
+        """
         if not os.access(proginit.logapp, os.R_OK):
-            return Binary(pickle.dumps([]))
+            return Binary(b'\x16')  # 
+        elif start > os.path.getsize(proginit.logapp):
+            return Binary(b'\x19')  # 
         else:
-            if self.fhapp is None or self.fhapp.closed:
-                self.fhapp = open(proginit.logapp)
+            with self.fhapplk:
+                if self.fhapp is None or self.fhapp.closed:
+                    self.fhapp = open(proginit.logapp, "rb")
 
-            lst_new = []
-            while True:
-                self.posapp = self.fhapp.tell()
-                line = self.fhapp.readline()
-                if line:
-                    lst_new.append(line)
-                else:
-                    self.fhapp.seek(self.posapp)
-                    break
+                self.fhapp.seek(start)
+                return Binary(self.fhapp.read(count))
 
-            proginit.logger.debug(
-                "got {} new app log lines".format(len(lst_new))
-            )
-            return Binary(pickle.dumps(lst_new))
+    def load_plclog(self, start, count):
+        """Uebertraegt Logdaten Binaer.
 
-    def get_applog(self):
-        """Gibt die gesamte Logdatei zurueck.
-        @returns: str() mit Logdaten"""
-        if not os.access(proginit.logapp, os.R_OK):
-            proginit.logger.error(
-                "can not access logfile {}".format(proginit.logapp)
-            )
-            return Binary(pickle.dumps(""))
-        else:
-            if self.fhapp is None or self.fhapp.closed:
-                self.fhapp = open(proginit.logapp)
-            self.fhapp.seek(0)
-            return Binary(pickle.dumps(self.fhapp.read()))
+        @param start: Startbyte
+        @param count: Max. Byteanzahl zum uebertragen
+        @returns: Binary() der Logdatei
 
-    def get_plclines(self):
-        """Gibt neue Zeilen ab letzen Aufruf zurueck.
-        @returns: list() mit neuen Zeilen"""
+        """
         if not os.access(proginit.logplc, os.R_OK):
-            proginit.logger.error(
-                "can not access logfile {}".format(proginit.logplc)
-            )
-            return Binary(pickle.dumps([]))
+            return Binary(b'\x16')  # 
+        elif start > os.path.getsize(proginit.logplc):
+            return Binary(b'\x19')  # 
         else:
-            if self.fhplc is None or self.fhplc.closed:
-                self.fhplc = open(proginit.logplc)
+            with self.fhplclk:
+                if self.fhplc is None or self.fhplc.closed:
+                    self.fhplc = open(proginit.logplc, "rb")
 
-            lst_new = []
-            while True:
-                self.posplc = self.fhplc.tell()
-                line = self.fhplc.readline()
-                if line:
-                    lst_new.append(line)
-                else:
-                    self.fhplc.seek(self.posplc)
-                    break
-
-            proginit.logger.debug(
-                "got {} new pyloader log lines".format(len(lst_new))
-            )
-            return Binary(pickle.dumps(lst_new))
-
-    def get_plclog(self):
-        """Gibt die gesamte Logdatei zurueck.
-        @returns: str() mit Logdaten"""
-        if not os.access(proginit.logplc, os.R_OK):
-            proginit.logger.error(
-                "can not access logfile {}".format(proginit.logplc)
-            )
-            return Binary(pickle.dumps(""))
-        else:
-            if self.fhplc is None or self.fhplc.closed:
-                self.fhplc = open(proginit.logplc)
-            self.fhplc.seek(0)
-            return Binary(pickle.dumps(self.fhplc.read()))
+                self.fhplc.seek(start)
+                return Binary(self.fhplc.read(count))
 
 
 class PipeLogwriter(Thread):
@@ -581,12 +541,11 @@ class RevPiPyLoad():
                 allow_none=True
             )
             self.xsrv.register_introspection_functions()
+            self.xsrv.register_multicall_functions()
 
             # XML Modus 1 Nur Logs lesen und PLC Programm neu starten
-            self.xsrv.register_function(self.logr.get_applines, "get_applines")
-            self.xsrv.register_function(self.logr.get_applog, "get_applog")
-            self.xsrv.register_function(self.logr.get_plclines, "get_plclines")
-            self.xsrv.register_function(self.logr.get_plclog, "get_plclog")
+            self.xsrv.register_function(self.logr.load_applog, "load_applog")
+            self.xsrv.register_function(self.logr.load_plclog, "load_plclog")
             self.xsrv.register_function(self.xml_plcexitcode, "plcexitcode")
             self.xsrv.register_function(self.xml_plcrunning, "plcrunning")
             self.xsrv.register_function(self.xml_plcstart, "plcstart")
