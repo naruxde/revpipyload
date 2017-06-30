@@ -107,27 +107,37 @@ class ProcimgServer():
         @param device: Device Position oder Name
         @param io: IO Name fuer neuen Wert
         @param value: Neuer Wert
+        @returns: list() [device, io, status, msg]
 
         """
         # Zugriffsrechte prüfen
         if self.acl < 3:
-            raise PermissionError(
+            return [
+                device, io, False,
                 "not allowed in XML-RPC permission mode {}".format(self.acl)
-            )
+            ]
+
+        # Binary() in bytes() umwandeln
+        if type(value) == Binary:
+            value = value.data
 
         self.rpi.devices.syncoutputs(device=device)
 
-        # Neuen Wert übernehmen
-        if type(value) == bytes or type(value) == bool:
-            self.rpi.devices[device][io].set_value(value)
-        else:
-            self.rpi.devices[device][io].set_value(
-                value.to_bytes(
-                    self.rpi.devices[device][io].length, byteorder="little"
+        try:
+            # Neuen Wert übernehmen
+            if type(value) == bytes or type(value) == bool:
+                self.rpi.devices[device][io].set_value(value)
+            else:
+                self.rpi.devices[device][io].set_value(
+                    value.to_bytes(
+                        self.rpi.devices[device][io].length, byteorder="little"
+                    )
                 )
-            )
+        except Exception as e:
+            return [device, io, False, str(e)]
 
         self.rpi.devices.writeprocimg(device=device)
+        return [device, io, True, ""]
 
     def values(self):
         """Liefert Prozessabbild an Client.

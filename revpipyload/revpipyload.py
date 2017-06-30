@@ -54,6 +54,7 @@ configrsc = None
 picontrolreset = "/opt/KUNBUS/piControlReset"
 procimg = "/dev/piControl0"
 pyloadverion = "0.4.1"
+rapcatalog = None
 
 
 class LogReader():
@@ -443,11 +444,8 @@ class RevPiPyLoad():
         """Instantiiert RevPiPyLoad-Klasse."""
         proginit.configure()
 
-        # Globale Werte anpassen
-        global configrsc
-        global picontrolreset
-
         # piCtory Konfiguration an bekannten Stellen prüfen
+        global configrsc
         lst_rsc = ["/etc/revpi/config.rsc", "/opt/KUNBUS/config.rsc"]
         for rscfile in lst_rsc:
             if os.access(rscfile, os.F_OK | os.R_OK):
@@ -459,7 +457,18 @@ class RevPiPyLoad():
                 "".format(", ".join(lst_rsc))
             )
 
+        # rap Katalog an bekannten Stellen prüfen und laden
+        global rapcatalog
+        lst_rap = [
+            "/opt/KUNBUS/pictory/resources/data/rap",
+            "/var/www/pictory/resources/data/rap"
+        ]
+        for rapfolder in lst_rap:
+            if os.path.isdir(rapfolder):
+                rapcatalog = os.listdir(rapfolder)
+
         # piControlReset suchen
+        global picontrolreset
         if not os.access(picontrolreset, os.F_OK | os.X_OK):
             picontrolreset = "/usr/bin/piTest -x"
 
@@ -668,7 +677,8 @@ class RevPiPyLoad():
         @returns: Dateinamen des Archivs
 
         """
-        filename = mkstemp(suffix=".packed", prefix="plc")
+        tup_file = mkstemp(suffix="_packed", prefix="plc_")
+        filename = tup_file[1]
 
         if mode == "zip":
             fh_pack = zipfile.ZipFile(filename, mode="w")
@@ -968,6 +978,8 @@ class RevPiPyLoad():
             -1 Kann JSON-Datei nicht laden
             -2 piCtory Elemente in JSON-Datei nicht gefunden
             -3 Konnte Konfiguraiton nicht schreiben
+            -4 Module in Konfiguration enthalten, die es nicht gibt
+            -5 Kein RAP Katalog zur Ueberpruefung gefunden
             Positive Zahl ist exitcode von piControlReset
 
         """
@@ -985,7 +997,22 @@ class RevPiPyLoad():
             if chk not in jconfigrsc:
                 return -2
 
-        # TODO: Module prüfen, ob sie existieren
+        # Prüfen ob Modulkatalog vorhanden ist
+        if rapcatalog is None:
+            return -5
+        else:
+
+            # piCtory Device in Katalog suchen
+            for picdev in jconfigrsc["Devices"]:
+                found = False
+                picdev = picdev["id"][7:-4]
+                for rapdev in rapcatalog:
+                    if rapdev.find(picdev) >= 0:
+                        found = True
+
+                # Device im Katalog nicht gefunden
+                if not found:
+                    return -4
 
         try:
             with open(configrsc, "wb") as fh:

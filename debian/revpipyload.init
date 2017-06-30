@@ -5,8 +5,8 @@
 # Required-Stop:     $remote_fs $syslog $piControl
 # Default-Start:     2 3 4 5
 # Default-Stop:      0 1 6
-# Short-Description: Start RevPiPyLoad to execute python plc program
-# Description:       This file starts the RevPiPyLoad on system
+# Short-Description: RevPiPyLoad to execute python plc program
+# Description:       This file manages the RevPiPyLoad on system
 #                    boot. The Loader starts your python plc program and
 #                    check whether it is running.
 ### END INIT INFO

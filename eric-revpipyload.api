@@ -15,10 +15,8 @@ proginit.logplc?7
 proginit.pargs?7
 proginit.startdir?7
 revpipyload.LogReader.closeall?4()
-revpipyload.LogReader.get_applines?4()
-revpipyload.LogReader.get_applog?4()
-revpipyload.LogReader.get_plclines?4()
-revpipyload.LogReader.get_plclog?4()
+revpipyload.LogReader.load_applog?4(start, count)
+revpipyload.LogReader.load_plclog?4(start, count)
 revpipyload.LogReader?1()
 revpipyload.PipeLogwriter.__del__?6()
 revpipyload.PipeLogwriter._configurefh?5()
@@ -65,3 +63,4 @@ revpipyload.configrsc?7
 revpipyload.picontrolreset?7
 revpipyload.procimg?7
 revpipyload.pyloadverion?7
+revpipyload.rapcatalog?7
