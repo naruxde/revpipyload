@@ -123,10 +123,10 @@ LogReader.load_applog</h3>
 <p>
 Uebertraegt Logdaten Binaer.
 </p><dl>
-<dt><i>start:</i></dt>
+<dt><i>start</i></dt>
 <dd>
 Startbyte
-</dd><dt><i>count:</i></dt>
+</dd><dt><i>count</i></dt>
 <dd>
 Max. Byteanzahl zum uebertragen
 </dd>
@@ -142,10 +142,10 @@ LogReader.load_plclog</h3>
 <p>
 Uebertraegt Logdaten Binaer.
 </p><dl>
-<dt><i>start:</i></dt>
+<dt><i>start</i></dt>
 <dd>
 Startbyte
-</dd><dt><i>count:</i></dt>
+</dd><dt><i>count</i></dt>
 <dd>
 Max. Byteanzahl zum uebertragen
 </dd>
@@ -220,7 +220,7 @@ PipeLogwriter (Constructor)</h3>
 <p>
 Instantiiert PipeLogwriter-Klasse.
 </p><dl>
-<dt><i>logfilename:</i></dt>
+<dt><i>logfilename</i></dt>
 <dd>
 Dateiname fuer Logdatei
 </dd>
@@ -248,7 +248,7 @@ PipeLogwriter.logline</h3>
 <p>
 Schreibt eine Zeile in die Logdatei oder stdout.
 </p><dl>
-<dt><i>message:</i></dt>
+<dt><i>message</i></dt>
 <dd>
 Logzeile zum Schreiben
 </dd>
@@ -362,7 +362,7 @@ RevPiPlc._spopen</h3>
 <p>
 Startet das PLC Programm.
 </p><dl>
-<dt><i>lst_proc:</i></dt>
+<dt><i>lst_proc</i></dt>
 <dd>
 Prozessliste
 </dd>
@@ -486,7 +486,7 @@ Methods</h3>
 <td>Loescht das gesamte plcworkdir Verzeichnis.</td>
 </tr><tr>
 <td><a style="color:#0000FF" href="#RevPiPyLoad.xml_psstart">xml_psstart</a></td>
-<td>Starten den Prozessabbildserver.</td>
+<td>Startet den Prozessabbildserver.</td>
 </tr><tr>
 <td><a style="color:#0000FF" href="#RevPiPyLoad.xml_psstop">xml_psstop</a></td>
 <td>Stoppt den Prozessabbildserver.</td>
@@ -554,10 +554,10 @@ RevPiPyLoad.packapp</h3>
 <p>
 Erzeugt aus dem PLC-Programm ein TAR-File.
 </p><dl>
-<dt><i>mode:</i></dt>
+<dt><i>mode</i></dt>
 <dd>
 Packart 'tar' oder 'zip'
-</dd><dt><i>pictory:</i></dt>
+</dd><dt><i>pictory</i></dt>
 <dd>
 piCtory Konfiguration mit einpacken
 </dd>
@@ -629,10 +629,10 @@ RevPiPyLoad.xml_plcdownload</h3>
 <p>
 Uebertraegt ein Archiv vom plcworkdir.
 </p><dl>
-<dt><i>mode:</i></dt>
+<dt><i>mode</i></dt>
 <dd>
 Archivart 'tar' 'zip'
-</dd><dt><i>pictory:</i></dt>
+</dd><dt><i>pictory</i></dt>
 <dd>
 piCtory Konfiguraiton mit einpacken
 </dd>
@@ -698,10 +698,10 @@ RevPiPyLoad.xml_plcupload</h3>
 <p>
 Empfaengt Dateien fuer das PLC Programm.
 </p><dl>
-<dt><i>filedata:</i></dt>
+<dt><i>filedata</i></dt>
 <dd>
 GZIP Binary data der datei
-</dd><dt><i>filename:</i></dt>
+</dd><dt><i>filename</i></dt>
 <dd>
 Name inkl. Unterverzeichnis der Datei
 </dd>
@@ -726,7 +726,7 @@ True, wenn erfolgreich
 RevPiPyLoad.xml_psstart</h3>
 <b>xml_psstart</b>(<i></i>)
 <p>
-Starten den Prozessabbildserver.
+Startet den Prozessabbildserver.
 </p><dl>
 <dt>Returns:</dt>
 <dd>
@@ -767,10 +767,10 @@ RevPiPyLoad.xml_setpictoryrsc</h3>
 <p>
 Schreibt die config.rsc Datei von piCotry.
 </p><dl>
-<dt><i>filebytes:</i></dt>
+<dt><i>filebytes</i></dt>
 <dd>
 xmlrpc.client.Binary()-Objekt
-</dd><dt><i>reset:</i></dt>
+</dd><dt><i>reset</i></dt>
 <dd>
 Reset piControl Device
 </dd>

@@ -30,11 +30,11 @@ class ProcimgServer():
     def __init__(self, logger, xmlserver, configrsc, procimg, aclmode):
         """Instantiiert RevPiCheckServer()-Klasse.
 
-        @param xmlserver: XML-RPC Server
-        @param procimg: Pfad zum Prozessabbild
-        @param configrsc: Pfad zur piCtory Konfigurationsdatei
-        @param logger: Loggerinstanz
-        @param aclmode: Zugriffsrechte
+        @param xmlserver XML-RPC Server
+        @param procimg Pfad zum Prozessabbild
+        @param configrsc Pfad zur piCtory Konfigurationsdatei
+        @param logger Loggerinstanz
+        @param aclmode Zugriffsrechte
 
         """
         # Logger übernehmen
@@ -68,15 +68,15 @@ class ProcimgServer():
 
     def devices(self):
         """Generiert Deviceliste mit Position und Namen.
-        @returns: list() mit Tuple (pos, name)"""
+        @return list() mit Tuple (pos, name)"""
         return [
             (dev.position, dev.name) for dev in self.rpi.devices
         ]
 
     def ios(self, type):
         """Generiert ein dict() der Devices und IOs.
-        @param type: IO Typ inp/out
-        @returns: pickled dict()"""
+        @param type IO Typ inp/out
+        @return pickled dict()"""
         dict_ios = {}
         for dev in self.rpi.devices:
             dict_ios[dev.position] = []
@@ -104,10 +104,10 @@ class ProcimgServer():
     def setvalue(self, device, io, value):
         """Setzt einen Wert auf dem RevPi.
 
-        @param device: Device Position oder Name
-        @param io: IO Name fuer neuen Wert
-        @param value: Neuer Wert
-        @returns: list() [device, io, status, msg]
+        @param device Device Position oder Name
+        @param io IO Name fuer neuen Wert
+        @param value Neuer Wert
+        @return list() [device, io, status, msg]
 
         """
         # Zugriffsrechte prüfen
@@ -141,7 +141,7 @@ class ProcimgServer():
 
     def values(self):
         """Liefert Prozessabbild an Client.
-        @returns: Binary() bytes or None"""
+        @return Binary() bytes or None"""
         if self.rpi.devices.readprocimg() and self.rpi.devices.syncoutputs():
             bytebuff = b''
             for dev in self.rpi.devices:
