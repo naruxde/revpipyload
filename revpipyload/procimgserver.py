@@ -41,6 +41,9 @@ class ProcimgServer():
         self.logger = logger
         self.logger.debug("enter ProcimgServer.__init__()")
         self.acl = aclmode
+        self.configrsc = configrsc
+        self.procimg = procimg
+        self.rpi = None
 
         # XML-Server übernehmen
         self.xmlsrv = xmlserver
@@ -55,14 +58,7 @@ class ProcimgServer():
             "ps_setvalue": self.setvalue,
         }
 
-        # RevPiModIO-Modul Instantiieren
-        self.logger.debug("create revpimodio class")
-        self.rpi = revpimodio.RevPiModIO(
-            configrsc=configrsc,
-            procimg=procimg,
-        )
-        self.rpi.devices.syncoutputs(device=0)
-        self.logger.debug("created revpimodio class")
+        self.loadrevpimodio()
 
         self.logger.debug("leave ProcimgServer.__init__()")
 
@@ -100,6 +96,20 @@ class ProcimgServer():
                     io._bitaddress,
                 ])
         return Binary(pickle.dumps(dict_ios))
+
+    def loadrevpimodio(self):
+        """Instantiiert das RevPiModIO Modul."""
+        # RevPiModIO-Modul Instantiieren
+        if self.rpi is not None:
+            self.rpi.cleanup()
+
+        self.logger.debug("create revpimodio class")
+        self.rpi = revpimodio.RevPiModIO(
+            configrsc=self.configrsc,
+            procimg=self.procimg,
+        )
+        self.rpi.devices.syncoutputs(device=0)
+        self.logger.debug("created revpimodio class")
 
     def setvalue(self, device, io, value):
         """Setzt einen Wert auf dem RevPi.

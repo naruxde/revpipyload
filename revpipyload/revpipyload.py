@@ -477,6 +477,7 @@ class RevPiPyLoad():
 
         # Klassenattribute
         self._exit = True
+        self.pictorymtime = os.path.getmtime(configrsc)
         self.evt_loadconfig = Event()
         self.globalconfig = ConfigParser()
         self.logr = LogReader()
@@ -580,7 +581,7 @@ class RevPiPyLoad():
                 self.xml_ps = None
                 proginit.logger.warning(
                     "can not load revpimodio module. maybe its not installed "
-                    "or an old version (required at least 0.11.0). if you "
+                    "or an old version (required at least 0.15.0). if you "
                     "like to use the process monitor feature, update/install "
                     "revpimodio: 'apt-get install python3-revpimodio'"
                 )
@@ -751,6 +752,16 @@ class RevPiPyLoad():
 
         while not self._exit \
                 and not self.evt_loadconfig.is_set():
+
+            # piCtory auf Veränderung prüfen
+            if self.pictorymtime != os.path.getmtime(configrsc):
+                proginit.logger.warning("piCtory configuration was changed")
+                self.pictorymtime = os.path.getmtime(configrsc)
+
+                if self.xml_ps is not None:
+                    self.xml_psstop()
+                    self.xml_ps.loadrevpimodio()
+
             self.evt_loadconfig.wait(1)
 
         if not self._exit:

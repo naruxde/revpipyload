@@ -1,5 +1,6 @@
 procimgserver.ProcimgServer.devices?4()
 procimgserver.ProcimgServer.ios?4(type)
+procimgserver.ProcimgServer.loadrevpimodio?4()
 procimgserver.ProcimgServer.setvalue?4(device, io, value)
 procimgserver.ProcimgServer.start?4()
 procimgserver.ProcimgServer.stop?4()
