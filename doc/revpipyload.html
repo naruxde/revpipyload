@@ -64,8 +64,6 @@ Ermoeglicht den Zugriff auf die Logdateien.
 </p><p>
     Beinhaltet Funktionen fuer den Abruf der gesamten Logdatei fuer das
     RevPiPyLoad-System und die Logdatei der PLC-Anwendung.
-    Ausserdem koennen nur neue Zeilen abgerufen werden, um eine dynamische
-    Logansicht zu ermoeglichen.
 </p><p>
 
 </p>
@@ -93,10 +91,10 @@ Methods</h3>
 <td>Fuehrt close auf File Handler durch.</td>
 </tr><tr>
 <td><a style="color:#0000FF" href="#LogReader.load_applog">load_applog</a></td>
-<td>Uebertraegt Logdaten Binaer.</td>
+<td>Uebertraegt Logdaten des PLC Programms Binaer.</td>
 </tr><tr>
 <td><a style="color:#0000FF" href="#LogReader.load_plclog">load_plclog</a></td>
-<td>Uebertraegt Logdaten Binaer.</td>
+<td>Uebertraegt Logdaten des Loaders Binaer.</td>
 </tr>
 </table>
 <h3 style="background-color:#FFFFFF;color:#FF0000">
@@ -121,7 +119,7 @@ Fuehrt close auf File Handler durch.
 LogReader.load_applog</h3>
 <b>load_applog</b>(<i>start, count</i>)
 <p>
-Uebertraegt Logdaten Binaer.
+Uebertraegt Logdaten des PLC Programms Binaer.
 </p><dl>
 <dt><i>start</i></dt>
 <dd>
@@ -140,7 +138,7 @@ Binary() der Logdatei
 LogReader.load_plclog</h3>
 <b>load_plclog</b>(<i>start, count</i>)
 <p>
-Uebertraegt Logdaten Binaer.
+Uebertraegt Logdaten des Loaders Binaer.
 </p><dl>
 <dt><i>start</i></dt>
 <dd>
@@ -444,13 +442,13 @@ Methods</h3>
 <td>Signal handler to start new logfile.</td>
 </tr><tr>
 <td><a style="color:#0000FF" href="#RevPiPyLoad.packapp">packapp</a></td>
-<td>Erzeugt aus dem PLC-Programm ein TAR-File.</td>
+<td>Erzeugt aus dem PLC-Programm ein TAR/Zip-File.</td>
 </tr><tr>
 <td><a style="color:#0000FF" href="#RevPiPyLoad.start">start</a></td>
-<td>Start plcload and PLC python program.</td>
+<td>Start revpipyload.</td>
 </tr><tr>
 <td><a style="color:#0000FF" href="#RevPiPyLoad.stop">stop</a></td>
-<td>Stop PLC python program and plcload.</td>
+<td>Stop revpipyload.</td>
 </tr><tr>
 <td><a style="color:#0000FF" href="#RevPiPyLoad.xml_getconfig">xml_getconfig</a></td>
 <td>Uebertraegt die RevPiPyLoad Konfiguration.</td>
@@ -480,7 +478,7 @@ Methods</h3>
 <td>Stoppt das PLC Programm.</td>
 </tr><tr>
 <td><a style="color:#0000FF" href="#RevPiPyLoad.xml_plcupload">xml_plcupload</a></td>
-<td>Empfaengt Dateien fuer das PLC Programm.</td>
+<td>Empfaengt Dateien fuer das PLC Programm einzeln.</td>
 </tr><tr>
 <td><a style="color:#0000FF" href="#RevPiPyLoad.xml_plcuploadclean">xml_plcuploadclean</a></td>
 <td>Loescht das gesamte plcworkdir Verzeichnis.</td>
@@ -552,7 +550,7 @@ Signal handler to start new logfile.
 RevPiPyLoad.packapp</h3>
 <b>packapp</b>(<i>mode="tar", pictory=False</i>)
 <p>
-Erzeugt aus dem PLC-Programm ein TAR-File.
+Erzeugt aus dem PLC-Programm ein TAR/Zip-File.
 </p><dl>
 <dt><i>mode</i></dt>
 <dd>
@@ -571,13 +569,13 @@ Dateinamen des Archivs
 RevPiPyLoad.start</h3>
 <b>start</b>(<i></i>)
 <p>
-Start plcload and PLC python program.
+Start revpipyload.
 </p><a NAME="RevPiPyLoad.stop" ID="RevPiPyLoad.stop"></a>
 <h3 style="background-color:#FFFFFF;color:#FF0000">
 RevPiPyLoad.stop</h3>
 <b>stop</b>(<i></i>)
 <p>
-Stop PLC python program and plcload.
+Stop revpipyload.
 </p><a NAME="RevPiPyLoad.xml_getconfig" ID="RevPiPyLoad.xml_getconfig"></a>
 <h3 style="background-color:#FFFFFF;color:#FF0000">
 RevPiPyLoad.xml_getconfig</h3>
@@ -676,6 +674,7 @@ Startet das PLC Programm.
 <dt>Returns:</dt>
 <dd>
 int() Status:
+            -0 Erfolgreich
             -1 Programm lauft noch
             -2 Datei nicht gefunden
 </dd>
@@ -689,6 +688,7 @@ Stoppt das PLC Programm.
 <dt>Returns:</dt>
 <dd>
 int() Exitcode vom PLC Programm
+            -0 Erfolgreich
             -1 PLC Programm lief nicht
 </dd>
 </dl><a NAME="RevPiPyLoad.xml_plcupload" ID="RevPiPyLoad.xml_plcupload"></a>
@@ -696,7 +696,7 @@ int() Exitcode vom PLC Programm
 RevPiPyLoad.xml_plcupload</h3>
 <b>xml_plcupload</b>(<i>filedata, filename</i>)
 <p>
-Empfaengt Dateien fuer das PLC Programm.
+Empfaengt Dateien fuer das PLC Programm einzeln.
 </p><dl>
 <dt><i>filedata</i></dt>
 <dd>
@@ -778,7 +778,7 @@ Reset piControl Device
 <dt>Returns:</dt>
 <dd>
 Statuscode:
-            0 Alles erfolgreich
+            -0 Alles erfolgreich
             -1 Kann JSON-Datei nicht laden
             -2 piCtory Elemente in JSON-Datei nicht gefunden
             -3 Konnte Konfiguraiton nicht schreiben

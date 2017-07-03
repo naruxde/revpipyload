@@ -63,8 +63,6 @@ class LogReader():
 
     Beinhaltet Funktionen fuer den Abruf der gesamten Logdatei fuer das
     RevPiPyLoad-System und die Logdatei der PLC-Anwendung.
-    Ausserdem koennen nur neue Zeilen abgerufen werden, um eine dynamische
-    Logansicht zu ermoeglichen.
 
     """
 
@@ -83,7 +81,7 @@ class LogReader():
             self.fhplc.close()
 
     def load_applog(self, start, count):
-        """Uebertraegt Logdaten Binaer.
+        """Uebertraegt Logdaten des PLC Programms Binaer.
 
         @param start Startbyte
         @param count Max. Byteanzahl zum uebertragen
@@ -103,7 +101,7 @@ class LogReader():
                 return Binary(self.fhapp.read(count))
 
     def load_plclog(self, start, count):
-        """Uebertraegt Logdaten Binaer.
+        """Uebertraegt Logdaten des Loaders Binaer.
 
         @param start Startbyte
         @param count Max. Byteanzahl zum uebertragen
@@ -200,7 +198,7 @@ class PipeLogwriter(Thread):
                 self._fh.write(line)
                 self._fh.flush()
             except:
-                proginit.logger.exception("PipeLogwriter write log line")
+                proginit.logger.exception("PipeLogwriter in write log line")
             finally:
                 self._lckfh.release()
         proginit.logger.debug("leave logreader pipe loop")
@@ -273,8 +271,10 @@ class RevPiPlc(Thread):
 
     def _setuppopen(self):
         """Setzt UID und GID fuer das PLC Programm."""
-        proginit.logger.debug(
-            "set uid {} and gid {}".format(self.uid, self.gid))
+        proginit.logger.info(
+            "set uid {} and gid {} for plc program".format(
+                self.uid, self.gid)
+            )
         os.setgid(self.gid)
         os.setuid(self.uid)
 
@@ -343,7 +343,7 @@ class RevPiPlc(Thread):
                 if self.exitcode > 0:
                     # PLC Python Programm abgestürzt
                     proginit.logger.error(
-                        "plc program chrashed - exitcode: {}".format(
+                        "plc program crashed - exitcode: {}".format(
                             self.exitcode
                         )
                     )
@@ -456,7 +456,7 @@ class RevPiPyLoad():
                 break
         if configrsc is None:
             raise RuntimeError(
-                "can not access known pictory configurations at {}"
+                "can not find known pictory configurations at {}"
                 "".format(", ".join(lst_rsc))
             )
 
@@ -685,7 +685,7 @@ class RevPiPyLoad():
         proginit.logger.debug("leave RevPiPyLoad._signewlogfile()")
 
     def packapp(self, mode="tar", pictory=False):
-        """Erzeugt aus dem PLC-Programm ein TAR-File.
+        """Erzeugt aus dem PLC-Programm ein TAR/Zip-File.
 
         @param mode Packart 'tar' oder 'zip'
         @param pictory piCtory Konfiguration mit einpacken
@@ -734,7 +734,7 @@ class RevPiPyLoad():
         return filename
 
     def start(self):
-        """Start plcload and PLC python program."""
+        """Start revpipyload."""
         proginit.logger.debug("enter RevPiPyLoad.start()")
 
         proginit.logger.info("starting revpipyload")
@@ -771,7 +771,7 @@ class RevPiPyLoad():
         proginit.logger.debug("leave RevPiPyLoad.start()")
 
     def stop(self):
-        """Stop PLC python program and plcload."""
+        """Stop revpipyload."""
         proginit.logger.debug("enter RevPiPyLoad.stop()")
 
         proginit.logger.info("stopping revpipyload")
@@ -781,7 +781,7 @@ class RevPiPyLoad():
             proginit.logger.debug("stopping revpiplc-thread")
             self.plc.stop()
             self.plc.join()
-            proginit.logger.debug("revpiplc-thread successfully closed")
+            proginit.logger.debug("revpiplc thread successfully closed")
 
         if self.xmlrpc >= 1:
             proginit.logger.info("shutting down xmlrpc-server")
@@ -885,6 +885,7 @@ class RevPiPyLoad():
         """Startet das PLC Programm.
 
         @return int() Status:
+            -0 Erfolgreich
             -1 Programm lauft noch
             -2 Datei nicht gefunden
 
@@ -904,6 +905,7 @@ class RevPiPyLoad():
         """Stoppt das PLC Programm.
 
         @return int() Exitcode vom PLC Programm
+            -0 Erfolgreich
             -1 PLC Programm lief nicht
 
         """
@@ -911,13 +913,13 @@ class RevPiPyLoad():
         if self.plc is not None and self.plc.is_alive():
             self.plc.stop()
             self.plc.join()
-            proginit.logger.debug("revpiplc-thread successfully closed")
+            proginit.logger.debug("revpiplc thread successfully closed")
             return self.plc.exitcode
         else:
             return -1
 
     def xml_plcupload(self, filedata, filename):
-        """Empfaengt Dateien fuer das PLC Programm.
+        """Empfaengt Dateien fuer das PLC Programm einzeln.
 
         @param filedata GZIP Binary data der datei
         @param filename Name inkl. Unterverzeichnis der Datei
@@ -1012,7 +1014,7 @@ class RevPiPyLoad():
         @param filebytes xmlrpc.client.Binary()-Objekt
         @param reset Reset piControl Device
         @return Statuscode:
-            0 Alles erfolgreich
+            -0 Alles erfolgreich
             -1 Kann JSON-Datei nicht laden
             -2 piCtory Elemente in JSON-Datei nicht gefunden
             -3 Konnte Konfiguraiton nicht schreiben
