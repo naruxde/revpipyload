@@ -98,18 +98,26 @@ class ProcimgServer():
         return Binary(pickle.dumps(dict_ios))
 
     def loadrevpimodio(self):
-        """Instantiiert das RevPiModIO Modul."""
+        """Instantiiert das RevPiModIO Modul.
+        @return True, wenn erfolgreich, sonst False"""
         # RevPiModIO-Modul Instantiieren
         if self.rpi is not None:
             self.rpi.cleanup()
 
         self.logger.debug("create revpimodio class")
-        self.rpi = revpimodio.RevPiModIO(
-            configrsc=self.configrsc,
-            procimg=self.procimg,
-        )
+        try:
+            self.rpi = revpimodio.RevPiModIO(
+                configrsc=self.configrsc,
+                procimg=self.procimg,
+            )
+        except:
+            self.rpi = None
+            self.logger.error("piCtory configuration not loadable")
+            return False
+
         self.rpi.devices.syncoutputs(device=0)
         self.logger.debug("created revpimodio class")
+        return True
 
     def setvalue(self, device, io, value):
         """Setzt einen Wert auf dem RevPi.
@@ -161,19 +169,27 @@ class ProcimgServer():
             return None
 
     def start(self):
-        """Registriert XML Funktionen."""
+        """Registriert XML Funktionen.
+        @return True, wenn erfolgreich"""
         self.logger.debug("enter ProcimgServer.start()")
+        ec = False
 
-        # Registriere Funktionen
-        for xmlfunc in self.xmlreadfuncs:
-            self.xmlsrv.register_function(self.xmlreadfuncs[xmlfunc], xmlfunc)
-        if self.acl >= 3:
-            for xmlfunc in self.xmlwritefuncs:
+        if self.rpi is not None:
+
+            # Registriere Funktionen
+            for xmlfunc in self.xmlreadfuncs:
                 self.xmlsrv.register_function(
-                    self.xmlwritefuncs[xmlfunc], xmlfunc
+                    self.xmlreadfuncs[xmlfunc], xmlfunc
                 )
+            if self.acl >= 3:
+                for xmlfunc in self.xmlwritefuncs:
+                    self.xmlsrv.register_function(
+                        self.xmlwritefuncs[xmlfunc], xmlfunc
+                    )
+            ec = True
 
         self.logger.debug("leave ProcimgServer.start()")
+        return ec
 
     def stop(self):
         """Entfernt XML-Funktionen."""

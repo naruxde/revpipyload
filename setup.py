@@ -27,7 +27,7 @@ setup(
 
     license="LGPLv3",
     name="revpipyload",
-    version="0.4.1",
+    version="0.4.2",
 
     scripts=["data/revpipyload"],
 
@@ -42,12 +42,12 @@ setup(
 
     description="PLC Loader für Python-Projekte auf den RevolutionPi",
     long_description=""
-    "Dieses Programm startet beim Systemstart ein angegebenes Python PLC\n"
-    "Programm. Es überwacht das Programm und startet es im Fehlerfall neu.\n"
-    "Bei Absturz kann das gesamte /dev/piControl0 auf 0x00 gesetzt werden.\n"
-    "Außerdem stellt es einen XML-RPC Server bereit, über den die Software\n"
-    "auf den RevPi geladen werden kann. Das Prozessabbild kann über ein Tool\n"
-    "zur Laufzeit überwacht werden.",
+    "Dieses Programm startet beim Systemstart ein angegebenes Python PLC \n"
+    "Programm. Es überwacht das Programm und startet es im Fehlerfall neu. \n"
+    "Bei Absturz kann das gesamte /dev/piControl0 auf 0x00 gesetzt werden. \n"
+    "Außerdem stellt es einen XML-RPC Server bereit, über den die Software \n"
+    "auf den RevPi geladen werden kann. Das Prozessabbild kann über ein \n"
+    "Tool zur Laufzeit überwacht werden.",
 
     classifiers=[
         "License :: OSI Approved :: "

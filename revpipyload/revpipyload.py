@@ -53,7 +53,7 @@ from xmlrpc.server import SimpleXMLRPCServer
 configrsc = None
 picontrolreset = "/opt/KUNBUS/piControlReset"
 procimg = "/dev/piControl0"
-pyloadverion = "0.4.1"
+pyloadverion = "0.4.2"
 rapcatalog = None
 
 
@@ -1069,8 +1069,7 @@ class RevPiPyLoad():
         """Startet den Prozessabbildserver.
         @return True, wenn start erfolgreich"""
         if self.xml_ps is not None:
-            self.xml_ps.start()
-            return True
+            return self.xml_ps.start()
         else:
             return False
 
