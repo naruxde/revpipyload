@@ -32,7 +32,7 @@ begrenzt werden!
 <h3 style="background-color:#FFFFFF;color:#FF0000">
 Global Attributes</h3>
 <table>
-<tr><td>configrsc</td></tr><tr><td>picontrolreset</td></tr><tr><td>procimg</td></tr><tr><td>pyloadverion</td></tr>
+<tr><td>configrsc</td></tr><tr><td>picontrolreset</td></tr><tr><td>procimg</td></tr><tr><td>pyloadverion</td></tr><tr><td>rapcatalog</td></tr>
 </table>
 <h3 style="background-color:#FFFFFF;color:#FF0000">
 Classes</h3>
@@ -64,8 +64,6 @@ Ermoeglicht den Zugriff auf die Logdateien.
 </p><p>
     Beinhaltet Funktionen fuer den Abruf der gesamten Logdatei fuer das
     RevPiPyLoad-System und die Logdatei der PLC-Anwendung.
-    Ausserdem koennen nur neue Zeilen abgerufen werden, um eine dynamische
-    Logansicht zu ermoeglichen.
 </p><p>
 
 </p>
@@ -92,17 +90,11 @@ Methods</h3>
 <td><a style="color:#0000FF" href="#LogReader.closeall">closeall</a></td>
 <td>Fuehrt close auf File Handler durch.</td>
 </tr><tr>
-<td><a style="color:#0000FF" href="#LogReader.get_applines">get_applines</a></td>
-<td>Gibt neue Zeilen ab letzen Aufruf zurueck.</td>
+<td><a style="color:#0000FF" href="#LogReader.load_applog">load_applog</a></td>
+<td>Uebertraegt Logdaten des PLC Programms Binaer.</td>
 </tr><tr>
-<td><a style="color:#0000FF" href="#LogReader.get_applog">get_applog</a></td>
-<td>Gibt die gesamte Logdatei zurueck.</td>
-</tr><tr>
-<td><a style="color:#0000FF" href="#LogReader.get_plclines">get_plclines</a></td>
-<td>Gibt neue Zeilen ab letzen Aufruf zurueck.</td>
-</tr><tr>
-<td><a style="color:#0000FF" href="#LogReader.get_plclog">get_plclog</a></td>
-<td>Gibt die gesamte Logdatei zurueck.</td>
+<td><a style="color:#0000FF" href="#LogReader.load_plclog">load_plclog</a></td>
+<td>Uebertraegt Logdaten des Loaders Binaer.</td>
 </tr>
 </table>
 <h3 style="background-color:#FFFFFF;color:#FF0000">
@@ -122,49 +114,43 @@ LogReader.closeall</h3>
 <b>closeall</b>(<i></i>)
 <p>
 Fuehrt close auf File Handler durch.
-</p><a NAME="LogReader.get_applines" ID="LogReader.get_applines"></a>
+</p><a NAME="LogReader.load_applog" ID="LogReader.load_applog"></a>
 <h3 style="background-color:#FFFFFF;color:#FF0000">
-LogReader.get_applines</h3>
-<b>get_applines</b>(<i></i>)
+LogReader.load_applog</h3>
+<b>load_applog</b>(<i>start, count</i>)
 <p>
-Gibt neue Zeilen ab letzen Aufruf zurueck.
+Uebertraegt Logdaten des PLC Programms Binaer.
 </p><dl>
-<dt>Returns:</dt>
+<dt><i>start</i></dt>
 <dd>
-list() mit neuen Zeilen
+Startbyte
+</dd><dt><i>count</i></dt>
+<dd>
+Max. Byteanzahl zum uebertragen
 </dd>
-</dl><a NAME="LogReader.get_applog" ID="LogReader.get_applog"></a>
-<h3 style="background-color:#FFFFFF;color:#FF0000">
-LogReader.get_applog</h3>
-<b>get_applog</b>(<i></i>)
-<p>
-Gibt die gesamte Logdatei zurueck.
-</p><dl>
+</dl><dl>
 <dt>Returns:</dt>
 <dd>
-str() mit Logdaten
+Binary() der Logdatei
 </dd>
-</dl><a NAME="LogReader.get_plclines" ID="LogReader.get_plclines"></a>
+</dl><a NAME="LogReader.load_plclog" ID="LogReader.load_plclog"></a>
 <h3 style="background-color:#FFFFFF;color:#FF0000">
-LogReader.get_plclines</h3>
-<b>get_plclines</b>(<i></i>)
+LogReader.load_plclog</h3>
+<b>load_plclog</b>(<i>start, count</i>)
 <p>
-Gibt neue Zeilen ab letzen Aufruf zurueck.
+Uebertraegt Logdaten des Loaders Binaer.
 </p><dl>
-<dt>Returns:</dt>
+<dt><i>start</i></dt>
 <dd>
-list() mit neuen Zeilen
+Startbyte
+</dd><dt><i>count</i></dt>
+<dd>
+Max. Byteanzahl zum uebertragen
 </dd>
-</dl><a NAME="LogReader.get_plclog" ID="LogReader.get_plclog"></a>
-<h3 style="background-color:#FFFFFF;color:#FF0000">
-LogReader.get_plclog</h3>
-<b>get_plclog</b>(<i></i>)
-<p>
-Gibt die gesamte Logdatei zurueck.
-</p><dl>
+</dl><dl>
 <dt>Returns:</dt>
 <dd>
-str() mit Logdaten
+Binary() der Logdatei
 </dd>
 </dl>
 <div align="right"><a style="color:#0000FF" href="#top">Up</a></div>
@@ -232,7 +218,7 @@ PipeLogwriter (Constructor)</h3>
 <p>
 Instantiiert PipeLogwriter-Klasse.
 </p><dl>
-<dt><i>logfilename:</i></dt>
+<dt><i>logfilename</i></dt>
 <dd>
 Dateiname fuer Logdatei
 </dd>
@@ -260,7 +246,7 @@ PipeLogwriter.logline</h3>
 <p>
 Schreibt eine Zeile in die Logdatei oder stdout.
 </p><dl>
-<dt><i>message:</i></dt>
+<dt><i>message</i></dt>
 <dd>
 Logzeile zum Schreiben
 </dd>
@@ -374,7 +360,7 @@ RevPiPlc._spopen</h3>
 <p>
 Startet das PLC Programm.
 </p><dl>
-<dt><i>lst_proc:</i></dt>
+<dt><i>lst_proc</i></dt>
 <dd>
 Prozessliste
 </dd>
@@ -456,13 +442,13 @@ Methods</h3>
 <td>Signal handler to start new logfile.</td>
 </tr><tr>
 <td><a style="color:#0000FF" href="#RevPiPyLoad.packapp">packapp</a></td>
-<td>Erzeugt aus dem PLC-Programm ein TAR-File.</td>
+<td>Erzeugt aus dem PLC-Programm ein TAR/Zip-File.</td>
 </tr><tr>
 <td><a style="color:#0000FF" href="#RevPiPyLoad.start">start</a></td>
-<td>Start plcload and PLC python program.</td>
+<td>Start revpipyload.</td>
 </tr><tr>
 <td><a style="color:#0000FF" href="#RevPiPyLoad.stop">stop</a></td>
-<td>Stop PLC python program and plcload.</td>
+<td>Stop revpipyload.</td>
 </tr><tr>
 <td><a style="color:#0000FF" href="#RevPiPyLoad.xml_getconfig">xml_getconfig</a></td>
 <td>Uebertraegt die RevPiPyLoad Konfiguration.</td>
@@ -492,10 +478,16 @@ Methods</h3>
 <td>Stoppt das PLC Programm.</td>
 </tr><tr>
 <td><a style="color:#0000FF" href="#RevPiPyLoad.xml_plcupload">xml_plcupload</a></td>
-<td>Empfaengt Dateien fuer das PLC Programm.</td>
+<td>Empfaengt Dateien fuer das PLC Programm einzeln.</td>
 </tr><tr>
 <td><a style="color:#0000FF" href="#RevPiPyLoad.xml_plcuploadclean">xml_plcuploadclean</a></td>
 <td>Loescht das gesamte plcworkdir Verzeichnis.</td>
+</tr><tr>
+<td><a style="color:#0000FF" href="#RevPiPyLoad.xml_psstart">xml_psstart</a></td>
+<td>Startet den Prozessabbildserver.</td>
+</tr><tr>
+<td><a style="color:#0000FF" href="#RevPiPyLoad.xml_psstop">xml_psstop</a></td>
+<td>Stoppt den Prozessabbildserver.</td>
 </tr><tr>
 <td><a style="color:#0000FF" href="#RevPiPyLoad.xml_reload">xml_reload</a></td>
 <td>Startet RevPiPyLoad neu und verwendet neue Konfiguraiton.</td>
@@ -558,12 +550,12 @@ Signal handler to start new logfile.
 RevPiPyLoad.packapp</h3>
 <b>packapp</b>(<i>mode="tar", pictory=False</i>)
 <p>
-Erzeugt aus dem PLC-Programm ein TAR-File.
+Erzeugt aus dem PLC-Programm ein TAR/Zip-File.
 </p><dl>
-<dt><i>mode:</i></dt>
+<dt><i>mode</i></dt>
 <dd>
 Packart 'tar' oder 'zip'
-</dd><dt><i>pictory:</i></dt>
+</dd><dt><i>pictory</i></dt>
 <dd>
 piCtory Konfiguration mit einpacken
 </dd>
@@ -577,13 +569,13 @@ Dateinamen des Archivs
 RevPiPyLoad.start</h3>
 <b>start</b>(<i></i>)
 <p>
-Start plcload and PLC python program.
+Start revpipyload.
 </p><a NAME="RevPiPyLoad.stop" ID="RevPiPyLoad.stop"></a>
 <h3 style="background-color:#FFFFFF;color:#FF0000">
 RevPiPyLoad.stop</h3>
 <b>stop</b>(<i></i>)
 <p>
-Stop PLC python program and plcload.
+Stop revpipyload.
 </p><a NAME="RevPiPyLoad.xml_getconfig" ID="RevPiPyLoad.xml_getconfig"></a>
 <h3 style="background-color:#FFFFFF;color:#FF0000">
 RevPiPyLoad.xml_getconfig</h3>
@@ -635,10 +627,10 @@ RevPiPyLoad.xml_plcdownload</h3>
 <p>
 Uebertraegt ein Archiv vom plcworkdir.
 </p><dl>
-<dt><i>mode:</i></dt>
+<dt><i>mode</i></dt>
 <dd>
 Archivart 'tar' 'zip'
-</dd><dt><i>pictory:</i></dt>
+</dd><dt><i>pictory</i></dt>
 <dd>
 piCtory Konfiguraiton mit einpacken
 </dd>
@@ -682,6 +674,7 @@ Startet das PLC Programm.
 <dt>Returns:</dt>
 <dd>
 int() Status:
+            -0 Erfolgreich
             -1 Programm lauft noch
             -2 Datei nicht gefunden
 </dd>
@@ -695,6 +688,7 @@ Stoppt das PLC Programm.
 <dt>Returns:</dt>
 <dd>
 int() Exitcode vom PLC Programm
+            -0 Erfolgreich
             -1 PLC Programm lief nicht
 </dd>
 </dl><a NAME="RevPiPyLoad.xml_plcupload" ID="RevPiPyLoad.xml_plcupload"></a>
@@ -702,12 +696,12 @@ int() Exitcode vom PLC Programm
 RevPiPyLoad.xml_plcupload</h3>
 <b>xml_plcupload</b>(<i>filedata, filename</i>)
 <p>
-Empfaengt Dateien fuer das PLC Programm.
+Empfaengt Dateien fuer das PLC Programm einzeln.
 </p><dl>
-<dt><i>filedata:</i></dt>
+<dt><i>filedata</i></dt>
 <dd>
 GZIP Binary data der datei
-</dd><dt><i>filename:</i></dt>
+</dd><dt><i>filename</i></dt>
 <dd>
 Name inkl. Unterverzeichnis der Datei
 </dd>
@@ -726,6 +720,28 @@ Loescht das gesamte plcworkdir Verzeichnis.
 <dt>Returns:</dt>
 <dd>
 True, wenn erfolgreich
+</dd>
+</dl><a NAME="RevPiPyLoad.xml_psstart" ID="RevPiPyLoad.xml_psstart"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+RevPiPyLoad.xml_psstart</h3>
+<b>xml_psstart</b>(<i></i>)
+<p>
+Startet den Prozessabbildserver.
+</p><dl>
+<dt>Returns:</dt>
+<dd>
+True, wenn start erfolgreich
+</dd>
+</dl><a NAME="RevPiPyLoad.xml_psstop" ID="RevPiPyLoad.xml_psstop"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+RevPiPyLoad.xml_psstop</h3>
+<b>xml_psstop</b>(<i></i>)
+<p>
+Stoppt den Prozessabbildserver.
+</p><dl>
+<dt>Returns:</dt>
+<dd>
+True, wenn stop erfolgreich
 </dd>
 </dl><a NAME="RevPiPyLoad.xml_reload" ID="RevPiPyLoad.xml_reload"></a>
 <h3 style="background-color:#FFFFFF;color:#FF0000">
@@ -751,10 +767,10 @@ RevPiPyLoad.xml_setpictoryrsc</h3>
 <p>
 Schreibt die config.rsc Datei von piCotry.
 </p><dl>
-<dt><i>filebytes:</i></dt>
+<dt><i>filebytes</i></dt>
 <dd>
 xmlrpc.client.Binary()-Objekt
-</dd><dt><i>reset:</i></dt>
+</dd><dt><i>reset</i></dt>
 <dd>
 Reset piControl Device
 </dd>
@@ -762,10 +778,12 @@ Reset piControl Device
 <dt>Returns:</dt>
 <dd>
 Statuscode:
-            0 Alles erfolgreich
+            -0 Alles erfolgreich
             -1 Kann JSON-Datei nicht laden
             -2 piCtory Elemente in JSON-Datei nicht gefunden
             -3 Konnte Konfiguraiton nicht schreiben
+            -4 Module in Konfiguration enthalten, die es nicht gibt
+            -5 Kein RAP Katalog zur Ueberpruefung gefunden
             Positive Zahl ist exitcode von piControlReset
 </dd>
 </dl>

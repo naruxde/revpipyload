@@ -33,7 +33,6 @@ begrenzt werden!
 import gzip
 import proginit
 import os
-import pickle
 import shlex
 import signal
 import socket
@@ -47,7 +46,7 @@ from json import loads as jloads
 from re import match as rematch
 from shutil import rmtree
 from sys import stdout as sysstdout
-from tempfile import mktemp
+from tempfile import mkstemp
 from threading import Thread, Event, Lock
 from time import sleep, asctime
 from timeit import default_timer
@@ -57,7 +56,8 @@ from xmlrpc.server import SimpleXMLRPCServer
 configrsc = None
 picontrolreset = "/opt/KUNBUS/piControlReset"
 procimg = "/dev/piControl0"
-pyloadverion = "0.3.0"
+pyloadverion = "0.4.2"
+rapcatalog = None
 
 
 def _zeroprocimg():
@@ -73,17 +73,15 @@ class LogReader():
 
     Beinhaltet Funktionen fuer den Abruf der gesamten Logdatei fuer das
     RevPiPyLoad-System und die Logdatei der PLC-Anwendung.
-    Ausserdem koennen nur neue Zeilen abgerufen werden, um eine dynamische
-    Logansicht zu ermoeglichen.
 
     """
 
     def __init__(self):
         """Instantiiert LogReader-Klasse."""
         self.fhapp = None
-        self.posapp = 0
+        self.fhapplk = Lock()
         self.fhplc = None
-        self.posplc = 0
+        self.fhplclk = Lock()
 
     def closeall(self):
         """Fuehrt close auf File Handler durch."""
@@ -92,84 +90,45 @@ class LogReader():
         if self.fhplc is not None:
             self.fhplc.close()
 
-    def get_applines(self):
-        """Gibt neue Zeilen ab letzen Aufruf zurueck.
-        @returns: list() mit neuen Zeilen"""
+    def load_applog(self, start, count):
+        """Uebertraegt Logdaten des PLC Programms Binaer.
+
+        @param start Startbyte
+        @param count Max. Byteanzahl zum uebertragen
+        @return Binary() der Logdatei
+
+        """
         if not os.access(proginit.logapp, os.R_OK):
-            return Binary(pickle.dumps([]))
+            return Binary(b'\x16')  # 
+        elif start > os.path.getsize(proginit.logapp):
+            return Binary(b'\x19')  # 
         else:
-            if self.fhapp is None or self.fhapp.closed:
-                self.fhapp = open(proginit.logapp)
+            with self.fhapplk:
+                if self.fhapp is None or self.fhapp.closed:
+                    self.fhapp = open(proginit.logapp, "rb")
 
-            lst_new = []
-            while True:
-                self.posapp = self.fhapp.tell()
-                line = self.fhapp.readline()
-                if line:
-                    lst_new.append(line)
-                else:
-                    self.fhapp.seek(self.posapp)
-                    break
+                self.fhapp.seek(start)
+                return Binary(self.fhapp.read(count))
 
-            proginit.logger.debug(
-                "got {} new app log lines".format(len(lst_new))
-            )
-            return Binary(pickle.dumps(lst_new))
+    def load_plclog(self, start, count):
+        """Uebertraegt Logdaten des Loaders Binaer.
 
-    def get_applog(self):
-        """Gibt die gesamte Logdatei zurueck.
-        @returns: str() mit Logdaten"""
-        if not os.access(proginit.logapp, os.R_OK):
-            proginit.logger.error(
-                "can not access logfile {}".format(proginit.logapp)
-            )
-            return Binary(pickle.dumps(""))
-        else:
-            if self.fhapp is None or self.fhapp.closed:
-                self.fhapp = open(proginit.logapp)
-            self.fhapp.seek(0)
-            return Binary(pickle.dumps(self.fhapp.read()))
+        @param start Startbyte
+        @param count Max. Byteanzahl zum uebertragen
+        @return Binary() der Logdatei
 
-    def get_plclines(self):
-        """Gibt neue Zeilen ab letzen Aufruf zurueck.
-        @returns: list() mit neuen Zeilen"""
+        """
         if not os.access(proginit.logplc, os.R_OK):
-            proginit.logger.error(
-                "can not access logfile {}".format(proginit.logplc)
-            )
-            return Binary(pickle.dumps([]))
+            return Binary(b'\x16')  # 
+        elif start > os.path.getsize(proginit.logplc):
+            return Binary(b'\x19')  # 
         else:
-            if self.fhplc is None or self.fhplc.closed:
-                self.fhplc = open(proginit.logplc)
+            with self.fhplclk:
+                if self.fhplc is None or self.fhplc.closed:
+                    self.fhplc = open(proginit.logplc, "rb")
 
-            lst_new = []
-            while True:
-                self.posplc = self.fhplc.tell()
-                line = self.fhplc.readline()
-                if line:
-                    lst_new.append(line)
-                else:
-                    self.fhplc.seek(self.posplc)
-                    break
-
-            proginit.logger.debug(
-                "got {} new pyloader log lines".format(len(lst_new))
-            )
-            return Binary(pickle.dumps(lst_new))
-
-    def get_plclog(self):
-        """Gibt die gesamte Logdatei zurueck.
-        @returns: str() mit Logdaten"""
-        if not os.access(proginit.logplc, os.R_OK):
-            proginit.logger.error(
-                "can not access logfile {}".format(proginit.logplc)
-            )
-            return Binary(pickle.dumps(""))
-        else:
-            if self.fhplc is None or self.fhplc.closed:
-                self.fhplc = open(proginit.logplc)
-            self.fhplc.seek(0)
-            return Binary(pickle.dumps(self.fhplc.read()))
+                self.fhplc.seek(start)
+                return Binary(self.fhplc.read(count))
 
 
 class PipeLogwriter(Thread):
@@ -185,7 +144,7 @@ class PipeLogwriter(Thread):
 
     def __init__(self, logfilename):
         """Instantiiert PipeLogwriter-Klasse.
-        @param logfilename: Dateiname fuer Logdatei"""
+        @param logfilename Dateiname fuer Logdatei"""
         super().__init__()
         self._exit = Event()
         self._fh = None
@@ -208,11 +167,10 @@ class PipeLogwriter(Thread):
 
     def _configurefh(self):
         """Konfiguriert den FileHandler fuer Ausgaben der PLCAPP.
-        @returns: FileHandler-Objekt"""
+        @return FileHandler-Objekt"""
         proginit.logger.debug("enter PipeLogwriter._configurefh()")
 
         dirname = os.path.dirname(self.logfile)
-
         proginit.logger.debug("dirname = {}".format(os.path.abspath(dirname)))
 
         if os.access(dirname, os.R_OK | os.W_OK):
@@ -225,7 +183,7 @@ class PipeLogwriter(Thread):
 
     def logline(self, message):
         """Schreibt eine Zeile in die Logdatei oder stdout.
-        @param message: Logzeile zum Schreiben"""
+        @param message Logzeile zum Schreiben"""
         with self._lckfh:
             self._fh.write("{}\n".format(message))
             self._fh.flush()
@@ -243,7 +201,6 @@ class PipeLogwriter(Thread):
         proginit.logger.debug("enter PipeLogwriter.run()")
 
         fhread = os.fdopen(self._fdr)
-        proginit.logger.debug("enter logreader pipe loop")
         while not self._exit.is_set():
             line = fhread.readline()
             self._lckfh.acquire()
@@ -251,7 +208,7 @@ class PipeLogwriter(Thread):
                 self._fh.write(line)
                 self._fh.flush()
             except:
-                proginit.logger.exception("PipeLogwriter write log line")
+                proginit.logger.exception("PipeLogwriter in write log line")
             finally:
                 self._lckfh.release()
         proginit.logger.debug("leave logreader pipe loop")
@@ -307,7 +264,7 @@ class RevPiPlc(Thread):
 
     def _configureplw(self):
         """Konfiguriert den PipeLogwriter fuer Ausgaben der PLCAPP.
-        @returns: PipeLogwriter()"""
+        @return PipeLogwriter()"""
         proginit.logger.debug("enter RevPiPlc._configureplw()")
         logfile = None
         if proginit.pargs.daemon:
@@ -324,15 +281,17 @@ class RevPiPlc(Thread):
 
     def _setuppopen(self):
         """Setzt UID und GID fuer das PLC Programm."""
-        proginit.logger.debug(
-            "set uid {} and gid {}".format(self.uid, self.gid))
+        proginit.logger.info(
+            "set uid {} and gid {} for plc program".format(
+                self.uid, self.gid)
+            )
         os.setgid(self.gid)
         os.setuid(self.uid)
 
     def _spopen(self, lst_proc):
         """Startet das PLC Programm.
-        @param lst_proc: Prozessliste
-        @returns: subprocess"""
+        @param lst_proc Prozessliste
+        @return subprocess"""
         proginit.logger.debug("enter RevPiPlc._spopen({})".format(lst_proc))
         sp = subprocess.Popen(
             lst_proc,
@@ -388,7 +347,7 @@ class RevPiPlc(Thread):
                 if self.exitcode > 0:
                     # PLC Python Programm abgestürzt
                     proginit.logger.error(
-                        "plc program chrashed - exitcode: {}".format(
+                        "plc program crashed - exitcode: {}".format(
                             self.exitcode
                         )
                     )
@@ -422,6 +381,12 @@ class RevPiPlc(Thread):
 
             self._evt_exit.wait(1)
 
+        if self._plw is not None:
+            self._plw.logline("-" * 55)
+            self._plw.logline("plc: {} stopped: {}".format(
+                os.path.basename(self._program), asctime()
+            ))
+
         proginit.logger.debug("leave RevPiPlc.run()")
 
     def stop(self):
@@ -434,9 +399,8 @@ class RevPiPlc(Thread):
         if self._procplc is None:
             if self._plw is not None:
                 self._plw.stop()
-                proginit.logger.debug("join after NONE pipe thread")
                 self._plw.join()
-                proginit.logger.debug("joined after NONE pipe thread")
+                proginit.logger.debug("log pipes successfully closed")
 
             proginit.logger.debug("leave RevPiPlc.stop()")
             return
@@ -467,9 +431,8 @@ class RevPiPlc(Thread):
 
         if self._plw is not None:
             self._plw.stop()
-            proginit.logger.debug("join pipe thread")
             self._plw.join()
-            proginit.logger.debug("joined pipe thread")
+            proginit.logger.debug("log pipes successfully closed")
 
         proginit.logger.debug("leave RevPiPlc.stop()")
 
@@ -675,12 +638,10 @@ class RevPiPyLoad():
     def __init__(self):
         """Instantiiert RevPiPyLoad-Klasse."""
         proginit.configure()
-
-        # Globale Werte anpassen
-        global configrsc
-        global picontrolreset
+        proginit.logger.debug("enter RevPiPyLoad.__init__()")
 
         # piCtory Konfiguration an bekannten Stellen prüfen
+        global configrsc
         lst_rsc = ["/etc/revpi/config.rsc", "/opt/KUNBUS/config.rsc"]
         for rscfile in lst_rsc:
             if os.access(rscfile, os.F_OK | os.R_OK):
@@ -688,16 +649,28 @@ class RevPiPyLoad():
                 break
         if configrsc is None:
             raise RuntimeError(
-                "can not access known pictory configurations at {}"
+                "can not find known pictory configurations at {}"
                 "".format(", ".join(lst_rsc))
             )
 
+        # rap Katalog an bekannten Stellen prüfen und laden
+        global rapcatalog
+        lst_rap = [
+            "/opt/KUNBUS/pictory/resources/data/rap",
+            "/var/www/pictory/resources/data/rap"
+        ]
+        for rapfolder in lst_rap:
+            if os.path.isdir(rapfolder):
+                rapcatalog = os.listdir(rapfolder)
+
         # piControlReset suchen
+        global picontrolreset
         if not os.access(picontrolreset, os.F_OK | os.X_OK):
             picontrolreset = "/usr/bin/piTest -x"
 
         # Klassenattribute
         self._exit = True
+        self.pictorymtime = os.path.getmtime(configrsc)
         self.evt_loadconfig = Event()
         self.globalconfig = ConfigParser()
         self.logr = LogReader()
@@ -705,6 +678,7 @@ class RevPiPyLoad():
         self.tfile = {}
         self.tpe = None
         self.xsrv = None
+        self.xml_ps = None
 
         # Load config
         self._loadconfig()
@@ -715,8 +689,12 @@ class RevPiPyLoad():
         signal.signal(signal.SIGHUP, self._sigloadconfig)
         signal.signal(signal.SIGUSR1, self._signewlogfile)
 
+        proginit.logger.debug("leave RevPiPyLoad.__init__()")
+
     def _loadconfig(self):
         """Load configuration file and setup modul."""
+        proginit.logger.debug("enter RevPiPyLoad._loadconfig()")
+
         self.evt_loadconfig.clear()
         pauseproc = False
 
@@ -773,17 +751,33 @@ class RevPiPyLoad():
                 allow_none=True
             )
             self.xsrv.register_introspection_functions()
+            self.xsrv.register_multicall_functions()
 
             # XML Modus 1 Nur Logs lesen und PLC Programm neu starten
-            self.xsrv.register_function(self.logr.get_applines, "get_applines")
-            self.xsrv.register_function(self.logr.get_applog, "get_applog")
-            self.xsrv.register_function(self.logr.get_plclines, "get_plclines")
-            self.xsrv.register_function(self.logr.get_plclog, "get_plclog")
+            self.xsrv.register_function(self.logr.load_applog, "load_applog")
+            self.xsrv.register_function(self.logr.load_plclog, "load_plclog")
             self.xsrv.register_function(self.xml_plcexitcode, "plcexitcode")
             self.xsrv.register_function(self.xml_plcrunning, "plcrunning")
             self.xsrv.register_function(self.xml_plcstart, "plcstart")
             self.xsrv.register_function(self.xml_plcstop, "plcstop")
             self.xsrv.register_function(self.xml_reload, "reload")
+
+            # Erweiterte Funktionen anmelden
+            try:
+                import procimgserver
+                self.xml_ps = procimgserver.ProcimgServer(
+                    proginit.logger, self.xsrv, configrsc, procimg, self.xmlrpc
+                )
+                self.xsrv.register_function(self.xml_psstart, "psstart")
+                self.xsrv.register_function(self.xml_psstop, "psstop")
+            except:
+                self.xml_ps = None
+                proginit.logger.warning(
+                    "can not load revpimodio module. maybe its not installed "
+                    "or an old version (required at least 0.15.0). if you "
+                    "like to use the process monitor feature, update/install "
+                    "revpimodio: 'apt-get install python3-revpimodio'"
+                )
 
             # XML Modus 2 Einstellungen lesen und Programm herunterladen
             if self.xmlrpc >= 2:
@@ -821,9 +815,11 @@ class RevPiPyLoad():
             )
             self.start()
 
+        proginit.logger.debug("leave RevPiPyLoad._loadconfig()")
+
     def _plcthread(self):
         """Konfiguriert den PLC-Thread fuer die Ausfuehrung.
-        @returns: PLC-Thread Object or None"""
+        @return PLC-Thread Object or None"""
         th_plc = None
 
         if self.plcslave:
@@ -851,28 +847,29 @@ class RevPiPyLoad():
             th_plc.uid = int(self.globalconfig["DEFAULT"].get("plcuid", 65534))
             th_plc.zeroonerror = self.zeroonerror
             th_plc.zeroonexit = self.zeroonexit
-            proginit.logger.debug("created PLC watcher")
 
+        proginit.logger.debug("leave RevPiPyLoad._plcthread()")
         return th_plc
 
     def _sigexit(self, signum, frame):
         """Signal handler to clean and exit program."""
-        proginit.logger.debug("got exit signal")
-        self.stop()
+        proginit.logger.debug("enter RevPiPyLoad._sigexit()")
 
-        # Programm aufräumen
+        # Programm stoppen und aufräumen
+        self.stop()
         proginit.cleanup()
 
-        proginit.logger.debug("end revpipyload program")
+        proginit.logger.debug("leave RevPiPyLoad._sigexit()")
 
     def _sigloadconfig(self, signum, frame):
         """Signal handler to load configuration."""
-        proginit.logger.debug("got reload config signal")
+        proginit.logger.debug("enter RevPiPyLoad._sigloadconfig()")
         self.evt_loadconfig.set()
+        proginit.logger.debug("leave RevPiPyLoad._sigloadconfig()")
 
     def _signewlogfile(self, signum, frame):
         """Signal handler to start new logfile."""
-        proginit.logger.debug("got new logfile signal")
+        proginit.logger.debug("enter RevPiPyLoad._signewlogfile()")
 
         # Logger neu konfigurieren
         proginit.configure()
@@ -885,15 +882,20 @@ class RevPiPyLoad():
         # Logreader schließen
         self.logr.closeall()
 
-    def packapp(self, mode="tar", pictory=False):
-        """Erzeugt aus dem PLC-Programm ein TAR-File.
+        proginit.logger.debug("leave RevPiPyLoad._signewlogfile()")
 
-        @param mode: Packart 'tar' oder 'zip'
-        @param pictory: piCtory Konfiguration mit einpacken
-        @returns: Dateinamen des Archivs
+    def packapp(self, mode="tar", pictory=False):
+        """Erzeugt aus dem PLC-Programm ein TAR/Zip-File.
+
+        @param mode Packart 'tar' oder 'zip'
+        @param pictory piCtory Konfiguration mit einpacken
+        @return Dateinamen des Archivs
 
         """
-        filename = mktemp(suffix=".packed", prefix="plc")
+        proginit.logger.debug("enter RevPiPyLoad.packapp()")
+
+        tup_file = mkstemp(suffix="_packed", prefix="plc_")
+        filename = tup_file[1]
 
         if mode == "zip":
             fh_pack = zipfile.ZipFile(filename, mode="w")
@@ -928,10 +930,13 @@ class RevPiPyLoad():
             finally:
                 fh_pack.close()
 
+        proginit.logger.debug("leave RevPiPyLoad.packapp()")
         return filename
 
     def start(self):
-        """Start plcload and PLC python program."""
+        """Start revpipyload."""
+        proginit.logger.debug("enter RevPiPyLoad.start()")
+
         proginit.logger.info("starting revpipyload")
         self._exit = False
 
@@ -947,14 +952,28 @@ class RevPiPyLoad():
 
         while not self._exit \
                 and not self.evt_loadconfig.is_set():
+
+            # piCtory auf Veränderung prüfen
+            if self.pictorymtime != os.path.getmtime(configrsc):
+                proginit.logger.warning("piCtory configuration was changed")
+                self.pictorymtime = os.path.getmtime(configrsc)
+
+                if self.xml_ps is not None:
+                    self.xml_psstop()
+                    self.xml_ps.loadrevpimodio()
+
             self.evt_loadconfig.wait(1)
 
         if not self._exit:
             proginit.logger.info("exit python plc program to reload config")
             self._loadconfig()
 
+        proginit.logger.debug("leave RevPiPyLoad.start()")
+
     def stop(self):
-        """Stop PLC python program and plcload."""
+        """Stop revpipyload."""
+        proginit.logger.debug("enter RevPiPyLoad.stop()")
+
         proginit.logger.info("stopping revpipyload")
         self._exit = True
 
@@ -962,6 +981,7 @@ class RevPiPyLoad():
             proginit.logger.debug("stopping revpiplc-thread")
             self.plc.stop()
             self.plc.join()
+            proginit.logger.debug("revpiplc thread successfully closed")
 
         if self.xmlrpc >= 1:
             proginit.logger.info("shutting down xmlrpc-server")
@@ -969,9 +989,11 @@ class RevPiPyLoad():
             self.tpe.shutdown()
             self.xsrv.server_close()
 
+        proginit.logger.debug("leave RevPiPyLoad.stop()")
+
     def xml_getconfig(self):
         """Uebertraegt die RevPiPyLoad Konfiguration.
-        @returns: dict() der Konfiguration"""
+        @return dict() der Konfiguration"""
         proginit.logger.debug("xmlrpc call getconfig")
         dc = {}
         dc["autoreload"] = self.autoreload
@@ -990,7 +1012,7 @@ class RevPiPyLoad():
 
     def xml_getfilelist(self):
         """Uebertraegt die Dateiliste vom plcworkdir.
-        @returns: list() mit Dateinamen"""
+        @return list() mit Dateinamen"""
         proginit.logger.debug("xmlrpc call getfilelist")
         lst_file = []
         wd = os.walk("./")
@@ -1001,7 +1023,7 @@ class RevPiPyLoad():
 
     def xml_getpictoryrsc(self):
         """Gibt die config.rsc Datei von piCotry zurueck.
-        @returns: xmlrpc.client.Binary()"""
+        @return xmlrpc.client.Binary()"""
         proginit.logger.debug("xmlrpc call getpictoryrsc")
         with open(configrsc, "rb") as fh:
             buff = fh.read()
@@ -1009,7 +1031,7 @@ class RevPiPyLoad():
 
     def xml_getprocimg(self):
         """Gibt die Rohdaten aus piControl0 zurueck.
-        @returns: xmlrpc.client.Binary()"""
+        @return xmlrpc.client.Binary()"""
         proginit.logger.debug("xmlrpc call getprocimg")
         with open(procimg, "rb") as fh:
             buff = fh.read()
@@ -1018,9 +1040,9 @@ class RevPiPyLoad():
     def xml_plcdownload(self, mode="tar", pictory=False):
         """Uebertraegt ein Archiv vom plcworkdir.
 
-        @param mode: Archivart 'tar' 'zip'
-        @param pictory: piCtory Konfiguraiton mit einpacken
-        @returns: Binary() mit Archivdatei
+        @param mode Archivart 'tar' 'zip'
+        @param pictory piCtory Konfiguraiton mit einpacken
+        @return Binary() mit Archivdatei
 
         """
         proginit.logger.debug("xmlrpc call plcdownload")
@@ -1039,7 +1061,7 @@ class RevPiPyLoad():
     def xml_plcexitcode(self):
         """Gibt den aktuellen exitcode vom PLC Programm zurueck.
 
-        @returns: int() exitcode oder:
+        @return int() exitcode oder:
             -1 laeuft noch
             -2 Datei nicht gefunden
             -3 Lief nie
@@ -1055,14 +1077,15 @@ class RevPiPyLoad():
 
     def xml_plcrunning(self):
         """Prueft ob das PLC Programm noch lauft.
-        @returns: True, wenn das PLC Programm noch lauft"""
+        @return True, wenn das PLC Programm noch lauft"""
         proginit.logger.debug("xmlrpc call plcrunning")
         return False if self.plc is None else self.plc.is_alive()
 
     def xml_plcstart(self):
         """Startet das PLC Programm.
 
-        @returns: int() Status:
+        @return int() Status:
+            -0 Erfolgreich
             -1 Programm lauft noch
             -2 Datei nicht gefunden
 
@@ -1081,7 +1104,8 @@ class RevPiPyLoad():
     def xml_plcstop(self):
         """Stoppt das PLC Programm.
 
-        @returns: int() Exitcode vom PLC Programm
+        @return int() Exitcode vom PLC Programm
+            -0 Erfolgreich
             -1 PLC Programm lief nicht
 
         """
@@ -1089,16 +1113,17 @@ class RevPiPyLoad():
         if self.plc is not None and self.plc.is_alive():
             self.plc.stop()
             self.plc.join()
+            proginit.logger.debug("revpiplc thread successfully closed")
             return self.plc.exitcode
         else:
             return -1
 
     def xml_plcupload(self, filedata, filename):
-        """Empfaengt Dateien fuer das PLC Programm.
+        """Empfaengt Dateien fuer das PLC Programm einzeln.
 
-        @param filedata: GZIP Binary data der datei
-        @param filename: Name inkl. Unterverzeichnis der Datei
-        @returns: Ture, wenn Datei erfolgreich gespeichert wurde
+        @param filedata GZIP Binary data der datei
+        @param filename Name inkl. Unterverzeichnis der Datei
+        @return Ture, wenn Datei erfolgreich gespeichert wurde
 
         """
         proginit.logger.debug("xmlrpc call plcupload")
@@ -1128,7 +1153,7 @@ class RevPiPyLoad():
 
     def xml_plcuploadclean(self):
         """Loescht das gesamte plcworkdir Verzeichnis.
-        @returns: True, wenn erfolgreich"""
+        @return True, wenn erfolgreich"""
         proginit.logger.debug("xmlrpc call plcuploadclean")
         try:
             rmtree(".", ignore_errors=True)
@@ -1143,7 +1168,7 @@ class RevPiPyLoad():
 
     def xml_setconfig(self, dc, loadnow=False):
         """Empfaengt die RevPiPyLoad Konfiguration.
-        @returns: True, wenn erfolgreich angewendet"""
+        @return True, wenn erfolgreich angewendet"""
         proginit.logger.debug("xmlrpc call setconfig")
         keys = {
             "autoreload": "[01]",
@@ -1186,13 +1211,15 @@ class RevPiPyLoad():
     def xml_setpictoryrsc(self, filebytes, reset=False):
         """Schreibt die config.rsc Datei von piCotry.
 
-        @param filebytes: xmlrpc.client.Binary()-Objekt
-        @param reset: Reset piControl Device
-        @returns: Statuscode:
-            0 Alles erfolgreich
+        @param filebytes xmlrpc.client.Binary()-Objekt
+        @param reset Reset piControl Device
+        @return Statuscode:
+            -0 Alles erfolgreich
             -1 Kann JSON-Datei nicht laden
             -2 piCtory Elemente in JSON-Datei nicht gefunden
             -3 Konnte Konfiguraiton nicht schreiben
+            -4 Module in Konfiguration enthalten, die es nicht gibt
+            -5 Kein RAP Katalog zur Ueberpruefung gefunden
             Positive Zahl ist exitcode von piControlReset
 
         """
@@ -1210,6 +1237,23 @@ class RevPiPyLoad():
             if chk not in jconfigrsc:
                 return -2
 
+        # Prüfen ob Modulkatalog vorhanden ist
+        if rapcatalog is None:
+            return -5
+        else:
+
+            # piCtory Device in Katalog suchen
+            for picdev in jconfigrsc["Devices"]:
+                found = False
+                picdev = picdev["id"][7:-4]
+                for rapdev in rapcatalog:
+                    if rapdev.find(picdev) >= 0:
+                        found = True
+
+                # Device im Katalog nicht gefunden
+                if not found:
+                    return -4
+
         try:
             with open(configrsc, "wb") as fh:
                 fh.write(filebytes.data)
@@ -1220,6 +1264,23 @@ class RevPiPyLoad():
                 return os.system(picontrolreset)
             else:
                 return 0
+
+    def xml_psstart(self):
+        """Startet den Prozessabbildserver.
+        @return True, wenn start erfolgreich"""
+        if self.xml_ps is not None:
+            return self.xml_ps.start()
+        else:
+            return False
+
+    def xml_psstop(self):
+        """Stoppt den Prozessabbildserver.
+        @return True, wenn stop erfolgreich"""
+        if self.xml_ps is not None:
+            self.xml_ps.stop()
+            return True
+        else:
+            return False
 
 
 if __name__ == "__main__":

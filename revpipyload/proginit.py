@@ -102,7 +102,8 @@ def configure():
 
     # Program logger
     global logger
-    logger = logging.getLogger()
+    if logger is None:
+        logger = logging.getLogger()
 
     # Alle handler entfernen
     for lhandler in logger.handlers:
