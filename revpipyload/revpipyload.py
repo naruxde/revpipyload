@@ -449,6 +449,10 @@ class RevPiSlave(Thread):
         self.zeroonerror = False
         self.zeroonexit = False
 
+    def newlogfile(self):
+        """Konfiguriert die FileHandler auf neue Logdatei."""
+        pass
+
     def run(self):
         proginit.logger.debug("enter RevPiSlave.run()")
 
@@ -820,6 +824,7 @@ class RevPiPyLoad():
     def _plcthread(self):
         """Konfiguriert den PLC-Thread fuer die Ausfuehrung.
         @return PLC-Thread Object or None"""
+        proginit.logger.debug("enter RevPiPyLoad._plcthread()")
         th_plc = None
 
         if self.plcslave:
