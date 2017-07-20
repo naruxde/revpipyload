@@ -499,6 +499,7 @@ class RevPiSlave(Thread):
     def stop(self):
         """Beendet Slaveausfuehrung."""
         proginit.logger.debug("enter RevPiSlave.stop()")
+
         self._evt_exit.set()
         self.so.shutdown(socket.SHUT_RDWR)
 
@@ -521,7 +522,7 @@ class RevPiSlaveDev(Thread):
     def run(self):
         proginit.logger.debug("enter RevPiSlaveDev.run()")
 
-        msgcli = [b'DATA', b'PICT', b'SEND', b'CONF']
+        msgcli = [b'DATA', b'PICT', b'SEND']
         proginit.logger.info("connected from {}".format(self._addr))
 
         # Prozessabbild öffnen
@@ -530,8 +531,8 @@ class RevPiSlaveDev(Thread):
         while not self._evt_exit.is_set():
             # Meldung erhalten
             try:
-                netcmd = self._devcon.recv(4)
-                #proginit.logger.debug("command {}".format(netcmd))
+                netcmd = self._devcon.recv(16)
+                # proginit.logger.debug("command {}".format(netcmd))
             except:
                 break
 
@@ -539,10 +540,11 @@ class RevPiSlaveDev(Thread):
             ot = default_timer()
 
             # Wenn Meldung ungültig ist aussteigen
-            if netcmd not in msgcli:
+            cmd = netcmd[:4]
+            if cmd not in msgcli:
                 break
 
-            if netcmd == b'PICT':
+            if cmd == b'PICT':
                 # piCtory Konfiguration senden
                 proginit.logger.debug(
                     "transfair pictory configuration: {}".format(configrsc)
@@ -560,48 +562,35 @@ class RevPiSlaveDev(Thread):
                 self._devcon.send(b'PICOK')
                 continue
 
-            if netcmd == b'CONF':
-                meldung = self._devcon.recv(16)
-
-                # Konfiguraiton zerlegen
-                try:
-                    self._startvalr = int(meldung[0:4])
-                except:
-                    self._devcon.send(b'CFGXX')
-                    continue
-                try:
-                    self._lenvalr = int(meldung[4:8])
-                except:
-                    self._devcon.send(b'CFGXX')
-                    continue
-                try:
-                    self._startvalw = int(meldung[8:12])
-                except:
-                    self._devcon.send(b'CFGXX')
-                    continue
-                try:
-                    self._lenvalw = int(meldung[12:16])
-                except:
-                    self._devcon.send(b'CFGXX')
-                    continue
-                self._devcon.send(b'CFGOK')
-
-            if netcmd == b'DATA':
+            if cmd == b'DATA':
                 # Processabbild übertragen
-                fh_proc.seek(self._startvalr)
+                # CMD_|POS_|LEN_|RSVE = 16
+
+                position = int(netcmd[4:8])
+                length = int(netcmd[8:12])
+
+                fh_proc.seek(position)
                 try:
-                    self._devcon.sendall(fh_proc.read(self._lenvalr))
+                    self._devcon.sendall(fh_proc.read(length))
                 except:
                     break
 
-            if netcmd == b'SEND':
+            if cmd == b'SEND':
                 # Ausgänge empfangen
-                try:
-                    block = self._devcon.recv(self._lenvalw)
-                except:
-                    break
-                fh_proc.seek(self._startvalw)
+                # CMD_|POS_|LEN_|RSVE = 16
+
+                position = int(netcmd[4:8])
+                length = int(netcmd[8:12])
+
+#                try:
+                block = self._devcon.recv(length)
+#                except:
+#                    break
+                fh_proc.seek(position)
                 fh_proc.write(block)
+
+                # Record seperator
+                self._devcon.send(b'\x1e')
 
             # Verarbeitungszeit prüfen
             comtime = default_timer() - ot
@@ -611,7 +600,7 @@ class RevPiSlaveDev(Thread):
                         int(self._deadtime * 1000), int(comtime * 1000)
                     )
                 )
-                #break
+#                break
 
         fh_proc.close()
         self._devcon.close()

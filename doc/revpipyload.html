@@ -49,12 +49,21 @@ Classes</h3>
 </tr><tr>
 <td><a style="color:#0000FF" href="#RevPiPyLoad">RevPiPyLoad</a></td>
 <td>Hauptklasse, die alle Funktionen zur Verfuegung stellt.</td>
+</tr><tr>
+<td><a style="color:#0000FF" href="#RevPiSlave">RevPiSlave</a></td>
+<td></td>
+</tr><tr>
+<td><a style="color:#0000FF" href="#RevPiSlaveDev">RevPiSlaveDev</a></td>
+<td></td>
 </tr>
 </table>
 <h3 style="background-color:#FFFFFF;color:#FF0000">
 Functions</h3>
 <table>
-<tr><td>None</td></tr>
+<tr>
+<td><a style="color:#0000FF" href="#_zeroprocimg">_zeroprocimg</a></td>
+<td>Setzt Prozessabbild auf NULL.</td>
+</tr>
 </table>
 <hr /><hr />
 <a NAME="LogReader" ID="LogReader"></a>
@@ -312,9 +321,6 @@ Methods</h3>
 <td><a style="color:#0000FF" href="#RevPiPlc._spopen">_spopen</a></td>
 <td>Startet das PLC Programm.</td>
 </tr><tr>
-<td><a style="color:#0000FF" href="#RevPiPlc._zeroprocimg">_zeroprocimg</a></td>
-<td>Setzt Prozessabbild auf NULL.</td>
-</tr><tr>
 <td><a style="color:#0000FF" href="#RevPiPlc.newlogfile">newlogfile</a></td>
 <td>Konfiguriert die FileHandler auf neue Logdatei.</td>
 </tr><tr>
@@ -369,13 +375,7 @@ Prozessliste
 <dd>
 subprocess
 </dd>
-</dl><a NAME="RevPiPlc._zeroprocimg" ID="RevPiPlc._zeroprocimg"></a>
-<h3 style="background-color:#FFFFFF;color:#FF0000">
-RevPiPlc._zeroprocimg</h3>
-<b>_zeroprocimg</b>(<i></i>)
-<p>
-Setzt Prozessabbild auf NULL.
-</p><a NAME="RevPiPlc.newlogfile" ID="RevPiPlc.newlogfile"></a>
+</dl><a NAME="RevPiPlc.newlogfile" ID="RevPiPlc.newlogfile"></a>
 <h3 style="background-color:#FFFFFF;color:#FF0000">
 RevPiPlc.newlogfile</h3>
 <b>newlogfile</b>(<i></i>)
@@ -787,6 +787,127 @@ Statuscode:
             Positive Zahl ist exitcode von piControlReset
 </dd>
 </dl>
+<div align="right"><a style="color:#0000FF" href="#top">Up</a></div>
+<hr /><hr />
+<a NAME="RevPiSlave" ID="RevPiSlave"></a>
+<h2 style="background-color:#FFFFFF;color:#0000FF">RevPiSlave</h2>
+
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+Derived from</h3>
+Thread
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+Class Attributes</h3>
+<table>
+<tr><td>None</td></tr>
+</table>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+Class Methods</h3>
+<table>
+<tr><td>None</td></tr>
+</table>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+Methods</h3>
+<table>
+<tr>
+<td><a style="color:#0000FF" href="#RevPiSlave.__init__">RevPiSlave</a></td>
+<td>Instantiiert RevPiSlave-Klasse.</td>
+</tr><tr>
+<td><a style="color:#0000FF" href="#RevPiSlave.newlogfile">newlogfile</a></td>
+<td>Konfiguriert die FileHandler auf neue Logdatei.</td>
+</tr><tr>
+<td><a style="color:#0000FF" href="#RevPiSlave.run">run</a></td>
+<td></td>
+</tr><tr>
+<td><a style="color:#0000FF" href="#RevPiSlave.stop">stop</a></td>
+<td>Beendet Slaveausfuehrung.</td>
+</tr>
+</table>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+Static Methods</h3>
+<table>
+<tr><td>None</td></tr>
+</table>
+<a NAME="RevPiSlave.__init__" ID="RevPiSlave.__init__"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+RevPiSlave (Constructor)</h3>
+<b>RevPiSlave</b>(<i></i>)
+<p>
+Instantiiert RevPiSlave-Klasse.
+</p><a NAME="RevPiSlave.newlogfile" ID="RevPiSlave.newlogfile"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+RevPiSlave.newlogfile</h3>
+<b>newlogfile</b>(<i></i>)
+<p>
+Konfiguriert die FileHandler auf neue Logdatei.
+</p><a NAME="RevPiSlave.run" ID="RevPiSlave.run"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+RevPiSlave.run</h3>
+<b>run</b>(<i></i>)
+<a NAME="RevPiSlave.stop" ID="RevPiSlave.stop"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+RevPiSlave.stop</h3>
+<b>stop</b>(<i></i>)
+<p>
+Beendet Slaveausfuehrung.
+</p>
+<div align="right"><a style="color:#0000FF" href="#top">Up</a></div>
+<hr /><hr />
+<a NAME="RevPiSlaveDev" ID="RevPiSlaveDev"></a>
+<h2 style="background-color:#FFFFFF;color:#0000FF">RevPiSlaveDev</h2>
+
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+Derived from</h3>
+Thread
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+Class Attributes</h3>
+<table>
+<tr><td>None</td></tr>
+</table>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+Class Methods</h3>
+<table>
+<tr><td>None</td></tr>
+</table>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+Methods</h3>
+<table>
+<tr>
+<td><a style="color:#0000FF" href="#RevPiSlaveDev.__init__">RevPiSlaveDev</a></td>
+<td></td>
+</tr><tr>
+<td><a style="color:#0000FF" href="#RevPiSlaveDev.run">run</a></td>
+<td></td>
+</tr><tr>
+<td><a style="color:#0000FF" href="#RevPiSlaveDev.stop">stop</a></td>
+<td></td>
+</tr>
+</table>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+Static Methods</h3>
+<table>
+<tr><td>None</td></tr>
+</table>
+<a NAME="RevPiSlaveDev.__init__" ID="RevPiSlaveDev.__init__"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+RevPiSlaveDev (Constructor)</h3>
+<b>RevPiSlaveDev</b>(<i>devcon, deadtime</i>)
+<a NAME="RevPiSlaveDev.run" ID="RevPiSlaveDev.run"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+RevPiSlaveDev.run</h3>
+<b>run</b>(<i></i>)
+<a NAME="RevPiSlaveDev.stop" ID="RevPiSlaveDev.stop"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+RevPiSlaveDev.stop</h3>
+<b>stop</b>(<i></i>)
+
+<div align="right"><a style="color:#0000FF" href="#top">Up</a></div>
+<hr /><hr />
+<a NAME="_zeroprocimg" ID="_zeroprocimg"></a>
+<h2 style="background-color:#FFFFFF;color:#0000FF">_zeroprocimg</h2>
+<b>_zeroprocimg</b>(<i></i>)
+<p>
+Setzt Prozessabbild auf NULL.
+</p>
 <div align="right"><a style="color:#0000FF" href="#top">Up</a></div>
 <hr />
 </body></html>
