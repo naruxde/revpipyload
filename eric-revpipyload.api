@@ -49,6 +49,8 @@ revpipyload.RevPiPyLoad.xml_getprocimg?4()
 revpipyload.RevPiPyLoad.xml_plcdownload?4(mode="tar", pictory=False)
 revpipyload.RevPiPyLoad.xml_plcexitcode?4()
 revpipyload.RevPiPyLoad.xml_plcrunning?4()
+revpipyload.RevPiPyLoad.xml_plcslavestart?4()
+revpipyload.RevPiPyLoad.xml_plcslavestop?4()
 revpipyload.RevPiPyLoad.xml_plcstart?4()
 revpipyload.RevPiPyLoad.xml_plcstop?4()
 revpipyload.RevPiPyLoad.xml_plcupload?4(filedata, filename)
@@ -62,13 +64,15 @@ revpipyload.RevPiPyLoad?1()
 revpipyload.RevPiSlave.newlogfile?4()
 revpipyload.RevPiSlave.run?4()
 revpipyload.RevPiSlave.stop?4()
-revpipyload.RevPiSlave?1()
+revpipyload.RevPiSlave?1(acl, port=55234)
 revpipyload.RevPiSlaveDev.run?4()
 revpipyload.RevPiSlaveDev.stop?4()
-revpipyload.RevPiSlaveDev?1(devcon, deadtime)
+revpipyload.RevPiSlaveDev?1(devcon, deadtime, acl)
+revpipyload._ipmatch?5(ipaddress, dict_acl)
 revpipyload._zeroprocimg?5()
 revpipyload.configrsc?7
 revpipyload.picontrolreset?7
 revpipyload.procimg?7
 revpipyload.pyloadverion?7
 revpipyload.rapcatalog?7
+revpipyload.re_ipacl?7

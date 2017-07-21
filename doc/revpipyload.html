@@ -32,7 +32,7 @@ begrenzt werden!
 <h3 style="background-color:#FFFFFF;color:#FF0000">
 Global Attributes</h3>
 <table>
-<tr><td>configrsc</td></tr><tr><td>picontrolreset</td></tr><tr><td>procimg</td></tr><tr><td>pyloadverion</td></tr><tr><td>rapcatalog</td></tr>
+<tr><td>configrsc</td></tr><tr><td>picontrolreset</td></tr><tr><td>procimg</td></tr><tr><td>pyloadverion</td></tr><tr><td>rapcatalog</td></tr><tr><td>re_ipacl</td></tr>
 </table>
 <h3 style="background-color:#FFFFFF;color:#FF0000">
 Classes</h3>
@@ -61,6 +61,9 @@ Classes</h3>
 Functions</h3>
 <table>
 <tr>
+<td><a style="color:#0000FF" href="#_ipmatch">_ipmatch</a></td>
+<td>Prueft IP gegen ACL List und gibt ACL aus.</td>
+</tr><tr>
 <td><a style="color:#0000FF" href="#_zeroprocimg">_zeroprocimg</a></td>
 <td>Setzt Prozessabbild auf NULL.</td>
 </tr>
@@ -471,6 +474,12 @@ Methods</h3>
 <td><a style="color:#0000FF" href="#RevPiPyLoad.xml_plcrunning">xml_plcrunning</a></td>
 <td>Prueft ob das PLC Programm noch lauft.</td>
 </tr><tr>
+<td><a style="color:#0000FF" href="#RevPiPyLoad.xml_plcslavestart">xml_plcslavestart</a></td>
+<td>Startet den PLC Slave Server.</td>
+</tr><tr>
+<td><a style="color:#0000FF" href="#RevPiPyLoad.xml_plcslavestop">xml_plcslavestop</a></td>
+<td>Stoppt den PLC Slave Server.</td>
+</tr><tr>
 <td><a style="color:#0000FF" href="#RevPiPyLoad.xml_plcstart">xml_plcstart</a></td>
 <td>Startet das PLC Programm.</td>
 </tr><tr>
@@ -664,6 +673,31 @@ Prueft ob das PLC Programm noch lauft.
 <dd>
 True, wenn das PLC Programm noch lauft
 </dd>
+</dl><a NAME="RevPiPyLoad.xml_plcslavestart" ID="RevPiPyLoad.xml_plcslavestart"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+RevPiPyLoad.xml_plcslavestart</h3>
+<b>xml_plcslavestart</b>(<i></i>)
+<p>
+Startet den PLC Slave Server.
+</p><dl>
+<dt>Returns:</dt>
+<dd>
+Statuscode:
+            0: erfolgreich gestartet
+            -1: Nicht aktiv in Konfiguration
+            -2: Laeuft bereits
+</dd>
+</dl><a NAME="RevPiPyLoad.xml_plcslavestop" ID="RevPiPyLoad.xml_plcslavestop"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+RevPiPyLoad.xml_plcslavestop</h3>
+<b>xml_plcslavestop</b>(<i></i>)
+<p>
+Stoppt den PLC Slave Server.
+</p><dl>
+<dt>Returns:</dt>
+<dd>
+True, wenn stop erfolgreich
+</dd>
 </dl><a NAME="RevPiPyLoad.xml_plcstart" ID="RevPiPyLoad.xml_plcstart"></a>
 <h3 style="background-color:#FFFFFF;color:#FF0000">
 RevPiPyLoad.xml_plcstart</h3>
@@ -830,10 +864,18 @@ Static Methods</h3>
 <a NAME="RevPiSlave.__init__" ID="RevPiSlave.__init__"></a>
 <h3 style="background-color:#FFFFFF;color:#FF0000">
 RevPiSlave (Constructor)</h3>
-<b>RevPiSlave</b>(<i></i>)
+<b>RevPiSlave</b>(<i>acl, port=55234</i>)
 <p>
 Instantiiert RevPiSlave-Klasse.
-</p><a NAME="RevPiSlave.newlogfile" ID="RevPiSlave.newlogfile"></a>
+</p><dl>
+<dt><i>acl</i></dt>
+<dd>
+Stringliste mit Leerstellen getrennt
+</dd><dt><i>port</i></dt>
+<dd>
+Listen Port fuer plc Slaveserver
+</dd>
+</dl><a NAME="RevPiSlave.newlogfile" ID="RevPiSlave.newlogfile"></a>
 <h3 style="background-color:#FFFFFF;color:#FF0000">
 RevPiSlave.newlogfile</h3>
 <b>newlogfile</b>(<i></i>)
@@ -890,7 +932,7 @@ Static Methods</h3>
 <a NAME="RevPiSlaveDev.__init__" ID="RevPiSlaveDev.__init__"></a>
 <h3 style="background-color:#FFFFFF;color:#FF0000">
 RevPiSlaveDev (Constructor)</h3>
-<b>RevPiSlaveDev</b>(<i>devcon, deadtime</i>)
+<b>RevPiSlaveDev</b>(<i>devcon, deadtime, acl</i>)
 <a NAME="RevPiSlaveDev.run" ID="RevPiSlaveDev.run"></a>
 <h3 style="background-color:#FFFFFF;color:#FF0000">
 RevPiSlaveDev.run</h3>
@@ -900,6 +942,27 @@ RevPiSlaveDev.run</h3>
 RevPiSlaveDev.stop</h3>
 <b>stop</b>(<i></i>)
 
+<div align="right"><a style="color:#0000FF" href="#top">Up</a></div>
+<hr /><hr />
+<a NAME="_ipmatch" ID="_ipmatch"></a>
+<h2 style="background-color:#FFFFFF;color:#0000FF">_ipmatch</h2>
+<b>_ipmatch</b>(<i>ipaddress, dict_acl</i>)
+<p>
+Prueft IP gegen ACL List und gibt ACL aus.
+</p><dl>
+<dt><i>ipaddress</i></dt>
+<dd>
+zum pruefen
+</dd><dt><i>dict_acl</i></dt>
+<dd>
+ACL Dict gegen die IP zu pruefen ist
+</dd>
+</dl><dl>
+<dt>Returns:</dt>
+<dd>
+int() ACL Wert oder -1 wenn nicht gefunden
+</dd>
+</dl>
 <div align="right"><a style="color:#0000FF" href="#top">Up</a></div>
 <hr /><hr />
 <a NAME="_zeroprocimg" ID="_zeroprocimg"></a>
