@@ -42,7 +42,7 @@ import zipfile
 from concurrent import futures
 from configparser import ConfigParser
 from json import loads as jloads
-from re import fullmatch as refullmatch
+from re import match as rematch
 from shutil import rmtree
 from sys import stdout as sysstdout
 from tempfile import mkstemp
@@ -71,9 +71,21 @@ def _ipmatch(ipaddress, dict_acl):
     """
     for aclip in sorted(dict_acl, reverse=True):
         regex = aclip.replace(".", "\\.").replace("*", "\\d{1,3}")
-        if refullmatch(regex, ipaddress) is not None:
-            return str(dict_acl[aclip])
-    return "-1"
+        if refullmatch(regex, ipaddress):
+            return dict_acl[aclip]
+    return -1
+
+
+def refullmatch(regex, string):
+    """re.fullmatch wegen alter python version aus wheezy nachgebaut.
+
+    @param regex RegEx Statement
+    @param string Zeichenfolge gegen die getestet wird
+    @return True, wenn komplett passt sonst False
+
+    """
+    m = rematch(regex, string)
+    return m is not None and m.end() == len(string)
 
 
 def _zeroprocimg():
@@ -464,6 +476,7 @@ class RevPiSlave(Thread):
         self._evt_exit = Event()
         self.exitcode = None
         self._port = port
+        self.so = None
         self._th_dev = []
         self.zeroonerror = False
         self.zeroonexit = False
@@ -473,13 +486,14 @@ class RevPiSlave(Thread):
         for host in acl.split():
             aclsplit = host.split(",")
             self.dict_acl[aclsplit[0]] = \
-                "0" if len(aclsplit) == 1 else aclsplit[1]
+                0 if len(aclsplit) == 1 else int(aclsplit[1])
 
     def newlogfile(self):
         """Konfiguriert die FileHandler auf neue Logdatei."""
         pass
 
     def run(self):
+        """Startet Serverkomponente fuer die Annahme neuer Verbindungen."""
         proginit.logger.debug("enter RevPiSlave.run()")
 
         # Socket öffnen und konfigurieren
@@ -494,6 +508,7 @@ class RevPiSlave(Thread):
                 break
         self.so.listen(15)
 
+        # Mit Socket arbeiten
         while not self._evt_exit.is_set():
             self.exitcode = -1
 
@@ -502,12 +517,13 @@ class RevPiSlave(Thread):
             try:
                 tup_sock = self.so.accept()
             except:
-                proginit.logger.exception("after accept")
+                if not self._evt_exit.is_set():
+                    proginit.logger.exception("accept exception")
                 continue
 
             # ACL prüfen
             aclstatus = _ipmatch(tup_sock[1][0], self.dict_acl)
-            if aclstatus == "-1":
+            if aclstatus == -1:
                 tup_sock[0].close()
                 proginit.logger.warning(
                     "host ip '{}' does not match revpiacl - disconnect"
@@ -519,7 +535,10 @@ class RevPiSlave(Thread):
                 th.start()
                 self._th_dev.append(th)
 
-            # TODO: tote Threads entfernen
+            # Liste von toten threads befreien
+            self._th_dev = [
+                th_check for th_check in self._th_dev if th_check.is_alive()
+            ]
 
         # Alle Threads beenden
         for th in self._th_dev:
@@ -527,6 +546,8 @@ class RevPiSlave(Thread):
 
         # Socket schließen
         self.so.close()
+        self.so = None
+
         self.exitcode = 0
 
         proginit.logger.debug("leave RevPiSlave.run()")
@@ -536,7 +557,8 @@ class RevPiSlave(Thread):
         proginit.logger.debug("enter RevPiSlave.stop()")
 
         self._evt_exit.set()
-        self.so.shutdown(socket.SHUT_RDWR)
+        if self.so is not None:
+            self.so.shutdown(socket.SHUT_RDWR)
 
         proginit.logger.debug("leave RevPiSlave.stop()")
 
@@ -544,18 +566,22 @@ class RevPiSlave(Thread):
 class RevPiSlaveDev(Thread):
 
     def __init__(self, devcon, deadtime, acl):
+        """Init RevPiSlaveDev-Class.
+
+        @param devcon Tuple der Verbindung
+        @param deadtime Timeout der Vararbeitung
+        @param acl Berechtigungslevel
+
+        """
         super().__init__()
         self._acl = acl
         self.daemon = True
         self._deadtime = deadtime
         self._devcon, self._addr = devcon
         self._evt_exit = Event()
-        self._startvalr = 0
-        self._lenvalr = 0
-        self._startvalw = 0
-        self._lenvalw = 0
 
     def run(self):
+        """Verarbeitet Anfragen von Remoteteilnehmer."""
         proginit.logger.debug("enter RevPiSlaveDev.run()")
 
         proginit.logger.info(
@@ -564,30 +590,79 @@ class RevPiSlaveDev(Thread):
         )
 
         # CMDs anhand ACL aufbauen
-        msgcli = [b'DATA', b'PICT']
-        if self._acl == "1":
-            msgcli.append(b'SEND')
+        msgcli = [b'DA', b'PI', b'\x06\x16']
+        if self._acl == 1:
+            msgcli.append(b'SD')
 
         # Prozessabbild öffnen
         fh_proc = open(procimg, "r+b", 0)
 
         while not self._evt_exit.is_set():
-            # Meldung erhalten
-            try:
-                netcmd = self._devcon.recv(16)
-                # proginit.logger.debug("command {}".format(netcmd))
-            except:
-                break
-
             # Laufzeitberechnung starten
             ot = default_timer()
 
+            # Meldung erhalten
+            try:
+                netcmd = self._devcon.recv(16)
+            except:
+                break
+
             # Wenn Meldung ungültig ist aussteigen
-            cmd = netcmd[:4]
+            if netcmd[0:1] != b'\x01' or netcmd[-1:] != b'\x17':
+                if netcmd != b'':
+                    proginit.logger.error(
+                        "net cmd not valid {}".format(netcmd)
+                    )
+                break
+
+            # CMD prüfen
+            cmd = netcmd[1:3]
             if cmd not in msgcli:
                 break
 
-            if cmd == b'PICT':
+            if cmd == b'\x06\x16':
+                # Just sync
+                pass
+
+            elif cmd == b'DA':
+                # Processabbild übertragen
+                # bCMiiii00000000b = 16
+
+                position = int.from_bytes(netcmd[3:5], byteorder="little")
+                length = int.from_bytes(netcmd[5:7], byteorder="little")
+
+                fh_proc.seek(position)
+                try:
+                    self._devcon.sendall(fh_proc.read(length))
+                except:
+                    proginit.logger.error("error while send read data")
+                    break
+
+            elif cmd == b'SD':
+                # Ausgänge empfangen
+                # bCMiiii00000000b = 16
+
+                position = int.from_bytes(netcmd[3:5], byteorder="little")
+                length = int.from_bytes(netcmd[5:7], byteorder="little")
+
+                try:
+                    block = self._devcon.recv(length)
+                except:
+                    proginit.logger.error("error while recv data to write")
+                    break
+                fh_proc.seek(position)
+
+                # Länge der Daten prüfen
+                if len(block) == length:
+                    fh_proc.write(block)
+                else:
+                    proginit.logger.error("got wrong length to write")
+                    break
+
+                # Record seperator character
+                self._devcon.send(b'\x1e')
+
+            elif cmd == b'PI':
                 # piCtory Konfiguration senden
                 proginit.logger.debug(
                     "transfair pictory configuration: {}".format(configrsc)
@@ -601,39 +676,9 @@ class RevPiSlaveDev(Thread):
                         fh_pic.close()
                         break
 
-                # Abschlussmeldung
-                self._devcon.send(b'PICOK')
+                # End-of-Transmission character
+                self._devcon.send(b'\x04')
                 continue
-
-            if cmd == b'DATA':
-                # Processabbild übertragen
-                # CMD_|POS_|LEN_|RSVE = 16
-
-                position = int(netcmd[4:8])
-                length = int(netcmd[8:12])
-
-                fh_proc.seek(position)
-                try:
-                    self._devcon.sendall(fh_proc.read(length))
-                except:
-                    break
-
-            if cmd == b'SEND':
-                # Ausgänge empfangen
-                # CMD_|POS_|LEN_|RSVE = 16
-
-                position = int(netcmd[4:8])
-                length = int(netcmd[8:12])
-
-#                try:
-                block = self._devcon.recv(length)
-#                except:
-#                    break
-                fh_proc.seek(position)
-                fh_proc.write(block)
-
-                # Record seperator
-                self._devcon.send(b'\x1e')
 
             # Verarbeitungszeit prüfen
             comtime = default_timer() - ot
@@ -643,7 +688,6 @@ class RevPiSlaveDev(Thread):
                         int(self._deadtime * 1000), int(comtime * 1000)
                     )
                 )
-#                break
 
         fh_proc.close()
         self._devcon.close()
@@ -653,6 +697,7 @@ class RevPiSlaveDev(Thread):
         proginit.logger.debug("leave RevPiSlaveDev.run()")
 
     def stop(self):
+        """Beendet Verbindungsthread."""
         proginit.logger.debug("enter RevPiSlaveDev.stop()")
 
         self._evt_exit.set()
@@ -764,7 +809,7 @@ class RevPiPyLoad():
         # PLC Slave ACL laden und prüfen
         plcslaveacl = \
             self.globalconfig["DEFAULT"].get("plcslaveacl", "")
-        if len(plcslaveacl) > 0 and refullmatch(re_ipacl, plcslaveacl) is None:
+        if len(plcslaveacl) > 0 and not refullmatch(re_ipacl, plcslaveacl):
             self.plcslaveacl = ""
             proginit.logger.warning("can not load plcslaveacl - wrong format")
         else:
@@ -781,7 +826,7 @@ class RevPiPyLoad():
         # TODO: xmlrpcacl auswerten
         xmlrpcacl = \
             self.globalconfig["DEFAULT"].get("xmlrpcacl", "")
-        if len(xmlrpcacl) > 0 and refullmatch(re_ipacl, xmlrpcacl) is None:
+        if len(xmlrpcacl) > 0 and not refullmatch(re_ipacl, xmlrpcacl):
             self.xmlrpcacl = ""
             proginit.logger.warning("can not load xmlrpcacl - wrong format")
         else:
@@ -1263,7 +1308,7 @@ class RevPiPyLoad():
         # Werte übernehmen
         for key in keys:
             if key in dc:
-                if refullmatch(keys[key], str(dc[key])) is None:
+                if not refullmatch(keys[key], str(dc[key])):
                     proginit.logger.error(
                         "got wrong setting '{}' with value '{}'".format(
                             key, dc[key]

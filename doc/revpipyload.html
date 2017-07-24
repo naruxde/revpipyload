@@ -66,6 +66,9 @@ Functions</h3>
 </tr><tr>
 <td><a style="color:#0000FF" href="#_zeroprocimg">_zeroprocimg</a></td>
 <td>Setzt Prozessabbild auf NULL.</td>
+</tr><tr>
+<td><a style="color:#0000FF" href="#refullmatch">refullmatch</a></td>
+<td>re.fullmatch wegen alter python version aus wheezy nachgebaut.</td>
 </tr>
 </table>
 <hr /><hr />
@@ -850,7 +853,7 @@ Methods</h3>
 <td>Konfiguriert die FileHandler auf neue Logdatei.</td>
 </tr><tr>
 <td><a style="color:#0000FF" href="#RevPiSlave.run">run</a></td>
-<td></td>
+<td>Startet Serverkomponente fuer die Annahme neuer Verbindungen.</td>
 </tr><tr>
 <td><a style="color:#0000FF" href="#RevPiSlave.stop">stop</a></td>
 <td>Beendet Slaveausfuehrung.</td>
@@ -885,7 +888,9 @@ Konfiguriert die FileHandler auf neue Logdatei.
 <h3 style="background-color:#FFFFFF;color:#FF0000">
 RevPiSlave.run</h3>
 <b>run</b>(<i></i>)
-<a NAME="RevPiSlave.stop" ID="RevPiSlave.stop"></a>
+<p>
+Startet Serverkomponente fuer die Annahme neuer Verbindungen.
+</p><a NAME="RevPiSlave.stop" ID="RevPiSlave.stop"></a>
 <h3 style="background-color:#FFFFFF;color:#FF0000">
 RevPiSlave.stop</h3>
 <b>stop</b>(<i></i>)
@@ -915,13 +920,13 @@ Methods</h3>
 <table>
 <tr>
 <td><a style="color:#0000FF" href="#RevPiSlaveDev.__init__">RevPiSlaveDev</a></td>
-<td></td>
+<td>Init RevPiSlaveDev-Class.</td>
 </tr><tr>
 <td><a style="color:#0000FF" href="#RevPiSlaveDev.run">run</a></td>
-<td></td>
+<td>Verarbeitet Anfragen von Remoteteilnehmer.</td>
 </tr><tr>
 <td><a style="color:#0000FF" href="#RevPiSlaveDev.stop">stop</a></td>
-<td></td>
+<td>Beendet Verbindungsthread.</td>
 </tr>
 </table>
 <h3 style="background-color:#FFFFFF;color:#FF0000">
@@ -933,15 +938,32 @@ Static Methods</h3>
 <h3 style="background-color:#FFFFFF;color:#FF0000">
 RevPiSlaveDev (Constructor)</h3>
 <b>RevPiSlaveDev</b>(<i>devcon, deadtime, acl</i>)
-<a NAME="RevPiSlaveDev.run" ID="RevPiSlaveDev.run"></a>
+<p>
+Init RevPiSlaveDev-Class.
+</p><dl>
+<dt><i>devcon</i></dt>
+<dd>
+Tuple der Verbindung
+</dd><dt><i>deadtime</i></dt>
+<dd>
+Timeout der Vararbeitung
+</dd><dt><i>acl</i></dt>
+<dd>
+Berechtigungslevel
+</dd>
+</dl><a NAME="RevPiSlaveDev.run" ID="RevPiSlaveDev.run"></a>
 <h3 style="background-color:#FFFFFF;color:#FF0000">
 RevPiSlaveDev.run</h3>
 <b>run</b>(<i></i>)
-<a NAME="RevPiSlaveDev.stop" ID="RevPiSlaveDev.stop"></a>
+<p>
+Verarbeitet Anfragen von Remoteteilnehmer.
+</p><a NAME="RevPiSlaveDev.stop" ID="RevPiSlaveDev.stop"></a>
 <h3 style="background-color:#FFFFFF;color:#FF0000">
 RevPiSlaveDev.stop</h3>
 <b>stop</b>(<i></i>)
-
+<p>
+Beendet Verbindungsthread.
+</p>
 <div align="right"><a style="color:#0000FF" href="#top">Up</a></div>
 <hr /><hr />
 <a NAME="_ipmatch" ID="_ipmatch"></a>
@@ -971,6 +993,27 @@ int() ACL Wert oder -1 wenn nicht gefunden
 <p>
 Setzt Prozessabbild auf NULL.
 </p>
+<div align="right"><a style="color:#0000FF" href="#top">Up</a></div>
+<hr /><hr />
+<a NAME="refullmatch" ID="refullmatch"></a>
+<h2 style="background-color:#FFFFFF;color:#0000FF">refullmatch</h2>
+<b>refullmatch</b>(<i>regex, string</i>)
+<p>
+re.fullmatch wegen alter python version aus wheezy nachgebaut.
+</p><dl>
+<dt><i>regex</i></dt>
+<dd>
+RegEx Statement
+</dd><dt><i>string</i></dt>
+<dd>
+Zeichenfolge gegen die getestet wird
+</dd>
+</dl><dl>
+<dt>Returns:</dt>
+<dd>
+True, wenn komplett passt sonst False
+</dd>
+</dl>
 <div align="right"><a style="color:#0000FF" href="#top">Up</a></div>
 <hr />
 </body></html>

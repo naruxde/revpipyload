@@ -76,3 +76,4 @@ revpipyload.procimg?7
 revpipyload.pyloadverion?7
 revpipyload.rapcatalog?7
 revpipyload.re_ipacl?7
+revpipyload.refullmatch?4(regex, string)
