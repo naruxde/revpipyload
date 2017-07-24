@@ -51,10 +51,10 @@ Classes</h3>
 <td>Hauptklasse, die alle Funktionen zur Verfuegung stellt.</td>
 </tr><tr>
 <td><a style="color:#0000FF" href="#RevPiSlave">RevPiSlave</a></td>
-<td></td>
+<td>RevPi PLC-Server.</td>
 </tr><tr>
 <td><a style="color:#0000FF" href="#RevPiSlaveDev">RevPiSlaveDev</a></td>
-<td></td>
+<td>Klasse um eine RevPiModIO Verbindung zu verwalten.</td>
 </tr>
 </table>
 <h3 style="background-color:#FFFFFF;color:#FF0000">
@@ -828,7 +828,16 @@ Statuscode:
 <hr /><hr />
 <a NAME="RevPiSlave" ID="RevPiSlave"></a>
 <h2 style="background-color:#FFFFFF;color:#0000FF">RevPiSlave</h2>
+<p>
+RevPi PLC-Server.
+</p><p>
+    Diese Klasste stellt den RevPi PLC-Server zur verfuegung und akzeptiert
+    neue Verbindungen. Dieser werden dann als RevPiSlaveDev abgebildet.
+</p><p>
+    Ueber die angegebenen ACLs koennen Zugriffsbeschraenkungen vergeben werden.
+</p><p>
 
+</p>
 <h3 style="background-color:#FFFFFF;color:#FF0000">
 Derived from</h3>
 Thread
@@ -901,7 +910,14 @@ Beendet Slaveausfuehrung.
 <hr /><hr />
 <a NAME="RevPiSlaveDev" ID="RevPiSlaveDev"></a>
 <h2 style="background-color:#FFFFFF;color:#0000FF">RevPiSlaveDev</h2>
+<p>
+Klasse um eine RevPiModIO Verbindung zu verwalten.
+</p><p>
+    Diese Klasste stellt die Funktionen zur Verfuegung um Daten ueber das
+    Netzwerk mit dem Prozessabbild auszutauschen.
+</p><p>
 
+</p>
 <h3 style="background-color:#FFFFFF;color:#FF0000">
 Derived from</h3>
 Thread
@@ -937,7 +953,7 @@ Static Methods</h3>
 <a NAME="RevPiSlaveDev.__init__" ID="RevPiSlaveDev.__init__"></a>
 <h3 style="background-color:#FFFFFF;color:#FF0000">
 RevPiSlaveDev (Constructor)</h3>
-<b>RevPiSlaveDev</b>(<i>devcon, deadtime, acl</i>)
+<b>RevPiSlaveDev</b>(<i>devcon, acl</i>)
 <p>
 Init RevPiSlaveDev-Class.
 </p><dl>

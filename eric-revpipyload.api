@@ -67,7 +67,7 @@ revpipyload.RevPiSlave.stop?4()
 revpipyload.RevPiSlave?1(acl, port=55234)
 revpipyload.RevPiSlaveDev.run?4()
 revpipyload.RevPiSlaveDev.stop?4()
-revpipyload.RevPiSlaveDev?1(devcon, deadtime, acl)
+revpipyload.RevPiSlaveDev?1(devcon, acl)
 revpipyload._ipmatch?5(ipaddress, dict_acl)
 revpipyload._zeroprocimg?5()
 revpipyload.configrsc?7

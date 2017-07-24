@@ -467,12 +467,20 @@ class RevPiPlc(Thread):
 
 class RevPiSlave(Thread):
 
+    """RevPi PLC-Server.
+
+    Diese Klasste stellt den RevPi PLC-Server zur verfuegung und akzeptiert
+    neue Verbindungen. Dieser werden dann als RevPiSlaveDev abgebildet.
+
+    Ueber die angegebenen ACLs koennen Zugriffsbeschraenkungen vergeben werden.
+
+    """
+
     def __init__(self, acl, port=55234):
         """Instantiiert RevPiSlave-Klasse.
         @param acl Stringliste mit Leerstellen getrennt
         @param port Listen Port fuer plc Slaveserver"""
         super().__init__()
-        self.deadtime = 0.5
         self._evt_exit = Event()
         self.exitcode = None
         self._port = port
@@ -531,7 +539,7 @@ class RevPiSlave(Thread):
                 )
             else:
                 # Thread starten
-                th = RevPiSlaveDev(tup_sock, self.deadtime, aclstatus)
+                th = RevPiSlaveDev(tup_sock, aclstatus)
                 th.start()
                 self._th_dev.append(th)
 
@@ -558,14 +566,24 @@ class RevPiSlave(Thread):
 
         self._evt_exit.set()
         if self.so is not None:
-            self.so.shutdown(socket.SHUT_RDWR)
+            try:
+                self.so.shutdown(socket.SHUT_RDWR)
+            except:
+                pass
 
         proginit.logger.debug("leave RevPiSlave.stop()")
 
 
 class RevPiSlaveDev(Thread):
 
-    def __init__(self, devcon, deadtime, acl):
+    """Klasse um eine RevPiModIO Verbindung zu verwalten.
+
+    Diese Klasste stellt die Funktionen zur Verfuegung um Daten ueber das
+    Netzwerk mit dem Prozessabbild auszutauschen.
+
+    """
+
+    def __init__(self, devcon, acl):
         """Init RevPiSlaveDev-Class.
 
         @param devcon Tuple der Verbindung
@@ -576,7 +594,7 @@ class RevPiSlaveDev(Thread):
         super().__init__()
         self._acl = acl
         self.daemon = True
-        self._deadtime = deadtime
+        self._deadtime = None
         self._devcon, self._addr = devcon
         self._evt_exit = Event()
 
@@ -588,11 +606,6 @@ class RevPiSlaveDev(Thread):
             "got new connection from host {} with acl {}".format(
                 self._addr, self._acl)
         )
-
-        # CMDs anhand ACL aufbauen
-        msgcli = [b'DA', b'PI', b'\x06\x16']
-        if self._acl == 1:
-            msgcli.append(b'SD')
 
         # Prozessabbild öffnen
         fh_proc = open(procimg, "r+b", 0)
@@ -615,16 +628,8 @@ class RevPiSlaveDev(Thread):
                     )
                 break
 
-            # CMD prüfen
             cmd = netcmd[1:3]
-            if cmd not in msgcli:
-                break
-
-            if cmd == b'\x06\x16':
-                # Just sync
-                pass
-
-            elif cmd == b'DA':
+            if cmd == b'DA':
                 # Processabbild übertragen
                 # bCMiiii00000000b = 16
 
@@ -638,8 +643,8 @@ class RevPiSlaveDev(Thread):
                     proginit.logger.error("error while send read data")
                     break
 
-            elif cmd == b'SD':
-                # Ausgänge empfangen
+            elif cmd == b'SD' and self._acl == 1:
+                # Ausgänge empfangen, wenn acl es erlaubt
                 # bCMiiii00000000b = 16
 
                 position = int.from_bytes(netcmd[3:5], byteorder="little")
@@ -662,6 +667,22 @@ class RevPiSlaveDev(Thread):
                 # Record seperator character
                 self._devcon.send(b'\x1e')
 
+            elif cmd == b'\x06\x16':
+                # Just sync
+                self._devcon.send(b'\x06\x16')
+
+            elif cmd == b'CF':
+                # Socket konfigurieren
+                # bCMii0000000000b = 16
+
+                timeoutms = int.from_bytes(netcmd[3:5], byteorder="little")
+
+                self._deadtime = timeoutms / 1000
+                self._devcon.settimeout(self._deadtime)
+
+                # Record seperator character
+                self._devcon.send(b'\x1e')
+
             elif cmd == b'PI':
                 # piCtory Konfiguration senden
                 proginit.logger.debug(
@@ -680,14 +701,20 @@ class RevPiSlaveDev(Thread):
                 self._devcon.send(b'\x04')
                 continue
 
+            else:
+                # Kein gültiges CMD gefunden, abbruch!
+                break
+
             # Verarbeitungszeit prüfen
-            comtime = default_timer() - ot
-            if comtime > self._deadtime:
-                proginit.logger.warning(
-                    "runtime more than {} ms: {}".format(
-                        int(self._deadtime * 1000), int(comtime * 1000)
+            if self._deadtime is not None:
+                comtime = default_timer() - ot
+                if comtime > self._deadtime:
+                    proginit.logger.warning(
+                        "runtime more than {} ms: {}!".format(
+                            int(self._deadtime * 1000), comtime
+                        )
                     )
-                )
+                    # TODO: Soll ein Fehler ausgelöst werden?
 
         fh_proc.close()
         self._devcon.close()
