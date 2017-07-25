@@ -598,6 +598,9 @@ class RevPiSlaveDev(Thread):
         self._devcon, self._addr = devcon
         self._evt_exit = Event()
 
+        # Sicherheitsbytes
+        self.ey_dict = {}
+
     def run(self):
         """Verarbeitet Anfragen von Remoteteilnehmer."""
         proginit.logger.debug("enter RevPiSlaveDev.run()")
@@ -610,6 +613,7 @@ class RevPiSlaveDev(Thread):
         # Prozessabbild öffnen
         fh_proc = open(procimg, "r+b", 0)
 
+        dirty = True
         while not self._evt_exit.is_set():
             # Laufzeitberechnung starten
             ot = default_timer()
@@ -683,6 +687,57 @@ class RevPiSlaveDev(Thread):
                 # Record seperator character
                 self._devcon.send(b'\x1e')
 
+            elif cmd == b'EY':
+                # Bytes bei Verbindungsabbruch schreiben
+                # bCMiiiix0000000b = 16
+
+                position = int.from_bytes(
+                    netcmd[3:5], byteorder="little"
+                )
+                length = int.from_bytes(
+                    netcmd[5:7], byteorder="little"
+                )
+                if netcmd[7:8] == b'\xFF':
+                    # Dirtybytes löschen
+                    if position in self.ey_dict:
+                        del self.ey_dict[position]
+
+                        # Record seperator character
+                        self._devcon.send(b'\x1e')
+                        proginit.logger.info(
+                            "cleared dirty bytes on position {}"
+                            "".format(position)
+                        )
+
+                else:
+                    # Dirtybytes hinzufügen
+                    bytesbuff = bytearray()
+                    try:
+                        while not self._evt_exit.is_set() \
+                                and len(bytesbuff) < length:
+                            block = self._devcon.recv(1024)
+                            bytesbuff += block
+                            if block == b'':
+                                break
+
+                    except:
+                        proginit.logger.error("error while recv dirty bytes")
+                        break
+
+                    # Länge der Daten prüfen
+                    if len(bytesbuff) == length:
+                        self.ey_dict[position] = bytesbuff
+                    else:
+                        proginit.logger.error("got wrong length to write")
+                        break
+
+                    # Record seperator character
+                    self._devcon.send(b'\x1e')
+                    proginit.logger.info(
+                        "got dirty bytes to write on error on position {}"
+                        "".format(position)
+                    )
+
             elif cmd == b'PI':
                 # piCtory Konfiguration senden
                 proginit.logger.debug(
@@ -701,6 +756,12 @@ class RevPiSlaveDev(Thread):
                 self._devcon.send(b'\x04')
                 continue
 
+            elif cmd == b'EX':
+                # Sauber Verbindung verlassen
+                dirty = False
+                self._evt_exit.set()
+                continue
+
             else:
                 # Kein gültiges CMD gefunden, abbruch!
                 break
@@ -715,6 +776,16 @@ class RevPiSlaveDev(Thread):
                         )
                     )
                     # TODO: Soll ein Fehler ausgelöst werden?
+
+        # Dirty verlassen
+        if dirty:
+            for pos in self.ey_dict:
+                fh_proc.seek(pos)
+                fh_proc.write(self.ey_dict[pos])
+
+            proginit.logger.error(
+                "dirty shutdown of connection"
+            )
 
         fh_proc.close()
         self._devcon.close()
@@ -1089,6 +1160,8 @@ class RevPiPyLoad():
 
         while not self._exit \
                 and not self.evt_loadconfig.is_set():
+
+            # TODO: Soll hier der PLC Server Thread geprüft werden?
 
             # piCtory auf Veränderung prüfen
             if self.pictorymtime != os.path.getmtime(configrsc):
