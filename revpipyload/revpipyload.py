@@ -58,7 +58,7 @@ procimg = "/dev/piControl0"
 pyloadverion = "0.5.0"
 rapcatalog = None
 
-re_ipacl = "(([\\d\\*]{1,3}\\.){3}[\\d\\*]{1,3},[0-1] ?)+"
+re_ipacl = "(([\\d\\*]{1,3}\\.){3}[\\d\\*]{1,3},[0-1] ?)*"
 
 
 def _ipmatch(ipaddress, dict_acl):
@@ -649,24 +649,26 @@ class RevPiSlaveDev(Thread):
 
             elif cmd == b'SD' and self._acl == 1:
                 # Ausgänge empfangen, wenn acl es erlaubt
-                # bCMiiii00000000b = 16
+                # bCMiiiic0000000b = 16
 
                 position = int.from_bytes(netcmd[3:5], byteorder="little")
                 length = int.from_bytes(netcmd[5:7], byteorder="little")
+                control = netcmd[7:8]
 
-                try:
-                    block = self._devcon.recv(length)
-                except:
-                    proginit.logger.error("error while recv data to write")
-                    break
-                fh_proc.seek(position)
+                if control == b'\x1d' and length > 0:
+                    try:
+                        block = self._devcon.recv(length)
+                    except:
+                        proginit.logger.error("error while recv data to write")
+                        break
+                    fh_proc.seek(position)
 
-                # Länge der Daten prüfen
-                if len(block) == length:
-                    fh_proc.write(block)
-                else:
-                    proginit.logger.error("got wrong length to write")
-                    break
+                    # Länge der Daten prüfen
+                    if len(block) == length:
+                        fh_proc.write(block)
+                    else:
+                        proginit.logger.error("got wrong length to write")
+                        break
 
                 # Record seperator character
                 self._devcon.send(b'\x1e')
@@ -783,9 +785,7 @@ class RevPiSlaveDev(Thread):
                 fh_proc.seek(pos)
                 fh_proc.write(self.ey_dict[pos])
 
-            proginit.logger.error(
-                "dirty shutdown of connection"
-            )
+            proginit.logger.error("dirty shutdown of connection")
 
         fh_proc.close()
         self._devcon.close()
