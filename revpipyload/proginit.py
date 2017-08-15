@@ -49,6 +49,14 @@ def configure():
         help="Save log entries to this file"
     )
     parser.add_argument(
+        "--procimg", dest="procimg",
+        help="Path to process image"
+    )
+    parser.add_argument(
+        "--pictory", dest="configrsc",
+        help="piCtory file to use"
+    )
+    parser.add_argument(
         "-v", "--verbose", action="count", dest="verbose",
         help="Switch on verbose logging"
     )

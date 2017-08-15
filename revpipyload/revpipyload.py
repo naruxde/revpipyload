@@ -297,8 +297,8 @@ class RevPiPlc(Thread):
     def _zeroprocimg(self):
         """Setzt Prozessabbild auf NULL."""
         if os.path.exists("/dev/piControl0"):
-            f = open("/dev/piControl0", "w+b", 0)
-            f.write(bytes(4096))
+            with open("/dev/piControl0", "w+b", 0) as f:
+                f.write(bytes(4096))
 
     def newlogfile(self):
         """Konfiguriert die FileHandler auf neue Logdatei."""
@@ -449,6 +449,7 @@ class RevPiPyLoad():
 
         # piCtory Konfiguration an bekannten Stellen prüfen
         global configrsc
+        configrsc = proginit.pargs.configrsc
         lst_rsc = ["/etc/revpi/config.rsc", "/opt/KUNBUS/config.rsc"]
         for rscfile in lst_rsc:
             if os.access(rscfile, os.F_OK | os.R_OK):
@@ -459,6 +460,11 @@ class RevPiPyLoad():
                 "can not find known pictory configurations at {}"
                 "".format(", ".join(lst_rsc))
             )
+
+        # Alternatives Processabbild verwenden
+        if proginit.pargs.procimg is not None:
+            global procimg
+            procimg = proginit.pargs.procimg
 
         # rap Katalog an bekannten Stellen prüfen und laden
         global rapcatalog
@@ -851,9 +857,8 @@ class RevPiPyLoad():
 
         file = self.packapp(mode, pictory)
         if os.path.exists(file):
-            fh = open(file, "rb")
-            xmldata = Binary(fh.read())
-            fh.close()
+            with open(file, "rb") as fh:
+                xmldata = Binary(fh.read())
             os.remove(file)
             return xmldata
         return Binary()
@@ -996,8 +1001,8 @@ class RevPiPyLoad():
                 self.globalconfig.set("DEFAULT", key, str(dc[key]))
 
         # conf-Datei schreiben
-        fh = open(proginit.globalconffile, "w")
-        self.globalconfig.write(fh)
+        with open(proginit.globalconffile, "w") as fh:
+            self.globalconfig.write(fh)
         proginit.logger.info(
             "got new config and wrote it to {}".format(proginit.globalconffile)
         )
