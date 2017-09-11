@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE Project SYSTEM "Project-5.1.dtd">
 <!-- eric project file for project revpipyload -->
-<!-- Saved: 2017-07-21, 22:24:05 -->
+<!-- Saved: 2017-08-26, 09:25:46 -->
 <!-- Copyright (C) 2017 Sven Sager, akira@narux.de -->
 <Project version="5.1">
   <Language>en_US</Language>
@@ -12,7 +12,7 @@
   <Version>0.5.0</Version>
   <Author>Sven Sager</Author>
   <Email>akira@narux.de</Email>
-  <Eol index="-1"/>
+  <Eol index="1"/>
   <Sources>
     <Source>revpipyload/proginit.py</Source>
     <Source>setup.py</Source>

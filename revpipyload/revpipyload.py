@@ -597,6 +597,7 @@ class RevPiSlaveDev(Thread):
         self._deadtime = None
         self._devcon, self._addr = devcon
         self._evt_exit = Event()
+        self._writeerror = False
 
         # Sicherheitsbytes
         self.ey_dict = {}
@@ -660,6 +661,7 @@ class RevPiSlaveDev(Thread):
                         block = self._devcon.recv(length)
                     except:
                         proginit.logger.error("error while recv data to write")
+                        self._writeerror = True
                         break
                     fh_proc.seek(position)
 
@@ -671,7 +673,12 @@ class RevPiSlaveDev(Thread):
                         break
 
                 # Record seperator character
-                self._devcon.send(b'\x1e')
+                if control == b'\x1c':
+                    if self._writeerror:
+                        self._devcon.send(b'\xff')
+                    else:
+                        self._devcon.send(b'\x1e')
+                    self._writeerror = False
 
             elif cmd == b'\x06\x16':
                 # Just sync
@@ -749,6 +756,7 @@ class RevPiSlaveDev(Thread):
                 while True:
                     data = fh_pic.read(1024)
                     if data:
+                        # FIXME: Fehler fangen
                         self._devcon.send(data)
                     else:
                         fh_pic.close()
