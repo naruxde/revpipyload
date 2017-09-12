@@ -1,17 +1,15 @@
+# -*- coding: utf-8 -*-
 #
 # RevPiPyLoad
 #
 # Webpage: https://revpimodio.org/revpipyplc/
 # (c) Sven Sager, License: LGPLv3
 #
-# -*- coding: utf-8 -*-
 """Main functions of our program."""
 import logging
-import os.path
+import os
 import sys
 from argparse import ArgumentParser
-from os import fork as osfork
-
 
 forked = False
 globalconffile = None
@@ -19,13 +17,35 @@ logapp = "revpipyloadapp.log"
 logplc = "revpipyload.log"
 logger = None
 pargs = None
+picontrolreset = "/opt/KUNBUS/piControlReset"
+rapcatalog = None
 startdir = None
+
+
+def _zeroprocimg(self):
+    """Setzt Prozessabbild auf NULL."""
+    procimg = "/dev/piControl0" if pargs is None else pargs.procimg
+    if os.access(procimg, os.W_OK):
+        with open(procimg, "w+b", 0) as f:
+            f.write(bytes(4096))
+    else:
+        if logger is not None:
+            logger.error("zeroprocimg can not write to piControl device")
 
 
 def cleanup():
     """Clean up program."""
+    # NOTE: Pidfile wirklich löschen?
+    if pargs is not None and pargs.daemon:
+        if os.path.exists("/var/run/revpipyload.pid"):
+            os.remove("/var/run/revpipyload.pid")
+
     # Logging beenden
     logging.shutdown()
+
+    # Dateihandler schließen
+    if pargs.daemon:
+        sys.stdout.close()
 
 
 def configure():
@@ -33,7 +53,7 @@ def configure():
 
     # Command arguments
     parser = ArgumentParser(
-        description="RevolutionPi Python3 Loader"
+        description="RevolutionPi Python Loader"
     )
     parser.add_argument(
         "-d", "--daemon", action="store_true", dest="daemon",
@@ -50,6 +70,7 @@ def configure():
     )
     parser.add_argument(
         "--procimg", dest="procimg",
+        default="/dev/piControl0",
         help="Path to process image"
     )
     parser.add_argument(
@@ -63,15 +84,6 @@ def configure():
     global pargs
     pargs = parser.parse_args()
 
-    # Pfade absolut umschreiben
-    global startdir
-    if startdir is None:
-        startdir = os.path.abspath(".")
-    if pargs.conffile is not None and os.path.dirname(pargs.conffile) == "":
-        pargs.conffile = os.path.join(startdir, pargs.conffile)
-    if pargs.logfile is not None and os.path.dirname(pargs.logfile) == "":
-        pargs.logfile = os.path.join(startdir, pargs.logfile)
-
     # Prüfen ob als Daemon ausgeführt werden soll
     global forked
     pidfile = "/var/run/revpipyload.pid"
@@ -84,7 +96,7 @@ def configure():
             )
 
         # Zum daemon machen
-        pid = osfork()
+        pid = os.fork()
         if pid > 0:
             with open(pidfile, "w") as f:
                 f.write(str(pid))
@@ -92,15 +104,58 @@ def configure():
         else:
             forked = True
 
+    # piCtory Konfiguration prüfen
+    if pargs.configrsc is None:
+        lst_rsc = ["/etc/revpi/config.rsc", "/opt/KUNBUS/config.rsc"]
+        for rscfile in lst_rsc:
+            if os.access(rscfile, os.F_OK | os.R_OK):
+                pargs.configrsc = rscfile
+                break
+    elif not os.access(pargs.configrsc, os.F_OK | os.R_OK):
+        pargs.configrsc = None
+    if pargs.configrsc is None:
+        raise RuntimeError(
+            "can not find known pictory configurations at {}"
+            "".format(", ".join(lst_rsc))
+        )
+
+    # piControlReset suchen
+    global picontrolreset
+    if not os.access(picontrolreset, os.F_OK | os.X_OK):
+        picontrolreset = "/usr/bin/piTest -x"
+
+    # rap Katalog an bekannten Stellen prüfen und laden
+    global rapcatalog
+    lst_rap = [
+        "/opt/KUNBUS/pictory/resources/data/rap",
+        "/var/www/pictory/resources/data/rap"
+    ]
+    for rapfolder in lst_rap:
+        if os.path.isdir(rapfolder):
+            rapcatalog = os.listdir(rapfolder)
+
+    # Pfade absolut umschreiben
+    global startdir
+    if startdir is None:
+        startdir = os.path.abspath(".")
+    if pargs.conffile is not None and os.path.dirname(pargs.conffile) == "":
+        pargs.conffile = os.path.join(startdir, pargs.conffile)
+    if pargs.logfile is not None and os.path.dirname(pargs.logfile) == "":
+        pargs.logfile = os.path.join(startdir, pargs.logfile)
+
     global logapp
     global logplc
     if pargs.daemon:
+        # Ausgage vor Umhängen schließen
+        sys.stdout.close()
+
         # Ausgaben umhängen in Logfile
         logapp = "/var/log/revpipyloadapp"
         logplc = "/var/log/revpipyload"
         pargs.conffile = "/etc/revpipyload/revpipyload.conf"
         sys.stdout = open(logplc, "a")
         sys.stderr = sys.stdout
+
     elif pargs.logfile is not None:
         logplc = pargs.logfile
 

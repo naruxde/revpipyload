@@ -1,10 +1,10 @@
+# -*- coding: utf-8 -*-
 #
 # RevPiPyLoad
 #
 # Webpage: https://revpimodio.org/revpipyplc/
 # (c) Sven Sager, License: LGPLv3
 #
-# -*- coding: utf-8 -*-
 """Stellt Funktionen bereit um das Prozessabbild zu ueberwachen.
 
 Bei ausreichend Rechten koennen Ausgaenge auch gesetzt werden um einen
@@ -12,6 +12,7 @@ IO-Check bei Inbetriebname durchzufuehren.
 
 """
 import pickle
+import proginit
 import revpimodio
 from xmlrpc.client import Binary
 
@@ -27,22 +28,17 @@ class ProcimgServer():
 
     """
 
-    def __init__(self, logger, xmlserver, configrsc, procimg, aclmode):
+    def __init__(self, xmlserver, aclmode):
         """Instantiiert RevPiCheckServer()-Klasse.
 
         @param xmlserver XML-RPC Server
-        @param procimg Pfad zum Prozessabbild
-        @param configrsc Pfad zur piCtory Konfigurationsdatei
-        @param logger Loggerinstanz
         @param aclmode Zugriffsrechte
 
         """
         # Logger übernehmen
-        self.logger = logger
-        self.logger.debug("enter ProcimgServer.__init__()")
+        proginit.logger.debug("enter ProcimgServer.__init__()")
+
         self.acl = aclmode
-        self.configrsc = configrsc
-        self.procimg = procimg
         self.rpi = None
 
         # XML-Server übernehmen
@@ -60,7 +56,7 @@ class ProcimgServer():
 
         self.loadrevpimodio()
 
-        self.logger.debug("leave ProcimgServer.__init__()")
+        proginit.logger.debug("leave ProcimgServer.__init__()")
 
     def devices(self):
         """Generiert Deviceliste mit Position und Namen.
@@ -104,19 +100,19 @@ class ProcimgServer():
         if self.rpi is not None:
             self.rpi.cleanup()
 
-        self.logger.debug("create revpimodio class")
+        proginit.logger.debug("create revpimodio class")
         try:
             self.rpi = revpimodio.RevPiModIO(
-                configrsc=self.configrsc,
-                procimg=self.procimg,
+                configrsc=proginit.pargs.configrsc,
+                procimg=proginit.pargs.procimg
             )
         except:
             self.rpi = None
-            self.logger.error("piCtory configuration not loadable")
+            proginit.logger.error("piCtory configuration not loadable")
             return False
 
         self.rpi.devices.syncoutputs(device=0)
-        self.logger.debug("created revpimodio class")
+        proginit.logger.debug("created revpimodio class")
         return True
 
     def setvalue(self, device, io, value):
@@ -171,9 +167,9 @@ class ProcimgServer():
     def start(self):
         """Registriert XML Funktionen.
         @return True, wenn erfolgreich"""
-        self.logger.debug("enter ProcimgServer.start()")
-        ec = False
+        proginit.logger.debug("enter ProcimgServer.start()")
 
+        ec = False
         if self.rpi is not None:
 
             # Registriere Funktionen
@@ -188,12 +184,12 @@ class ProcimgServer():
                     )
             ec = True
 
-        self.logger.debug("leave ProcimgServer.start()")
+        proginit.logger.debug("leave ProcimgServer.start()")
         return ec
 
     def stop(self):
         """Entfernt XML-Funktionen."""
-        self.logger.debug("enter ProcimgServer.stop()")
+        proginit.logger.debug("enter ProcimgServer.stop()")
 
         # Entferne Funktionen
         for xmlfunc in self.xmlreadfuncs:
@@ -204,4 +200,4 @@ class ProcimgServer():
                 if xmlfunc in self.xmlsrv.funcs:
                     del self.xmlsrv.funcs[xmlfunc]
 
-        self.logger.debug("leave ProcimgServer.stop()")
+        proginit.logger.debug("leave ProcimgServer.stop()")

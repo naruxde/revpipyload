@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE Project SYSTEM "Project-5.1.dtd">
 <!-- eric project file for project revpipyload -->
-<!-- Saved: 2017-07-06, 12:34:30 -->
+<!-- Saved: 2017-09-12, 10:20:24 -->
 <!-- Copyright (C) 2017 Sven Sager, akira@narux.de -->
 <Project version="5.1">
   <Language>en_US</Language>
@@ -9,15 +9,17 @@
   <ProgLanguage mixed="0">Python3</ProgLanguage>
   <ProjectType>Console</ProjectType>
   <Description>Dieser Loader wird über das Init-System geladen und führt das angegebene Pythonprogramm aus. Es ist für den RevolutionPi gedacht um automatisch das SPS-Programm zu starten.</Description>
-  <Version>0.4.2</Version>
+  <Version>0.4.3</Version>
   <Author>Sven Sager</Author>
   <Email>akira@narux.de</Email>
-  <Eol index="-1"/>
+  <Eol index="1"/>
   <Sources>
     <Source>revpipyload/proginit.py</Source>
     <Source>setup.py</Source>
     <Source>revpipyload/revpipyload.py</Source>
     <Source>revpipyload/procimgserver.py</Source>
+    <Source>revpipyload/logsystem.py</Source>
+    <Source>revpipyload/plcsystem.py</Source>
   </Sources>
   <Forms/>
   <Translations/>

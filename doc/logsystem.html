@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html><head>
+<title>logsystem</title>
+<meta charset="UTF-8">
+</head>
+<body style="background-color:#FFFFFF;color:#000000"><a NAME="top" ID="top"></a>
+<h1 style="background-color:#FFFFFF;color:#0000FF">
+logsystem</h1>
+<p>
+Modul fuer die Verwaltung der Logdateien.
+</p>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+Global Attributes</h3>
+<table>
+<tr><td>None</td></tr>
+</table>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+Classes</h3>
+<table>
+<tr>
+<td><a style="color:#0000FF" href="#LogReader">LogReader</a></td>
+<td>Ermoeglicht den Zugriff auf die Logdateien.</td>
+</tr><tr>
+<td><a style="color:#0000FF" href="#PipeLogwriter">PipeLogwriter</a></td>
+<td>File PIPE fuer das Schreiben des APP Log.</td>
+</tr>
+</table>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+Functions</h3>
+<table>
+<tr><td>None</td></tr>
+</table>
+<hr /><hr />
+<a NAME="LogReader" ID="LogReader"></a>
+<h2 style="background-color:#FFFFFF;color:#0000FF">LogReader</h2>
+<p>
+Ermoeglicht den Zugriff auf die Logdateien.
+</p><p>
+    Beinhaltet Funktionen fuer den Abruf der gesamten Logdatei fuer das
+    RevPiPyLoad-System und die Logdatei der PLC-Anwendung.
+</p><p>
+
+</p>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+Derived from</h3>
+None
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+Class Attributes</h3>
+<table>
+<tr><td>None</td></tr>
+</table>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+Class Methods</h3>
+<table>
+<tr><td>None</td></tr>
+</table>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+Methods</h3>
+<table>
+<tr>
+<td><a style="color:#0000FF" href="#LogReader.__init__">LogReader</a></td>
+<td>Instantiiert LogReader-Klasse.</td>
+</tr><tr>
+<td><a style="color:#0000FF" href="#LogReader.closeall">closeall</a></td>
+<td>Fuehrt close auf File Handler durch.</td>
+</tr><tr>
+<td><a style="color:#0000FF" href="#LogReader.load_applog">load_applog</a></td>
+<td>Uebertraegt Logdaten des PLC Programms Binaer.</td>
+</tr><tr>
+<td><a style="color:#0000FF" href="#LogReader.load_plclog">load_plclog</a></td>
+<td>Uebertraegt Logdaten des Loaders Binaer.</td>
+</tr>
+</table>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+Static Methods</h3>
+<table>
+<tr><td>None</td></tr>
+</table>
+<a NAME="LogReader.__init__" ID="LogReader.__init__"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+LogReader (Constructor)</h3>
+<b>LogReader</b>(<i></i>)
+<p>
+Instantiiert LogReader-Klasse.
+</p><a NAME="LogReader.closeall" ID="LogReader.closeall"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+LogReader.closeall</h3>
+<b>closeall</b>(<i></i>)
+<p>
+Fuehrt close auf File Handler durch.
+</p><a NAME="LogReader.load_applog" ID="LogReader.load_applog"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+LogReader.load_applog</h3>
+<b>load_applog</b>(<i>start, count</i>)
+<p>
+Uebertraegt Logdaten des PLC Programms Binaer.
+</p><dl>
+<dt><i>start</i></dt>
+<dd>
+Startbyte
+</dd><dt><i>count</i></dt>
+<dd>
+Max. Byteanzahl zum uebertragen
+</dd>
+</dl><dl>
+<dt>Returns:</dt>
+<dd>
+Binary() der Logdatei
+</dd>
+</dl><a NAME="LogReader.load_plclog" ID="LogReader.load_plclog"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+LogReader.load_plclog</h3>
+<b>load_plclog</b>(<i>start, count</i>)
+<p>
+Uebertraegt Logdaten des Loaders Binaer.
+</p><dl>
+<dt><i>start</i></dt>
+<dd>
+Startbyte
+</dd><dt><i>count</i></dt>
+<dd>
+Max. Byteanzahl zum uebertragen
+</dd>
+</dl><dl>
+<dt>Returns:</dt>
+<dd>
+Binary() der Logdatei
+</dd>
+</dl>
+<div align="right"><a style="color:#0000FF" href="#top">Up</a></div>
+<hr /><hr />
+<a NAME="PipeLogwriter" ID="PipeLogwriter"></a>
+<h2 style="background-color:#FFFFFF;color:#0000FF">PipeLogwriter</h2>
+<p>
+File PIPE fuer das Schreiben des APP Log.
+</p><p>
+    Spezieller LogFile-Handler fuer die Ausgabe des subprocess fuer das Python
+    PLC Programm. Die Ausgabe kann nicht auf einen neuen FileHandler
+    umgeschrieben werden. Dadurch waere es nicht moeglich nach einem logrotate
+    die neue Datei zu verwenden. Ueber die PIPE wird dies umgangen.
+</p><p>
+
+</p>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+Derived from</h3>
+Thread
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+Class Attributes</h3>
+<table>
+<tr><td>None</td></tr>
+</table>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+Class Methods</h3>
+<table>
+<tr><td>None</td></tr>
+</table>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+Methods</h3>
+<table>
+<tr>
+<td><a style="color:#0000FF" href="#PipeLogwriter.__init__">PipeLogwriter</a></td>
+<td>Instantiiert PipeLogwriter-Klasse.</td>
+</tr><tr>
+<td><a style="color:#0000FF" href="#PipeLogwriter.__del__">__del__</a></td>
+<td>Close der FileHandler.</td>
+</tr><tr>
+<td><a style="color:#0000FF" href="#PipeLogwriter._configurefh">_configurefh</a></td>
+<td>Konfiguriert den FileHandler fuer Ausgaben der PLCAPP.</td>
+</tr><tr>
+<td><a style="color:#0000FF" href="#PipeLogwriter.logline">logline</a></td>
+<td>Schreibt eine Zeile in die Logdatei oder stdout.</td>
+</tr><tr>
+<td><a style="color:#0000FF" href="#PipeLogwriter.newlogfile">newlogfile</a></td>
+<td>Konfiguriert den FileHandler auf eine neue Logdatei.</td>
+</tr><tr>
+<td><a style="color:#0000FF" href="#PipeLogwriter.run">run</a></td>
+<td>Prueft auf neue Logzeilen und schreibt diese.</td>
+</tr><tr>
+<td><a style="color:#0000FF" href="#PipeLogwriter.stop">stop</a></td>
+<td>Beendetden Thread und die FileHandler werden geschlossen.</td>
+</tr>
+</table>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+Static Methods</h3>
+<table>
+<tr><td>None</td></tr>
+</table>
+<a NAME="PipeLogwriter.__init__" ID="PipeLogwriter.__init__"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+PipeLogwriter (Constructor)</h3>
+<b>PipeLogwriter</b>(<i>logfilename</i>)
+<p>
+Instantiiert PipeLogwriter-Klasse.
+</p><dl>
+<dt><i>logfilename</i></dt>
+<dd>
+Dateiname fuer Logdatei
+</dd>
+</dl><a NAME="PipeLogwriter.__del__" ID="PipeLogwriter.__del__"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+PipeLogwriter.__del__</h3>
+<b>__del__</b>(<i></i>)
+<p>
+Close der FileHandler.
+</p><a NAME="PipeLogwriter._configurefh" ID="PipeLogwriter._configurefh"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+PipeLogwriter._configurefh</h3>
+<b>_configurefh</b>(<i></i>)
+<p>
+Konfiguriert den FileHandler fuer Ausgaben der PLCAPP.
+</p><dl>
+<dt>Returns:</dt>
+<dd>
+FileHandler-Objekt
+</dd>
+</dl><a NAME="PipeLogwriter.logline" ID="PipeLogwriter.logline"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+PipeLogwriter.logline</h3>
+<b>logline</b>(<i>message</i>)
+<p>
+Schreibt eine Zeile in die Logdatei oder stdout.
+</p><dl>
+<dt><i>message</i></dt>
+<dd>
+Logzeile zum Schreiben
+</dd>
+</dl><a NAME="PipeLogwriter.newlogfile" ID="PipeLogwriter.newlogfile"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+PipeLogwriter.newlogfile</h3>
+<b>newlogfile</b>(<i></i>)
+<p>
+Konfiguriert den FileHandler auf eine neue Logdatei.
+</p><a NAME="PipeLogwriter.run" ID="PipeLogwriter.run"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+PipeLogwriter.run</h3>
+<b>run</b>(<i></i>)
+<p>
+Prueft auf neue Logzeilen und schreibt diese.
+</p><a NAME="PipeLogwriter.stop" ID="PipeLogwriter.stop"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+PipeLogwriter.stop</h3>
+<b>stop</b>(<i></i>)
+<p>
+Beendetden Thread und die FileHandler werden geschlossen.
+</p>
+<div align="right"><a style="color:#0000FF" href="#top">Up</a></div>
+<hr />
+</body></html>
