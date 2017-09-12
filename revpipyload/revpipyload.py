@@ -36,6 +36,7 @@ import plcsystem
 import proginit
 import os
 import signal
+import socket
 import tarfile
 import zipfile
 from concurrent import futures
@@ -46,10 +47,396 @@ from shutil import rmtree
 from tempfile import mkstemp
 from threading import Event
 from time import asctime
+from timeit import default_timer
 from xmlrpc.client import Binary
 from xmlrpc.server import SimpleXMLRPCServer
 
 pyloadverion = "0.4.3"
+pyloadverion = "0.5.0"
+re_ipacl = "(([\\d\\*]{1,3}\\.){3}[\\d\\*]{1,3},[0-1] ?)*"
+
+
+def _ipmatch(ipaddress, dict_acl):
+    """Prueft IP gegen ACL List und gibt ACL aus.
+
+    @param ipaddress zum pruefen
+    @param dict_acl ACL Dict gegen die IP zu pruefen ist
+    @return int() ACL Wert oder -1 wenn nicht gefunden
+
+    """
+    for aclip in sorted(dict_acl, reverse=True):
+        regex = aclip.replace(".", "\\.").replace("*", "\\d{1,3}")
+        if refullmatch(regex, ipaddress):
+            return dict_acl[aclip]
+    return -1
+
+
+def refullmatch(regex, string):
+    """re.fullmatch wegen alter python version aus wheezy nachgebaut.
+
+    @param regex RegEx Statement
+    @param string Zeichenfolge gegen die getestet wird
+    @return True, wenn komplett passt sonst False
+
+    """
+    m = rematch(regex, string)
+    return m is not None and m.end() == len(string)
+
+
+def _zeroprocimg():
+    """Setzt Prozessabbild auf NULL."""
+    if os.path.exists(procimg):
+        f = open(procimg, "w+b", 0)
+        f.write(bytes(4096))
+
+
+
+class RevPiSlave(Thread):
+
+    """RevPi PLC-Server.
+
+    Diese Klasste stellt den RevPi PLC-Server zur verfuegung und akzeptiert
+    neue Verbindungen. Dieser werden dann als RevPiSlaveDev abgebildet.
+
+    Ueber die angegebenen ACLs koennen Zugriffsbeschraenkungen vergeben werden.
+
+    """
+
+    def __init__(self, acl, port=55234):
+        """Instantiiert RevPiSlave-Klasse.
+        @param acl Stringliste mit Leerstellen getrennt
+        @param port Listen Port fuer plc Slaveserver"""
+        super().__init__()
+        self._evt_exit = Event()
+        self.exitcode = None
+        self._port = port
+        self.so = None
+        self._th_dev = []
+        self.zeroonerror = False
+        self.zeroonexit = False
+
+        # ACLs aufbereiten
+        self.dict_acl = {}
+        for host in acl.split():
+            aclsplit = host.split(",")
+            self.dict_acl[aclsplit[0]] = \
+                0 if len(aclsplit) == 1 else int(aclsplit[1])
+
+    def newlogfile(self):
+        """Konfiguriert die FileHandler auf neue Logdatei."""
+        pass
+
+    def run(self):
+        """Startet Serverkomponente fuer die Annahme neuer Verbindungen."""
+        proginit.logger.debug("enter RevPiSlave.run()")
+
+        # Socket öffnen und konfigurieren
+        self.so = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        while not self._evt_exit.is_set():
+            try:
+                self.so.bind(("", self._port))
+            except:
+                proginit.logger.warning("can not bind socket - retry")
+                self._evt_exit.wait(1)
+            else:
+                break
+        self.so.listen(15)
+
+        # Mit Socket arbeiten
+        while not self._evt_exit.is_set():
+            self.exitcode = -1
+
+            # Verbindung annehmen
+            proginit.logger.debug("accept new connection")
+            try:
+                tup_sock = self.so.accept()
+            except:
+                if not self._evt_exit.is_set():
+                    proginit.logger.exception("accept exception")
+                continue
+
+            # ACL prüfen
+            aclstatus = _ipmatch(tup_sock[1][0], self.dict_acl)
+            if aclstatus == -1:
+                tup_sock[0].close()
+                proginit.logger.warning(
+                    "host ip '{}' does not match revpiacl - disconnect"
+                    "".format(tup_sock[1][0])
+                )
+            else:
+                # Thread starten
+                th = RevPiSlaveDev(tup_sock, aclstatus)
+                th.start()
+                self._th_dev.append(th)
+
+            # Liste von toten threads befreien
+            self._th_dev = [
+                th_check for th_check in self._th_dev if th_check.is_alive()
+            ]
+
+        # Alle Threads beenden
+        for th in self._th_dev:
+            th.stop()
+
+        # Socket schließen
+        self.so.close()
+        self.so = None
+
+        self.exitcode = 0
+
+        proginit.logger.debug("leave RevPiSlave.run()")
+
+    def stop(self):
+        """Beendet Slaveausfuehrung."""
+        proginit.logger.debug("enter RevPiSlave.stop()")
+
+        self._evt_exit.set()
+        if self.so is not None:
+            try:
+                self.so.shutdown(socket.SHUT_RDWR)
+            except:
+                pass
+
+        proginit.logger.debug("leave RevPiSlave.stop()")
+
+
+class RevPiSlaveDev(Thread):
+
+    """Klasse um eine RevPiModIO Verbindung zu verwalten.
+
+    Diese Klasste stellt die Funktionen zur Verfuegung um Daten ueber das
+    Netzwerk mit dem Prozessabbild auszutauschen.
+
+    """
+
+    def __init__(self, devcon, acl):
+        """Init RevPiSlaveDev-Class.
+
+        @param devcon Tuple der Verbindung
+        @param deadtime Timeout der Vararbeitung
+        @param acl Berechtigungslevel
+
+        """
+        super().__init__()
+        self._acl = acl
+        self.daemon = True
+        self._deadtime = None
+        self._devcon, self._addr = devcon
+        self._evt_exit = Event()
+        self._writeerror = False
+
+        # Sicherheitsbytes
+        self.ey_dict = {}
+
+    def run(self):
+        """Verarbeitet Anfragen von Remoteteilnehmer."""
+        proginit.logger.debug("enter RevPiSlaveDev.run()")
+
+        proginit.logger.info(
+            "got new connection from host {} with acl {}".format(
+                self._addr, self._acl)
+        )
+
+        # Prozessabbild öffnen
+        fh_proc = open(procimg, "r+b", 0)
+
+        dirty = True
+        while not self._evt_exit.is_set():
+            # Laufzeitberechnung starten
+            ot = default_timer()
+
+            # Meldung erhalten
+            try:
+                netcmd = self._devcon.recv(16)
+            except:
+                break
+
+            # Wenn Meldung ungültig ist aussteigen
+            if netcmd[0:1] != b'\x01' or netcmd[-1:] != b'\x17':
+                if netcmd != b'':
+                    proginit.logger.error(
+                        "net cmd not valid {}".format(netcmd)
+                    )
+                break
+
+            cmd = netcmd[1:3]
+            if cmd == b'DA':
+                # Processabbild übertragen
+                # bCMiiii00000000b = 16
+
+                position = int.from_bytes(netcmd[3:5], byteorder="little")
+                length = int.from_bytes(netcmd[5:7], byteorder="little")
+
+                fh_proc.seek(position)
+                try:
+                    self._devcon.sendall(fh_proc.read(length))
+                except:
+                    proginit.logger.error("error while send read data")
+                    break
+
+            elif cmd == b'SD' and self._acl == 1:
+                # Ausgänge empfangen, wenn acl es erlaubt
+                # bCMiiiic0000000b = 16
+
+                position = int.from_bytes(netcmd[3:5], byteorder="little")
+                length = int.from_bytes(netcmd[5:7], byteorder="little")
+                control = netcmd[7:8]
+
+                if control == b'\x1d' and length > 0:
+                    try:
+                        block = self._devcon.recv(length)
+                    except:
+                        proginit.logger.error("error while recv data to write")
+                        self._writeerror = True
+                        break
+                    fh_proc.seek(position)
+
+                    # Länge der Daten prüfen
+                    if len(block) == length:
+                        fh_proc.write(block)
+                    else:
+                        proginit.logger.error("got wrong length to write")
+                        break
+
+                # Record seperator character
+                if control == b'\x1c':
+                    if self._writeerror:
+                        self._devcon.send(b'\xff')
+                    else:
+                        self._devcon.send(b'\x1e')
+                    self._writeerror = False
+
+            elif cmd == b'\x06\x16':
+                # Just sync
+                self._devcon.send(b'\x06\x16')
+
+            elif cmd == b'CF':
+                # Socket konfigurieren
+                # bCMii0000000000b = 16
+
+                timeoutms = int.from_bytes(netcmd[3:5], byteorder="little")
+
+                self._deadtime = timeoutms / 1000
+                self._devcon.settimeout(self._deadtime)
+
+                # Record seperator character
+                self._devcon.send(b'\x1e')
+
+            elif cmd == b'EY':
+                # Bytes bei Verbindungsabbruch schreiben
+                # bCMiiiix0000000b = 16
+
+                position = int.from_bytes(
+                    netcmd[3:5], byteorder="little"
+                )
+                length = int.from_bytes(
+                    netcmd[5:7], byteorder="little"
+                )
+                if netcmd[7:8] == b'\xFF':
+                    # Dirtybytes löschen
+                    if position in self.ey_dict:
+                        del self.ey_dict[position]
+
+                        # Record seperator character
+                        self._devcon.send(b'\x1e')
+                        proginit.logger.info(
+                            "cleared dirty bytes on position {}"
+                            "".format(position)
+                        )
+
+                else:
+                    # Dirtybytes hinzufügen
+                    bytesbuff = bytearray()
+                    try:
+                        while not self._evt_exit.is_set() \
+                                and len(bytesbuff) < length:
+                            block = self._devcon.recv(1024)
+                            bytesbuff += block
+                            if block == b'':
+                                break
+
+                    except:
+                        proginit.logger.error("error while recv dirty bytes")
+                        break
+
+                    # Länge der Daten prüfen
+                    if len(bytesbuff) == length:
+                        self.ey_dict[position] = bytesbuff
+                    else:
+                        proginit.logger.error("got wrong length to write")
+                        break
+
+                    # Record seperator character
+                    self._devcon.send(b'\x1e')
+                    proginit.logger.info(
+                        "got dirty bytes to write on error on position {}"
+                        "".format(position)
+                    )
+
+            elif cmd == b'PI':
+                # piCtory Konfiguration senden
+                proginit.logger.debug(
+                    "transfair pictory configuration: {}".format(configrsc)
+                )
+                fh_pic = open(configrsc, "rb")
+                while True:
+                    data = fh_pic.read(1024)
+                    if data:
+                        # FIXME: Fehler fangen
+                        self._devcon.send(data)
+                    else:
+                        fh_pic.close()
+                        break
+
+                # End-of-Transmission character
+                self._devcon.send(b'\x04')
+                continue
+
+            elif cmd == b'EX':
+                # Sauber Verbindung verlassen
+                dirty = False
+                self._evt_exit.set()
+                continue
+
+            else:
+                # Kein gültiges CMD gefunden, abbruch!
+                break
+
+            # Verarbeitungszeit prüfen
+            if self._deadtime is not None:
+                comtime = default_timer() - ot
+                if comtime > self._deadtime:
+                    proginit.logger.warning(
+                        "runtime more than {} ms: {}!".format(
+                            int(self._deadtime * 1000), comtime
+                        )
+                    )
+                    # TODO: Soll ein Fehler ausgelöst werden?
+
+        # Dirty verlassen
+        if dirty:
+            for pos in self.ey_dict:
+                fh_proc.seek(pos)
+                fh_proc.write(self.ey_dict[pos])
+
+            proginit.logger.error("dirty shutdown of connection")
+
+        fh_proc.close()
+        self._devcon.close()
+        self._devcon = None
+
+        proginit.logger.info("disconnected from {}".format(self._addr))
+        proginit.logger.debug("leave RevPiSlaveDev.run()")
+
+    def stop(self):
+        """Beendet Verbindungsthread."""
+        proginit.logger.debug("enter RevPiSlaveDev.stop()")
+
+        self._evt_exit.set()
+        if self._devcon is not None:
+            self._devcon.shutdown(socket.SHUT_RDWR)
+
+        proginit.logger.debug("leave RevPiSlaveDev.stop()")
 
 
 class RevPiPyLoad():
@@ -121,10 +508,33 @@ class RevPiPyLoad():
             self.globalconfig["DEFAULT"].get("plcworkdir", ".")
         self.plcslave = \
             int(self.globalconfig["DEFAULT"].get("plcslave", 0))
+
+        # PLC Slave ACL laden und prüfen
+        plcslaveacl = \
+            self.globalconfig["DEFAULT"].get("plcslaveacl", "")
+        if len(plcslaveacl) > 0 and not refullmatch(re_ipacl, plcslaveacl):
+            self.plcslaveacl = ""
+            proginit.logger.warning("can not load plcslaveacl - wrong format")
+        else:
+            self.plcslaveacl = plcslaveacl
+
+        self.plcslaveport = \
+            int(self.globalconfig["DEFAULT"].get("plcslaveport", 55234))
         self.pythonver = \
             int(self.globalconfig["DEFAULT"].get("pythonversion", 3))
         self.xmlrpc = \
             int(self.globalconfig["DEFAULT"].get("xmlrpc", 0))
+
+        # XML ACL laden und prüfen
+        # TODO: xmlrpcacl auswerten
+        xmlrpcacl = \
+            self.globalconfig["DEFAULT"].get("xmlrpcacl", "")
+        if len(xmlrpcacl) > 0 and not refullmatch(re_ipacl, xmlrpcacl):
+            self.xmlrpcacl = ""
+            proginit.logger.warning("can not load xmlrpcacl - wrong format")
+        else:
+            self.xmlrpcacl = xmlrpcacl
+
         self.zeroonerror = \
             int(self.globalconfig["DEFAULT"].get("zeroonerror", 1))
         self.zeroonexit = \
@@ -135,6 +545,10 @@ class RevPiPyLoad():
 
         # PLC Thread konfigurieren
         self.plc = self._plcthread()
+        if self.plcslave:
+            self.th_plcslave = RevPiSlave(self.plcslaveacl, self.plcslaveport)
+        else:
+            self.th_plcslave = None
 
         # XMLRPC-Server Instantiieren und konfigurieren
         if self.xmlrpc >= 1:
@@ -198,6 +612,9 @@ class RevPiPyLoad():
                 self.xsrv.register_function(
                     lambda: os.system(proginit.picontrolreset),
                     "resetpicontrol")
+                    self.xml_plcslavestop, "plcslavestop")
+                self.xsrv.register_function(
+                    lambda: os.system(picontrolreset), "resetpicontrol")
                 self.xsrv.register_function(
                     self.xml_setconfig, "set_config")
                 self.xsrv.register_function(
@@ -219,6 +636,7 @@ class RevPiPyLoad():
         """Konfiguriert den PLC-Thread fuer die Ausfuehrung.
         @return PLC-Thread Object or None"""
         proginit.logger.debug("enter RevPiPyLoad._plcthread()")
+        th_plc = None
 
         # Prüfen ob Programm existiert
         if not os.path.exists(os.path.join(self.plcworkdir, self.plcprog)):
@@ -334,6 +752,10 @@ class RevPiPyLoad():
             self.tpe = futures.ThreadPoolExecutor(max_workers=1)
             self.tpe.submit(self.xsrv.serve_forever)
 
+        if self.plcslave:
+            # Slaveausfuehrung übergeben
+            self.th_plcslave.start()
+
         if self.autostart:
             proginit.logger.debug("starting revpiplc-thread")
             if self.plc is not None:
@@ -341,6 +763,8 @@ class RevPiPyLoad():
 
         while not self._exit \
                 and not self.evt_loadconfig.is_set():
+
+            # TODO: Soll hier der PLC Server Thread geprüft werden?
 
             # piCtory auf Veränderung prüfen
             if self.pictorymtime != os.path.getmtime(proginit.pargs.configrsc):
@@ -366,8 +790,14 @@ class RevPiPyLoad():
         proginit.logger.info("stopping revpipyload")
         self._exit = True
 
+        if self.th_plcslave is not None and self.th_plcslave.is_alive():
+            proginit.logger.debug("stopping revpi slave thread")
+            self.th_plcslave.stop()
+            self.th_plcslave.join()
+            proginit.logger.debug("revpi slave thread successfully closed")
+
         if self.plc is not None and self.plc.is_alive():
-            proginit.logger.debug("stopping revpiplc-thread")
+            proginit.logger.debug("stopping revpiplc thread")
             self.plc.stop()
             self.plc.join()
             proginit.logger.debug("revpiplc thread successfully closed")
@@ -391,8 +821,11 @@ class RevPiPyLoad():
         dc["plcprogram"] = self.plcprog
         dc["plcarguments"] = self.plcarguments
         dc["plcslave"] = self.plcslave
+        dc["plcslaveacl"] = self.plcslaveacl
+        dc["plcslaveport"] = self.plcslaveport
         dc["pythonversion"] = self.pythonver
         dc["xmlrpc"] = self.xmlrpc
+        dc["xmlrpcacl"] = self.xmlrpcacl
         dc["xmlrpcport"] = \
             self.globalconfig["DEFAULT"].get("xmlrpcport", 55123)
         dc["zeroonerror"] = self.zeroonerror
@@ -564,8 +997,11 @@ class RevPiPyLoad():
             "plcprogram": ".+",
             "plcarguments": ".*",
             "plcslave": "[01]",
+            "plcslaveacl": re_ipacl,
+            "plcslaveport": "[0-9]{,5}",
             "pythonversion": "[23]",
             "xmlrpc": "[0-3]",
+            "xmlrpcacl": re_ipacl,
             "xmlrpcport": "[0-9]{,5}",
             "zeroonerror": "[01]",
             "zeroonexit": "[01]"
@@ -574,7 +1010,7 @@ class RevPiPyLoad():
         # Werte übernehmen
         for key in keys:
             if key in dc:
-                if rematch(keys[key], str(dc[key])) is None:
+                if not refullmatch(keys[key], str(dc[key])):
                     proginit.logger.error(
                         "got wrong setting '{}' with value '{}'".format(
                             key, dc[key]
@@ -666,6 +1102,36 @@ class RevPiPyLoad():
         @return True, wenn stop erfolgreich"""
         if self.xml_ps is not None:
             self.xml_ps.stop()
+            return True
+        else:
+            return False
+
+    def xml_plcslavestart(self):
+        """Startet den PLC Slave Server.
+
+        @return Statuscode:
+            0: erfolgreich gestartet
+            -1: Nicht aktiv in Konfiguration
+            -2: Laeuft bereits
+
+        """
+        if self.plcslave:
+            if self.th_plcslave is not None and self.th_plcslave.is_alive():
+                return -2
+            else:
+                self.th_plcslave = RevPiSlave(
+                    self.plcslaveacl, self.plcslaveport
+                )
+                self.th_plcslave.start()
+                return 0
+        else:
+            return -1
+
+    def xml_plcslavestop(self):
+        """Stoppt den PLC Slave Server.
+        @return True, wenn stop erfolgreich"""
+        if self.th_plcslave is not None:
+            self.th_plcslave.stop()
             return True
         else:
             return False
