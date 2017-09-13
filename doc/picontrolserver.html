@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html><head>
+<title>picontrolserver</title>
+<meta charset="UTF-8">
+</head>
+<body style="background-color:#FFFFFF;color:#000000"><a NAME="top" ID="top"></a>
+<h1 style="background-color:#FFFFFF;color:#0000FF">
+picontrolserver</h1>
+<p>
+Modul fuer die Verwaltung der PLC-Slave Funktionen.
+</p>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+Global Attributes</h3>
+<table>
+<tr><td>None</td></tr>
+</table>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+Classes</h3>
+<table>
+<tr>
+<td><a style="color:#0000FF" href="#RevPiSlave">RevPiSlave</a></td>
+<td>RevPi PLC-Server.</td>
+</tr><tr>
+<td><a style="color:#0000FF" href="#RevPiSlaveDev">RevPiSlaveDev</a></td>
+<td>Klasse um eine RevPiModIO Verbindung zu verwalten.</td>
+</tr>
+</table>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+Functions</h3>
+<table>
+<tr><td>None</td></tr>
+</table>
+<hr /><hr />
+<a NAME="RevPiSlave" ID="RevPiSlave"></a>
+<h2 style="background-color:#FFFFFF;color:#0000FF">RevPiSlave</h2>
+<p>
+RevPi PLC-Server.
+</p><p>
+    Diese Klasste stellt den RevPi PLC-Server zur verfuegung und akzeptiert
+    neue Verbindungen. Dieser werden dann als RevPiSlaveDev abgebildet.
+</p><p>
+    Ueber die angegebenen ACLs koennen Zugriffsbeschraenkungen vergeben werden.
+</p><p>
+
+</p>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+Derived from</h3>
+Thread
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+Class Attributes</h3>
+<table>
+<tr><td>None</td></tr>
+</table>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+Class Methods</h3>
+<table>
+<tr><td>None</td></tr>
+</table>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+Methods</h3>
+<table>
+<tr>
+<td><a style="color:#0000FF" href="#RevPiSlave.__init__">RevPiSlave</a></td>
+<td>Instantiiert RevPiSlave-Klasse.</td>
+</tr><tr>
+<td><a style="color:#0000FF" href="#RevPiSlave.newlogfile">newlogfile</a></td>
+<td>Konfiguriert die FileHandler auf neue Logdatei.</td>
+</tr><tr>
+<td><a style="color:#0000FF" href="#RevPiSlave.run">run</a></td>
+<td>Startet Serverkomponente fuer die Annahme neuer Verbindungen.</td>
+</tr><tr>
+<td><a style="color:#0000FF" href="#RevPiSlave.stop">stop</a></td>
+<td>Beendet Slaveausfuehrung.</td>
+</tr>
+</table>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+Static Methods</h3>
+<table>
+<tr><td>None</td></tr>
+</table>
+<a NAME="RevPiSlave.__init__" ID="RevPiSlave.__init__"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+RevPiSlave (Constructor)</h3>
+<b>RevPiSlave</b>(<i>acl, port=55234</i>)
+<p>
+Instantiiert RevPiSlave-Klasse.
+</p><dl>
+<dt><i>acl</i></dt>
+<dd>
+Stringliste mit Leerstellen getrennt
+</dd><dt><i>port</i></dt>
+<dd>
+Listen Port fuer plc Slaveserver
+</dd>
+</dl><a NAME="RevPiSlave.newlogfile" ID="RevPiSlave.newlogfile"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+RevPiSlave.newlogfile</h3>
+<b>newlogfile</b>(<i></i>)
+<p>
+Konfiguriert die FileHandler auf neue Logdatei.
+</p><a NAME="RevPiSlave.run" ID="RevPiSlave.run"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+RevPiSlave.run</h3>
+<b>run</b>(<i></i>)
+<p>
+Startet Serverkomponente fuer die Annahme neuer Verbindungen.
+</p><a NAME="RevPiSlave.stop" ID="RevPiSlave.stop"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+RevPiSlave.stop</h3>
+<b>stop</b>(<i></i>)
+<p>
+Beendet Slaveausfuehrung.
+</p>
+<div align="right"><a style="color:#0000FF" href="#top">Up</a></div>
+<hr /><hr />
+<a NAME="RevPiSlaveDev" ID="RevPiSlaveDev"></a>
+<h2 style="background-color:#FFFFFF;color:#0000FF">RevPiSlaveDev</h2>
+<p>
+Klasse um eine RevPiModIO Verbindung zu verwalten.
+</p><p>
+    Diese Klasste stellt die Funktionen zur Verfuegung um Daten ueber das
+    Netzwerk mit dem Prozessabbild auszutauschen.
+</p><p>
+
+</p>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+Derived from</h3>
+Thread
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+Class Attributes</h3>
+<table>
+<tr><td>None</td></tr>
+</table>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+Class Methods</h3>
+<table>
+<tr><td>None</td></tr>
+</table>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+Methods</h3>
+<table>
+<tr>
+<td><a style="color:#0000FF" href="#RevPiSlaveDev.__init__">RevPiSlaveDev</a></td>
+<td>Init RevPiSlaveDev-Class.</td>
+</tr><tr>
+<td><a style="color:#0000FF" href="#RevPiSlaveDev.run">run</a></td>
+<td>Verarbeitet Anfragen von Remoteteilnehmer.</td>
+</tr><tr>
+<td><a style="color:#0000FF" href="#RevPiSlaveDev.stop">stop</a></td>
+<td>Beendet Verbindungsthread.</td>
+</tr>
+</table>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+Static Methods</h3>
+<table>
+<tr><td>None</td></tr>
+</table>
+<a NAME="RevPiSlaveDev.__init__" ID="RevPiSlaveDev.__init__"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+RevPiSlaveDev (Constructor)</h3>
+<b>RevPiSlaveDev</b>(<i>devcon, acl</i>)
+<p>
+Init RevPiSlaveDev-Class.
+</p><dl>
+<dt><i>devcon</i></dt>
+<dd>
+Tuple der Verbindung
+</dd><dt><i>deadtime</i></dt>
+<dd>
+Timeout der Vararbeitung
+</dd><dt><i>acl</i></dt>
+<dd>
+Berechtigungslevel
+</dd>
+</dl><a NAME="RevPiSlaveDev.run" ID="RevPiSlaveDev.run"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+RevPiSlaveDev.run</h3>
+<b>run</b>(<i></i>)
+<p>
+Verarbeitet Anfragen von Remoteteilnehmer.
+</p><a NAME="RevPiSlaveDev.stop" ID="RevPiSlaveDev.stop"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+RevPiSlaveDev.stop</h3>
+<b>stop</b>(<i></i>)
+<p>
+Beendet Verbindungsthread.
+</p>
+<div align="right"><a style="color:#0000FF" href="#top">Up</a></div>
+<hr />
+</body></html>

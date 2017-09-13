@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE Project SYSTEM "Project-5.1.dtd">
 <!-- eric project file for project revpipyload -->
-<!-- Saved: 2017-09-12, 10:20:24 -->
+<!-- Saved: 2017-09-12, 16:51:56 -->
 <!-- Copyright (C) 2017 Sven Sager, akira@narux.de -->
 <Project version="5.1">
   <Language>en_US</Language>
@@ -20,6 +20,7 @@
     <Source>revpipyload/procimgserver.py</Source>
     <Source>revpipyload/logsystem.py</Source>
     <Source>revpipyload/plcsystem.py</Source>
+    <Source>revpipyload/picontrolserver.py</Source>
   </Sources>
   <Forms/>
   <Translations/>
