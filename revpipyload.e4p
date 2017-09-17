@@ -157,6 +157,14 @@
         <value>
           <dict>
             <key>
+              <string>ignoreDirectories</string>
+            </key>
+            <value>
+              <list>
+                <string>demo</string>
+              </list>
+            </value>
+            <key>
               <string>ignoreFilePatterns</string>
             </key>
             <value>
@@ -264,7 +272,7 @@
               <string>ExcludeFiles</string>
             </key>
             <value>
-              <string></string>
+              <string>demo/*</string>
             </value>
             <key>
               <string>ExcludeMessages</string>

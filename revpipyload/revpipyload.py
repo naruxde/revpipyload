@@ -200,7 +200,7 @@ class RevPiPyLoad():
             self.xsrv = SimpleXMLRPCServer(
                 (
                     "",
-                    int(self.globalconfig["DEFAULT"].get("xmlrpcport", 55123))
+                    int(self.globalconfig["DEFAULT"].get("xmlrpcport", 55239))
                 ),
                 logRequests=False,
                 allow_none=True
@@ -454,6 +454,9 @@ class RevPiPyLoad():
             self.tpe.shutdown()
             self.xsrv.server_close()
 
+        # Logreader schließen
+        self.logr.closeall()
+
         proginit.logger.debug("leave RevPiPyLoad.stop()")
 
     def xml_getconfig(self):
@@ -473,7 +476,7 @@ class RevPiPyLoad():
         dc["xmlrpc"] = self.xmlrpc
         dc["xmlrpcacl"] = self.xmlrpcacl
         dc["xmlrpcport"] = \
-            self.globalconfig["DEFAULT"].get("xmlrpcport", 55123)
+            self.globalconfig["DEFAULT"].get("xmlrpcport", 55239)
         dc["zeroonerror"] = self.zeroonerror
         dc["zeroonexit"] = self.zeroonexit
         return dc
@@ -534,7 +537,6 @@ class RevPiPyLoad():
             -3 Lief nie
 
         """
-        # NOTE: proginit.logger.debug("xmlrpc call plcexitcode")
         if self.plc is None:
             return -2
         elif self.plc.is_alive():
