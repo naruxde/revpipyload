@@ -22,7 +22,7 @@ rapcatalog = None
 startdir = None
 
 
-def _zeroprocimg(self):
+def _zeroprocimg():
     """Setzt Prozessabbild auf NULL."""
     procimg = "/dev/piControl0" if pargs is None else pargs.procimg
     if os.access(procimg, os.W_OK):

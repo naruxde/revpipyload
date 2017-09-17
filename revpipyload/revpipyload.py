@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 #
 # RevPiPyLoad
-# Version: see global var pyloadverion
+# Version: see global var pyloadversion
 #
 # Webpage: https://revpimodio.org/revpipyplc/
 # (c) Sven Sager, License: LGPLv3
@@ -49,7 +49,7 @@ from time import asctime
 from xmlrpc.client import Binary
 from xmlrpc.server import SimpleXMLRPCServer
 
-pyloadverion = "0.4.3"
+pyloadversion = "0.4.5"
 
 
 class RevPiPyLoad():
@@ -142,7 +142,7 @@ class RevPiPyLoad():
             self.xsrv = SimpleXMLRPCServer(
                 (
                     "",
-                    int(self.globalconfig["DEFAULT"].get("xmlrpcport", 55123))
+                    int(self.globalconfig["DEFAULT"].get("xmlrpcport", 55239))
                 ),
                 logRequests=False,
                 allow_none=True
@@ -203,7 +203,7 @@ class RevPiPyLoad():
                 self.xsrv.register_function(
                     self.xml_setpictoryrsc, "set_pictoryrsc")
 
-            self.xsrv.register_function(lambda: pyloadverion, "version")
+            self.xsrv.register_function(lambda: pyloadversion, "version")
             self.xsrv.register_function(lambda: self.xmlrpc, "xmlmodus")
             proginit.logger.debug("created xmlrpc server")
 
@@ -378,6 +378,9 @@ class RevPiPyLoad():
             self.tpe.shutdown()
             self.xsrv.server_close()
 
+        # Logreader schließen
+        self.logr.closeall()
+
         proginit.logger.debug("leave RevPiPyLoad.stop()")
 
     def xml_getconfig(self):
@@ -394,7 +397,7 @@ class RevPiPyLoad():
         dc["pythonversion"] = self.pythonver
         dc["xmlrpc"] = self.xmlrpc
         dc["xmlrpcport"] = \
-            self.globalconfig["DEFAULT"].get("xmlrpcport", 55123)
+            self.globalconfig["DEFAULT"].get("xmlrpcport", 55239)
         dc["zeroonerror"] = self.zeroonerror
         dc["zeroonexit"] = self.zeroonexit
         return dc
@@ -455,7 +458,6 @@ class RevPiPyLoad():
             -3 Lief nie
 
         """
-        # NOTE: proginit.logger.debug("xmlrpc call plcexitcode")
         if self.plc is None:
             return -2
         elif self.plc.is_alive():

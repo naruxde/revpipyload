@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE Project SYSTEM "Project-5.1.dtd">
 <!-- eric project file for project revpipyload -->
-<!-- Saved: 2017-09-12, 10:20:24 -->
+<!-- Saved: 2017-09-17, 11:21:23 -->
 <!-- Copyright (C) 2017 Sven Sager, akira@narux.de -->
 <Project version="5.1">
   <Language>en_US</Language>
@@ -156,6 +156,14 @@
         <value>
           <dict>
             <key>
+              <string>ignoreDirectories</string>
+            </key>
+            <value>
+              <list>
+                <string>demo</string>
+              </list>
+            </value>
+            <key>
               <string>ignoreFilePatterns</string>
             </key>
             <value>
@@ -263,7 +271,7 @@
               <string>ExcludeFiles</string>
             </key>
             <value>
-              <string></string>
+              <string>demo/*</string>
             </value>
             <key>
               <string>ExcludeMessages</string>

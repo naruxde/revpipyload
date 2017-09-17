@@ -27,17 +27,23 @@ setup(
 
     license="LGPLv3",
     name="revpipyload",
-    version="0.4.3",
+    version="0.4.5",
 
     scripts=["data/revpipyload"],
 
     install_requires=["revpimodio"],
 
     data_files=[
-        ("/etc/default", ["data/etc/default/revpipyload"]),
-        ("/etc/revpipyload", ["data/etc/revpipyload/revpipyload.conf"]),
+        ("/etc/avahi/services", [
+            "data/etc/avahi/services/revpipyload.service",
+        ]),
+        ("/etc/revpipyload", [
+            "data/etc/revpipyload/revpipyload.conf",
+        ]),
         ("share/revpipyload", glob("revpipyload/*.*")),
-        ("/var/lib/revpipyload", ["data/var/lib/revpipyload/.placeholder"])
+        ("/var/lib/revpipyload", [
+            "data/var/lib/revpipyload/.placeholder",
+        ])
     ],
 
     description="PLC Loader für Python-Projekte auf den RevolutionPi",

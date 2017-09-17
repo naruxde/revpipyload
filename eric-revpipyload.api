@@ -24,7 +24,7 @@ procimgserver.ProcimgServer.start?4()
 procimgserver.ProcimgServer.stop?4()
 procimgserver.ProcimgServer.values?4()
 procimgserver.ProcimgServer?1(xmlserver, aclmode)
-proginit._zeroprocimg?5(self)
+proginit._zeroprocimg?5()
 proginit.cleanup?4()
 proginit.configure?4()
 proginit.forked?7
@@ -62,4 +62,4 @@ revpipyload.RevPiPyLoad.xml_reload?4()
 revpipyload.RevPiPyLoad.xml_setconfig?4(dc, loadnow=False)
 revpipyload.RevPiPyLoad.xml_setpictoryrsc?4(filebytes, reset=False)
 revpipyload.RevPiPyLoad?1()
-revpipyload.pyloadverion?7
+revpipyload.pyloadversion?7
