@@ -50,7 +50,7 @@ from time import asctime
 from xmlrpc.client import Binary
 from xmlrpc.server import SimpleXMLRPCServer
 
-pyloadversion = "0.5.0"
+pyloadversion = "0.5.1"
 re_ipacl = "(([\\d\\*]{1,3}\\.){3}[\\d\\*]{1,3},[0-1] ?)*"
 
 
@@ -187,12 +187,7 @@ class RevPiPyLoad():
 
         # PLC Thread konfigurieren
         self.plc = self._plcthread()
-        if self.plcslave:
-            self.th_plcslave = picontrolserver.RevPiSlave(
-                self.plcslaveacl, self.plcslaveport
-            )
-        else:
-            self.th_plcslave = None
+        self.th_plcslave = self._plcslave()
 
         # XMLRPC-Server Instantiieren und konfigurieren
         if self.xmlrpc >= 1:
@@ -306,6 +301,20 @@ class RevPiPyLoad():
         proginit.logger.debug("leave RevPiPyLoad._plcthread()")
         return th_plc
 
+    def _plcslave(self):
+        """Erstellt den PlcSlave-Server Thread.
+        @return PLC-Server-Thread Object or None"""
+        proginit.logger.debug("enter RevPiPyLoad._plcslave()")
+        th_plc = None
+
+        if self.plcslave:
+            th_plc = picontrolserver.RevPiSlave(
+                self.plcslaveacl, self.plcslaveport
+            )
+
+        proginit.logger.debug("leave RevPiPyLoad._plcslave()")
+        return th_plc
+
     def _sigexit(self, signum, frame):
         """Signal handler to clean and exit program."""
         proginit.logger.debug("enter RevPiPyLoad._sigexit()")
@@ -410,7 +419,14 @@ class RevPiPyLoad():
         while not self._exit \
                 and not self.evt_loadconfig.is_set():
 
-            # TODO: Soll hier der PLC Server Thread geprüft werden?
+            # PLC Server Thread prüfen
+            if self.plcslave and not self.th_plcslave.is_alive():
+                proginit.logger.warning(
+                    "restart plc slave after thread was not running"
+                )
+                self.th_plcslave = self._plcslave()
+                if self.th_plcslave is not None:
+                    self.th_plcslave.start()
 
             # piCtory auf Veränderung prüfen
             if self.pictorymtime != os.path.getmtime(proginit.pargs.configrsc):
@@ -763,17 +779,15 @@ class RevPiPyLoad():
             -2: Laeuft bereits
 
         """
-        if self.plcslave:
-            if self.th_plcslave is not None and self.th_plcslave.is_alive():
-                return -2
+        if self.th_plcslave is not None and self.th_plcslave.is_alive():
+            return -2
+        else:
+            self.th_plcslave = self._plcslave()
+            if self.th_plcslave is None:
+                return -1
             else:
-                self.th_plcslave = picontrolserver.RevPiSlave(
-                    self.plcslaveacl, self.plcslaveport
-                )
                 self.th_plcslave.start()
                 return 0
-        else:
-            return -1
 
     def xml_plcslavestop(self):
         """Stoppt den PLC Slave Server.
