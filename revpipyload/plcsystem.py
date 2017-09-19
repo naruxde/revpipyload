@@ -41,6 +41,7 @@ class RevPiPlc(Thread):
         self.exitcode = None
         self.gid = 65534
         self.uid = 65534
+        self.rtlevel = 1
         self.zeroonerror = False
         self.zeroonexit = False
 
@@ -103,18 +104,31 @@ class RevPiPlc(Thread):
         """Fuehrt PLC-Programm aus und ueberwacht es."""
         proginit.logger.debug("enter RevPiPlc.run()")
 
-        if self._pversion == 2:
-            lst_proc = shlex.split("/usr/bin/env python2 -u {} {}".format(
-                self._program, self._arguments
-            ))
-        else:
-            lst_proc = shlex.split("/usr/bin/env python3 -u {} {}".format(
-                self._program, self._arguments
-            ))
+        # Befehlstliste aufbauen
+        lst_proc = shlex.split("/usr/bin/env {} -OO -u {} {}".format(
+            "python2" if self._pversion == 2 else "python3",
+            self._program,
+            self._arguments
+        ))
 
         # Prozess erstellen
         proginit.logger.info("start plc program {}".format(self._program))
         self._procplc = self._spopen(lst_proc)
+
+        # RealTime Scheduler nutzen
+        if self.rtlevel > 0 and self._procplc.poll() is None:
+            proginit.logger.info(
+                "set scheduler profile of pid {}".format(self._procplc.pid)
+            )
+            ec = os.system("/usr/bin/env chrt -p {} {}".format(
+                20 if self.rtlevel == 2 else 1,
+                self._procplc.pid
+            ))
+            if ec != 0:
+                proginit.logger.error(
+                    "could not set scheduler profile of pid {}"
+                    "".format(self._procplc.pid)
+                )
 
         # LogWriter starten und Logausgaben schreiben
         if self._plw is not None:

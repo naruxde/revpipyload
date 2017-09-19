@@ -31,7 +31,7 @@ setup(
 
     scripts=["data/revpipyload"],
 
-    install_requires=["revpimodio"],
+    install_requires=["revpimodio2"],
 
     data_files=[
         ("/etc/avahi/services", [
@@ -56,9 +56,13 @@ setup(
     "Tool zur Laufzeit überwacht werden.",
 
     classifiers=[
+        "Development Status :: 5 - Production/Stable",
+        "Environment :: No Input/Output (Daemon)",
+        "Intended Audience :: Manufacturing",
         "License :: OSI Approved :: "
         "GNU Lesser General Public License v3 (LGPLv3)",
         "Operating System :: POSIX :: Linux",
+        "Topic :: System :: Operating System",
     ],
     cmdclass={"install_egg_info": MyEggInfo},
 )

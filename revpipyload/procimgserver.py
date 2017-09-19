@@ -13,7 +13,7 @@ IO-Check bei Inbetriebname durchzufuehren.
 """
 import pickle
 import proginit
-import revpimodio
+import revpimodio2
 from xmlrpc.client import Binary
 
 
@@ -47,7 +47,6 @@ class ProcimgServer():
             "ps_devices": self.devices,
             "ps_inps": lambda: self.ios("inp"),
             "ps_outs": lambda: self.ios("out"),
-            "ps_mems": lambda: self.ios("mem"),
             "ps_values": self.values,
         }
         self.xmlwritefuncs = {
@@ -62,7 +61,7 @@ class ProcimgServer():
         """Generiert Deviceliste mit Position und Namen.
         @return list() mit Tuple (pos, name)"""
         return [
-            (dev.position, dev.name) for dev in self.rpi.devices
+            (dev.position, dev.name) for dev in self.rpi.device
         ]
 
     def ios(self, type):
@@ -70,16 +69,14 @@ class ProcimgServer():
         @param type IO Typ inp/out
         @return pickled dict()"""
         dict_ios = {}
-        for dev in self.rpi.devices:
+        for dev in self.rpi.device:
             dict_ios[dev.position] = []
 
             # IO Typen auswerten
             if type == "inp":
-                lst_io = dev.get_inps()
+                lst_io = dev.get_inputs()
             elif type == "out":
-                lst_io = dev.get_outs()
-            elif type == "mem":
-                lst_io = dev.get_mems()
+                lst_io = dev.get_outputs()
             else:
                 lst_io = []
 
@@ -87,7 +84,7 @@ class ProcimgServer():
                 dict_ios[dev.position].append([
                     io.name,
                     1 if io._bitlength == 1 else int(io._bitlength / 8),
-                    io.slc_address.start + dev.offset,
+                    io._slc_address.start + dev.offset,
                     io.bmk,
                     io._bitaddress,
                 ])
@@ -100,9 +97,9 @@ class ProcimgServer():
         if self.rpi is not None:
             self.rpi.cleanup()
 
-        proginit.logger.debug("create revpimodio class")
+        proginit.logger.debug("create revpimodio2 object")
         try:
-            self.rpi = revpimodio.RevPiModIO(
+            self.rpi = revpimodio2.RevPiModIO(
                 configrsc=proginit.pargs.configrsc,
                 procimg=proginit.pargs.procimg
             )
@@ -111,8 +108,8 @@ class ProcimgServer():
             proginit.logger.error("piCtory configuration not loadable")
             return False
 
-        self.rpi.devices.syncoutputs(device=0)
-        proginit.logger.debug("created revpimodio class")
+        self.rpi.syncoutputs(device=0)
+        proginit.logger.debug("created revpimodio2 object")
         return True
 
     def setvalue(self, device, io, value):
@@ -135,30 +132,31 @@ class ProcimgServer():
         if type(value) == Binary:
             value = value.data
 
-        self.rpi.devices.syncoutputs(device=device)
+        self.rpi.syncoutputs(device=device)
 
         try:
             # Neuen Wert übernehmen
             if type(value) == bytes or type(value) == bool:
-                self.rpi.devices[device][io].set_value(value)
+                self.rpi.io[io].set_value(value)
             else:
-                self.rpi.devices[device][io].set_value(
+                self.rpi.io[io].set_value(
                     value.to_bytes(
-                        self.rpi.devices[device][io].length, byteorder="little"
+                        self.rpi.io[io].length,
+                        byteorder=self.rpi.io[io].byteorder
                     )
                 )
         except Exception as e:
             return [device, io, False, str(e)]
 
-        self.rpi.devices.writeprocimg(device=device)
+        self.rpi.writeprocimg(device=device)
         return [device, io, True, ""]
 
     def values(self):
         """Liefert Prozessabbild an Client.
         @return Binary() bytes or None"""
-        if self.rpi.devices.readprocimg() and self.rpi.devices.syncoutputs():
+        if self.rpi.readprocimg() and self.rpi.syncoutputs():
             bytebuff = b''
-            for dev in self.rpi.devices:
+            for dev in self.rpi.device:
                 bytebuff += bytes(dev)
             return Binary(bytebuff)
         else:
