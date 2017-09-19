@@ -123,6 +123,8 @@ class RevPiPyLoad():
             int(self.globalconfig["DEFAULT"].get("plcslave", 0))
         self.pythonver = \
             int(self.globalconfig["DEFAULT"].get("pythonversion", 3))
+        self.rtlevel = \
+            int(self.globalconfig["DEFAULT"].get("rtlevel", 1))
         self.xmlrpc = \
             int(self.globalconfig["DEFAULT"].get("xmlrpc", 0))
         self.zeroonerror = \
@@ -142,7 +144,7 @@ class RevPiPyLoad():
             self.xsrv = SimpleXMLRPCServer(
                 (
                     "",
-                    int(self.globalconfig["DEFAULT"].get("xmlrpcport", 55239))
+                    int(self.globalconfig["DEFAULT"].get("xmlrpcport", 55123))
                 ),
                 logRequests=False,
                 allow_none=True
@@ -170,10 +172,10 @@ class RevPiPyLoad():
             except:
                 self.xml_ps = None
                 proginit.logger.warning(
-                    "can not load revpimodio module. maybe its not installed "
-                    "or an old version (required at least 0.15.0). if you "
+                    "can not load revpimodio2 module. maybe its not installed "
+                    "or an old version (required at least 2.0.5). if you "
                     "like to use the process monitor feature, update/install "
-                    "revpimodio: 'apt-get install python3-revpimodio'"
+                    "revpimodio2: 'apt-get install python3-revpimodio2'"
                 )
 
             # XML Modus 2 Einstellungen lesen und Programm herunterladen
@@ -236,6 +238,7 @@ class RevPiPyLoad():
         th_plc.autoreload = self.autoreload
         th_plc.gid = int(self.globalconfig["DEFAULT"].get("plcgid", 65534))
         th_plc.uid = int(self.globalconfig["DEFAULT"].get("plcuid", 65534))
+        th_plc.rtlevel = self.rtlevel
         th_plc.zeroonerror = self.zeroonerror
         th_plc.zeroonexit = self.zeroonexit
 
@@ -395,9 +398,8 @@ class RevPiPyLoad():
         dc["plcarguments"] = self.plcarguments
         dc["plcslave"] = self.plcslave
         dc["pythonversion"] = self.pythonver
+        dc["rtlevel"] = self.rtlevel
         dc["xmlrpc"] = self.xmlrpc
-        dc["xmlrpcport"] = \
-            self.globalconfig["DEFAULT"].get("xmlrpcport", 55239)
         dc["zeroonerror"] = self.zeroonerror
         dc["zeroonexit"] = self.zeroonexit
         return dc
@@ -567,8 +569,8 @@ class RevPiPyLoad():
             "plcarguments": ".*",
             "plcslave": "[01]",
             "pythonversion": "[23]",
+            "rtlevel": "[0-2]",
             "xmlrpc": "[0-3]",
-            "xmlrpcport": "[0-9]{,5}",
             "zeroonerror": "[01]",
             "zeroonexit": "[01]"
         }
