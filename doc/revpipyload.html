@@ -87,6 +87,9 @@ Methods</h3>
 <td><a style="color:#0000FF" href="#RevPiPyLoad._loadconfig">_loadconfig</a></td>
 <td>Load configuration file and setup modul.</td>
 </tr><tr>
+<td><a style="color:#0000FF" href="#RevPiPyLoad._plcslave">_plcslave</a></td>
+<td>Erstellt den PlcSlave-Server Thread.</td>
+</tr><tr>
 <td><a style="color:#0000FF" href="#RevPiPyLoad._plcthread">_plcthread</a></td>
 <td>Konfiguriert den PLC-Thread fuer die Ausfuehrung.</td>
 </tr><tr>
@@ -180,7 +183,18 @@ RevPiPyLoad._loadconfig</h3>
 <b>_loadconfig</b>(<i></i>)
 <p>
 Load configuration file and setup modul.
-</p><a NAME="RevPiPyLoad._plcthread" ID="RevPiPyLoad._plcthread"></a>
+</p><a NAME="RevPiPyLoad._plcslave" ID="RevPiPyLoad._plcslave"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+RevPiPyLoad._plcslave</h3>
+<b>_plcslave</b>(<i></i>)
+<p>
+Erstellt den PlcSlave-Server Thread.
+</p><dl>
+<dt>Returns:</dt>
+<dd>
+PLC-Server-Thread Object or None
+</dd>
+</dl><a NAME="RevPiPyLoad._plcthread" ID="RevPiPyLoad._plcthread"></a>
 <h3 style="background-color:#FFFFFF;color:#FF0000">
 RevPiPyLoad._plcthread</h3>
 <b>_plcthread</b>(<i></i>)

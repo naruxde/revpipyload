@@ -50,7 +50,7 @@ from time import asctime
 from xmlrpc.client import Binary
 from xmlrpc.server import SimpleXMLRPCServer
 
-pyloadversion = "0.5.1"
+pyloadversion = "0.5.2"
 re_ipacl = "(([\\d\\*]{1,3}\\.){3}[\\d\\*]{1,3},[0-1] ?)*"
 
 

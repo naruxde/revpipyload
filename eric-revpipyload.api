@@ -44,6 +44,7 @@ proginit.picontrolreset?7
 proginit.rapcatalog?7
 proginit.startdir?7
 revpipyload.RevPiPyLoad._loadconfig?5()
+revpipyload.RevPiPyLoad._plcslave?5()
 revpipyload.RevPiPyLoad._plcthread?5()
 revpipyload.RevPiPyLoad._sigexit?5(signum, frame)
 revpipyload.RevPiPyLoad._sigloadconfig?5(signum, frame)
