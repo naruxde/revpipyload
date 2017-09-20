@@ -10,6 +10,7 @@ import logging
 import os
 import sys
 from argparse import ArgumentParser
+from subprocess import Popen, PIPE
 
 forked = False
 globalconffile = None
@@ -20,6 +21,99 @@ pargs = None
 picontrolreset = "/opt/KUNBUS/piControlReset"
 rapcatalog = None
 startdir = None
+
+
+def _setuprt(pid, evt_exit):
+    """Konfiguriert Programm fuer den RT-Scheduler.
+    @param pid PID, der angehoben werden soll
+    @return None"""
+    if logger is not None:
+        logger.debug("enter _setuprt()")
+
+    dict_change = {
+        "ksoftirqd/0,ksoftirqd/1,ksoftirqd/2,ksoftirqd/3": 10,
+        "ktimersoftd/0,ktimersoftd/1,ktimersoftd/2,ktimersoftd/3": 20
+    }
+
+    for ps_change in dict_change:
+        # pid und prio ermitteln
+        kpidps = Popen([
+            "/bin/ps", "-o", "pid=,rtprio=", "-C", ps_change
+        ], bufsize=1, stdout=PIPE)
+
+        # Timeout nachbilden da in Python 3.2 nicht vorhanden
+        count = 10
+        while kpidps.poll() is None:
+            count -= 1
+            if count == 0:
+                kpidps.kill()
+                if logger is not None:
+                    logger.error(
+                        "ps timeout to get rt prio info - no rt active"
+                    )
+                return None
+
+            evt_exit.wait(0.5)
+            if evt_exit.is_set():
+                return None
+
+        try:
+            kpiddat = kpidps.communicate()[0]
+            lst_kpids = kpiddat.split()
+        except:
+            kpidps.kill()
+            if logger is not None:
+                logger.error(
+                    "can not get pid and prio - no rt active"
+                )
+            return None
+
+        while len(lst_kpids) > 0:
+            # Elemente paarweise übernehmen
+            kpid = lst_kpids.pop(0)
+            kprio = lst_kpids.pop(0)
+
+            # Daten prüfen
+            if not kpid.isdigit():
+                if logger is not None:
+                    logger.error(
+                        "pid={} and prio={} are not valid - no rt active"
+                        "".format(kpid, kprio)
+                    )
+                return None
+            kpid = int(kpid)
+
+            # RTPrio ermitteln
+            if kprio.isdigit():
+                kprio = int(kprio)
+            else:
+                kprio = 0
+
+            if kprio < 10:
+                # Profile anpassen
+                ec = os.system("/usr/bin/env chrt -fp {} {}".format(
+                    dict_change[ps_change], kpid
+                ))
+                if ec != 0:
+                    if logger is not None:
+                        logger.error(
+                            "could not adjust scheduler - no rt active"
+                        )
+                    return None
+
+    # SCHED_RR für pid setzen
+    if logger is not None:
+        logger.info("set scheduler profile of pid {}".format(pid))
+
+    ec = os.system("/usr/bin/env chrt -p 1 {}".format(pid))
+    if ec != 0 and logger is not None:
+        logger.error(
+            "could not set scheduler profile of pid {}"
+            "".format(pid)
+        )
+
+    if logger is not None:
+        logger.debug("leave _setuprt()")
 
 
 def _zeroprocimg():

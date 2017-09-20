@@ -49,7 +49,7 @@ from time import asctime
 from xmlrpc.client import Binary
 from xmlrpc.server import SimpleXMLRPCServer
 
-pyloadversion = "0.4.5"
+pyloadversion = "0.4.6"
 
 
 class RevPiPyLoad():
@@ -124,7 +124,7 @@ class RevPiPyLoad():
         self.pythonver = \
             int(self.globalconfig["DEFAULT"].get("pythonversion", 3))
         self.rtlevel = \
-            int(self.globalconfig["DEFAULT"].get("rtlevel", 1))
+            int(self.globalconfig["DEFAULT"].get("rtlevel", 0))
         self.xmlrpc = \
             int(self.globalconfig["DEFAULT"].get("xmlrpc", 0))
         self.zeroonerror = \
@@ -133,6 +133,10 @@ class RevPiPyLoad():
             int(self.globalconfig["DEFAULT"].get("zeroonexit", 1))
 
         # Workdirectory wechseln
+        if not os.access(self.plcworkdir, os.R_OK | os.W_OK | os.X_OK):
+            raise ValueError(
+                "can not access plcworkdir '{}'".format(self.plcworkdir)
+            )
         os.chdir(self.plcworkdir)
 
         # PLC Thread konfigurieren
@@ -569,7 +573,7 @@ class RevPiPyLoad():
             "plcarguments": ".*",
             "plcslave": "[01]",
             "pythonversion": "[23]",
-            "rtlevel": "[0-2]",
+            "rtlevel": "[0-1]",
             "xmlrpc": "[0-3]",
             "zeroonerror": "[01]",
             "zeroonexit": "[01]"

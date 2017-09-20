@@ -11,6 +11,7 @@ import proginit
 import shlex
 import subprocess
 from logsystem import PipeLogwriter
+from proginit import _setuprt
 from sys import stdout as sysstdout
 from threading import Event, Thread
 from time import sleep, asctime
@@ -41,7 +42,7 @@ class RevPiPlc(Thread):
         self.exitcode = None
         self.gid = 65534
         self.uid = 65534
-        self.rtlevel = 1
+        self.rtlevel = 0
         self.zeroonerror = False
         self.zeroonexit = False
 
@@ -104,8 +105,16 @@ class RevPiPlc(Thread):
         """Fuehrt PLC-Programm aus und ueberwacht es."""
         proginit.logger.debug("enter RevPiPlc.run()")
 
+        # LogWriter starten und Logausgaben schreiben
+        if self._plw is not None:
+            self._plw.logline("-" * 55)
+            self._plw.logline("plc: {} started: {}".format(
+                os.path.basename(self._program), asctime()
+            ))
+            self._plw.start()
+
         # Befehlstliste aufbauen
-        lst_proc = shlex.split("/usr/bin/env {} -OO -u {} {}".format(
+        lst_proc = shlex.split("/usr/bin/env {} -u {} {}".format(
             "python2" if self._pversion == 2 else "python3",
             self._program,
             self._arguments
@@ -115,29 +124,13 @@ class RevPiPlc(Thread):
         proginit.logger.info("start plc program {}".format(self._program))
         self._procplc = self._spopen(lst_proc)
 
-        # RealTime Scheduler nutzen
-        if self.rtlevel > 0 and self._procplc.poll() is None:
-            proginit.logger.info(
-                "set scheduler profile of pid {}".format(self._procplc.pid)
-            )
-            ec = os.system("/usr/bin/env chrt -p {} {}".format(
-                20 if self.rtlevel == 2 else 1,
-                self._procplc.pid
-            ))
-            if ec != 0:
-                proginit.logger.error(
-                    "could not set scheduler profile of pid {}"
-                    "".format(self._procplc.pid)
-                )
+        # RealTime Scheduler nutzen nach 5 Sekunden Programmvorlauf
+        if self.rtlevel > 0 \
+                and not self._evt_exit.wait(5) \
+                and self._procplc.poll() is None:
+            _setuprt(self._procplc.pid, self._evt_exit)
 
-        # LogWriter starten und Logausgaben schreiben
-        if self._plw is not None:
-            self._plw.logline("-" * 55)
-            self._plw.logline("plc: {} started: {}".format(
-                os.path.basename(self._program), asctime()
-            ))
-            self._plw.start()
-
+        # Überwachung starten
         while not self._evt_exit.is_set():
 
             # Auswerten
@@ -179,7 +172,7 @@ class RevPiPlc(Thread):
                 else:
                     break
 
-            self._evt_exit.wait(1)
+            self._evt_exit.wait(0.5)
 
         if self._plw is not None:
             self._plw.logline("-" * 55)
