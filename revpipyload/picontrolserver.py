@@ -156,11 +156,19 @@ class RevPiSlaveDev(Thread):
 
         proginit.logger.info(
             "got new connection from host {} with acl {}".format(
-                self._addr, self._acl)
+                self._addr, self._acl
+            )
         )
 
         # Prozessabbild öffnen
-        fh_proc = open(proginit.pargs.procimg, "r+b", 0)
+        try:
+            fh_proc = open(proginit.pargs.procimg, "r+b", 0)
+        except:
+            fh_proc = None
+            self._evt_exit.set()
+            proginit.logger.error(
+                "can not open process image {}".format(proginit.pargs.procimg)
+            )
 
         dirty = True
         while not self._evt_exit.is_set():
@@ -197,7 +205,7 @@ class RevPiSlaveDev(Thread):
                     break
 
             elif cmd == b'SD' and self._acl == 1:
-                # Ausgänge empfangen, wenn acl es erlaubt
+                # Ausgänge setzen, wenn acl es erlaubt
                 # bCMiiiic0000000b = 16
 
                 position = int.from_bytes(netcmd[3:5], byteorder="little")
@@ -205,6 +213,7 @@ class RevPiSlaveDev(Thread):
                 control = netcmd[7:8]
 
                 if control == b'\x1d' and length > 0:
+                    # Empfange Datenblock zu schreiben nach Meldung
                     try:
                         block = self._devcon.recv(length)
                     except:
@@ -222,6 +231,7 @@ class RevPiSlaveDev(Thread):
 
                 # Record seperator character
                 if control == b'\x1c':
+                    # Bestätige Schreibvorgang aller Datenblöcke
                     if self._writeerror:
                         self._devcon.send(b'\xff')
                     else:
@@ -236,35 +246,50 @@ class RevPiSlaveDev(Thread):
                 # Socket konfigurieren
                 # bCMii0000000000b = 16
 
-                timeoutms = int.from_bytes(netcmd[3:5], byteorder="little")
+                try:
+                    timeoutms = int.from_bytes(netcmd[3:5], byteorder="little")
+                except:
+                    proginit.logger.error("can not convert timeout value")
+                    break
 
-                self._deadtime = timeoutms / 1000
-                self._devcon.settimeout(self._deadtime)
+                if 0 < timeoutms < 65535:
+                    self._deadtime = timeoutms / 1000
+                    self._devcon.settimeout(self._deadtime)
 
-                # Record seperator character
-                self._devcon.send(b'\x1e')
+                    # Record seperator character
+                    self._devcon.send(b'\x1e')
+                else:
+                    proginit.logger.error("timeout value must be 0 to 65535")
+                    break
 
             elif cmd == b'EY':
                 # Bytes bei Verbindungsabbruch schreiben
                 # bCMiiiix0000000b = 16
 
-                position = int.from_bytes(
-                    netcmd[3:5], byteorder="little"
-                )
-                length = int.from_bytes(
-                    netcmd[5:7], byteorder="little"
-                )
-                if netcmd[7:8] == b'\xFF':
-                    # Dirtybytes löschen
+                position = int.from_bytes(netcmd[3:5], byteorder="little")
+                length = int.from_bytes(netcmd[5:7], byteorder="little")
+                control = netcmd[7:8]
+
+                if control == b'\xFF':
+                    # Alle Dirtybytes löschen
+                    self.ey_dict = {}
+
+                    # Record seperator character
+                    self._devcon.send(b'\x1e')
+                    proginit.logger.info("cleared all dirty bytes")
+
+                elif control == b'\xFE':
+                    # Bestimmte Dirtybytes löschen
+
                     if position in self.ey_dict:
                         del self.ey_dict[position]
 
-                        # Record seperator character
-                        self._devcon.send(b'\x1e')
-                        proginit.logger.info(
-                            "cleared dirty bytes on position {}"
-                            "".format(position)
-                        )
+                    # Record seperator character
+                    self._devcon.send(b'\x1e')
+                    proginit.logger.info(
+                        "cleared dirty bytes on position {}"
+                        "".format(position)
+                    )
 
                 else:
                     # Dirtybytes hinzufügen
@@ -344,7 +369,8 @@ class RevPiSlaveDev(Thread):
 
             proginit.logger.error("dirty shutdown of connection")
 
-        fh_proc.close()
+        if fh_proc is not None:
+            fh_proc.close()
         self._devcon.close()
         self._devcon = None
 
