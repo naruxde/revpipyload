@@ -101,6 +101,7 @@ class RevPiPyLoad():
         self.globalconfig = ConfigParser()
         self.logr = logsystem.LogReader()
         self.plc = None
+        self.plc_pause = False
         self.tfile = {}
         self.tpe = None
         self.xsrv = None
@@ -217,6 +218,9 @@ class RevPiPyLoad():
             self.xsrv.register_function(self.xml_plcstart, "plcstart")
             self.xsrv.register_function(self.xml_plcstop, "plcstop")
             self.xsrv.register_function(self.xml_reload, "reload")
+            self.xsrv.register_function(
+                self.xml_plcslaverunning, "plcslaverunning"
+            )
 
             # Erweiterte Funktionen anmelden
             try:
@@ -258,10 +262,9 @@ class RevPiPyLoad():
                     lambda: os.system(proginit.picontrolreset),
                     "resetpicontrol")
                 self.xsrv.register_function(
-                    self.xml_plcslavestop, "plcslavestop")
+                    self.xml_plcslavestart, "plcslavestart")
                 self.xsrv.register_function(
-                    lambda: os.system(proginit.picontrolreset),
-                    "resetpicontrol")
+                    self.xml_plcslavestop, "plcslavestop")
                 self.xsrv.register_function(
                     self.xml_setconfig, "set_config")
                 self.xsrv.register_function(
@@ -427,7 +430,8 @@ class RevPiPyLoad():
                 and not self.evt_loadconfig.is_set():
 
             # PLC Server Thread prüfen
-            if self.plcslave and not self.th_plcslave.is_alive():
+            if self.plcslave \
+                    and not (self.plc_pause or self.th_plcslave.is_alive()):
                 proginit.logger.warning(
                     "restart plc slave after thread was not running"
                 )
@@ -776,6 +780,13 @@ class RevPiPyLoad():
         else:
             return False
 
+    def xml_plcslaverunning(self):
+        """Prueft ob PLC-Slave noch lauft.
+        @return True, wenn PLC-Slave noch lauft"""
+        proginit.logger.debug("xmlrpc call plcslaverunning")
+        return False if self.th_plcslave is None \
+            else self.th_plcslave.is_alive()
+
     def xml_plcslavestart(self):
         """Startet den PLC Slave Server.
 
@@ -785,6 +796,7 @@ class RevPiPyLoad():
             -2: Laeuft bereits
 
         """
+        self.plc_pause = False
         if self.th_plcslave is not None and self.th_plcslave.is_alive():
             return -2
         else:
@@ -798,6 +810,7 @@ class RevPiPyLoad():
     def xml_plcslavestop(self):
         """Stoppt den PLC Slave Server.
         @return True, wenn stop erfolgreich"""
+        self.plc_pause = True
         if self.th_plcslave is not None:
             self.th_plcslave.stop()
             return True
