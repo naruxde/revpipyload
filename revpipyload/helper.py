@@ -12,6 +12,72 @@ from re import match as rematch
 from subprocess import Popen, PIPE
 
 
+class IpAclManager():
+
+    """Verwaltung fuer IP Adressen und deren ACL Level."""
+
+    def __init__(self, acl=None, minlevel=0, maxlevel=1):
+        """Init IpAclManager class.
+        @param acl ACL Liste fuer Berechtigungen als <class 'str'>"""
+        if minlevel >= maxlevel:
+            raise ValueError("minlevel is smaller or equal than maxlevel")
+
+        self.__dict_acl = {}
+        self.__rawacl = ""
+        self.__re_ipacl = "(([\\d\\*]{1,3}\\.){3}[\\d\\*]{1,3},[" \
+            + str(minlevel) + "-" + str(maxlevel) + "] ?)*"
+
+        # Liste erstellen, wenn übergeben
+        if acl is not None:
+            self.__set_acl(acl)
+
+    def __get_acl(self):
+        """Getter fuer den rohen ACL-String.
+        return ACLs als <class 'str'>"""
+        return self.__rawacl
+
+    def __refullmatch(self, regex, string):
+        """re.fullmatch wegen alter python version aus wheezy nachgebaut.
+
+        @param regex RegEx Statement
+        @param string Zeichenfolge gegen die getestet wird
+        @return True, wenn komplett passt sonst False
+
+        """
+        m = rematch(regex, string)
+        return m is not None and m.end() == len(string)
+
+    def __set_acl(self, value):
+        """Uebernimmt neue ACL-Liste fuer die Ausertung der Level.
+        @param value Neue ACL-Liste als <class 'str'>"""
+        if type(value) != str:
+            raise ValueError("parameter acl must be <class 'str'>")
+
+        if not self.__refullmatch(self.__re_ipacl, value):
+            raise ValueError("acl format ist not okay - 1.2.3.4,0 5.6.7.8,1")
+
+        # Klassenwerte übernehmen
+        self.__dict_acl = {}
+        self.__rawacl = value
+
+        # Liste neu füllen mit regex Strings
+        for ip_level in value.split():
+            ip, level = ip_level.split(",", 1)
+            ip = ip.replace(".", "\\.").replace("*", "\\d{1,3}")
+            self.__dict_acl[ip] = int(level)
+
+    def get_acllevel(self, ipaddress):
+        """Prueft IP gegen ACL List und gibt ACL-Wert aus.
+        @param ipaddress zum pruefen
+        @return int() ACL Wert oder -1 wenn nicht gefunden"""
+        for aclip in sorted(self.__dict_acl, reverse=True):
+            if self.__refullmatch(aclip, ipaddress):
+                return self.__dict_acl[aclip]
+        return -1
+
+    acl = property(__get_acl, __set_acl)
+
+
 def _ipmatch(ipaddress, dict_acl):
     """Prueft IP gegen ACL List und gibt ACL aus.
 

@@ -45,13 +45,7 @@ Classes</h3>
 <h3 style="background-color:#FFFFFF;color:#FF0000">
 Functions</h3>
 <table>
-<tr>
-<td><a style="color:#0000FF" href="#_ipmatch">_ipmatch</a></td>
-<td>Prueft IP gegen ACL List und gibt ACL aus.</td>
-</tr><tr>
-<td><a style="color:#0000FF" href="#refullmatch">refullmatch</a></td>
-<td>re.fullmatch wegen alter python version aus wheezy nachgebaut.</td>
-</tr>
+<tr><td>None</td></tr>
 </table>
 <hr /><hr />
 <a NAME="RevPiPyLoad" ID="RevPiPyLoad"></a>
@@ -502,48 +496,6 @@ Statuscode:
             -4 Module in Konfiguration enthalten, die es nicht gibt
             -5 Kein RAP Katalog zur Ueberpruefung gefunden
             Positive Zahl ist exitcode von piControlReset
-</dd>
-</dl>
-<div align="right"><a style="color:#0000FF" href="#top">Up</a></div>
-<hr /><hr />
-<a NAME="_ipmatch" ID="_ipmatch"></a>
-<h2 style="background-color:#FFFFFF;color:#0000FF">_ipmatch</h2>
-<b>_ipmatch</b>(<i>ipaddress, dict_acl</i>)
-<p>
-Prueft IP gegen ACL List und gibt ACL aus.
-</p><dl>
-<dt><i>ipaddress</i></dt>
-<dd>
-zum pruefen
-</dd><dt><i>dict_acl</i></dt>
-<dd>
-ACL Dict gegen die IP zu pruefen ist
-</dd>
-</dl><dl>
-<dt>Returns:</dt>
-<dd>
-int() ACL Wert oder -1 wenn nicht gefunden
-</dd>
-</dl>
-<div align="right"><a style="color:#0000FF" href="#top">Up</a></div>
-<hr /><hr />
-<a NAME="refullmatch" ID="refullmatch"></a>
-<h2 style="background-color:#FFFFFF;color:#0000FF">refullmatch</h2>
-<b>refullmatch</b>(<i>regex, string</i>)
-<p>
-re.fullmatch wegen alter python version aus wheezy nachgebaut.
-</p><dl>
-<dt><i>regex</i></dt>
-<dd>
-RegEx Statement
-</dd><dt><i>string</i></dt>
-<dd>
-Zeichenfolge gegen die getestet wird
-</dd>
-</dl><dl>
-<dt>Returns:</dt>
-<dd>
-True, wenn komplett passt sonst False
 </dd>
 </dl>
 <div align="right"><a style="color:#0000FF" href="#top">Up</a></div>

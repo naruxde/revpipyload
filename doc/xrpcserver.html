@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html><head>
+<title>xrpcserver</title>
+<meta charset="UTF-8">
+</head>
+<body style="background-color:#FFFFFF;color:#000000"><a NAME="top" ID="top"></a>
+<h1 style="background-color:#FFFFFF;color:#0000FF">
+xrpcserver</h1>
+<p>
+XML-RPC Server anpassungen fuer Absicherung.
+</p>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+Global Attributes</h3>
+<table>
+<tr><td>None</td></tr>
+</table>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+Classes</h3>
+<table>
+<tr>
+<td><a style="color:#0000FF" href="#SaveXMLRPCRequestHandler">SaveXMLRPCRequestHandler</a></td>
+<td>Verwaltet die XML-Requests und prueft Berechtigungen.</td>
+</tr><tr>
+<td><a style="color:#0000FF" href="#SaveXMLRPCServer">SaveXMLRPCServer</a></td>
+<td>Erstellt einen erweiterten XMLRPCServer.</td>
+</tr>
+</table>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+Functions</h3>
+<table>
+<tr><td>None</td></tr>
+</table>
+<hr /><hr />
+<a NAME="SaveXMLRPCRequestHandler" ID="SaveXMLRPCRequestHandler"></a>
+<h2 style="background-color:#FFFFFF;color:#0000FF">SaveXMLRPCRequestHandler</h2>
+<p>
+Verwaltet die XML-Requests und prueft Berechtigungen.
+</p>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+Derived from</h3>
+SimpleXMLRPCRequestHandler
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+Class Attributes</h3>
+<table>
+<tr><td>None</td></tr>
+</table>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+Class Methods</h3>
+<table>
+<tr><td>None</td></tr>
+</table>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+Methods</h3>
+<table>
+<tr>
+<td><a style="color:#0000FF" href="#SaveXMLRPCRequestHandler.parse_request">parse_request</a></td>
+<td>Berechtigungen pruefen.</td>
+</tr>
+</table>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+Static Methods</h3>
+<table>
+<tr><td>None</td></tr>
+</table>
+<a NAME="SaveXMLRPCRequestHandler.parse_request" ID="SaveXMLRPCRequestHandler.parse_request"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+SaveXMLRPCRequestHandler.parse_request</h3>
+<b>parse_request</b>(<i></i>)
+<p>
+Berechtigungen pruefen.
+</p><dl>
+<dt>Returns:</dt>
+<dd>
+True, wenn Parsen erfolgreich war
+</dd>
+</dl>
+<div align="right"><a style="color:#0000FF" href="#top">Up</a></div>
+<hr /><hr />
+<a NAME="SaveXMLRPCServer" ID="SaveXMLRPCServer"></a>
+<h2 style="background-color:#FFFFFF;color:#0000FF">SaveXMLRPCServer</h2>
+<p>
+Erstellt einen erweiterten XMLRPCServer.
+</p>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+Derived from</h3>
+SimpleXMLRPCServer
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+Class Attributes</h3>
+<table>
+<tr><td>aclmgr</td></tr>
+</table>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+Class Methods</h3>
+<table>
+<tr><td>None</td></tr>
+</table>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+Methods</h3>
+<table>
+<tr>
+<td><a style="color:#0000FF" href="#SaveXMLRPCServer.__init__">SaveXMLRPCServer</a></td>
+<td>Init SaveXMLRPCServer class.</td>
+</tr><tr>
+<td><a style="color:#0000FF" href="#SaveXMLRPCServer.isAlive">isAlive</a></td>
+<td>Prueft ob der XML RPC Server laeuft.</td>
+</tr><tr>
+<td><a style="color:#0000FF" href="#SaveXMLRPCServer.start">start</a></td>
+<td>Startet den XML-RPC Server.</td>
+</tr><tr>
+<td><a style="color:#0000FF" href="#SaveXMLRPCServer.stop">stop</a></td>
+<td>Stoppt den XML-RPC Server.</td>
+</tr>
+</table>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+Static Methods</h3>
+<table>
+<tr><td>None</td></tr>
+</table>
+<a NAME="SaveXMLRPCServer.__init__" ID="SaveXMLRPCServer.__init__"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+SaveXMLRPCServer (Constructor)</h3>
+<b>SaveXMLRPCServer</b>(<i>addr, logRequests=True, allow_none=False, use_builtin_types=False, acl=""</i>)
+<p>
+Init SaveXMLRPCServer class.
+</p><a NAME="SaveXMLRPCServer.isAlive" ID="SaveXMLRPCServer.isAlive"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+SaveXMLRPCServer.isAlive</h3>
+<b>isAlive</b>(<i></i>)
+<p>
+Prueft ob der XML RPC Server laeuft.
+</p><dl>
+<dt>Returns:</dt>
+<dd>
+True, wenn Server noch laeuft
+</dd>
+</dl><a NAME="SaveXMLRPCServer.start" ID="SaveXMLRPCServer.start"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+SaveXMLRPCServer.start</h3>
+<b>start</b>(<i></i>)
+<p>
+Startet den XML-RPC Server.
+</p><a NAME="SaveXMLRPCServer.stop" ID="SaveXMLRPCServer.stop"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+SaveXMLRPCServer.stop</h3>
+<b>stop</b>(<i></i>)
+<p>
+Stoppt den XML-RPC Server.
+</p>
+<div align="right"><a style="color:#0000FF" href="#top">Up</a></div>
+<hr />
+</body></html>

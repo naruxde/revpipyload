@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html><head>
+<title>helper</title>
+<meta charset="UTF-8">
+</head>
+<body style="background-color:#FFFFFF;color:#000000"><a NAME="top" ID="top"></a>
+<h1 style="background-color:#FFFFFF;color:#0000FF">
+helper</h1>
+<p>
+Helperfunktionen fuer das gesamte RevPiPyLoad-System.
+</p>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+Global Attributes</h3>
+<table>
+<tr><td>None</td></tr>
+</table>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+Classes</h3>
+<table>
+<tr>
+<td><a style="color:#0000FF" href="#IpAclManager">IpAclManager</a></td>
+<td>Verwaltung fuer IP Adressen und deren ACL Level.</td>
+</tr>
+</table>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+Functions</h3>
+<table>
+<tr>
+<td><a style="color:#0000FF" href="#_ipmatch">_ipmatch</a></td>
+<td>Prueft IP gegen ACL List und gibt ACL aus.</td>
+</tr><tr>
+<td><a style="color:#0000FF" href="#_setuprt">_setuprt</a></td>
+<td>Konfiguriert Programm fuer den RT-Scheduler.</td>
+</tr><tr>
+<td><a style="color:#0000FF" href="#_zeroprocimg">_zeroprocimg</a></td>
+<td>Setzt Prozessabbild auf NULL.</td>
+</tr><tr>
+<td><a style="color:#0000FF" href="#refullmatch">refullmatch</a></td>
+<td>re.fullmatch wegen alter python version aus wheezy nachgebaut.</td>
+</tr>
+</table>
+<hr /><hr />
+<a NAME="IpAclManager" ID="IpAclManager"></a>
+<h2 style="background-color:#FFFFFF;color:#0000FF">IpAclManager</h2>
+<p>
+Verwaltung fuer IP Adressen und deren ACL Level.
+</p>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+Derived from</h3>
+None
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+Class Attributes</h3>
+<table>
+<tr><td>acl</td></tr>
+</table>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+Class Methods</h3>
+<table>
+<tr><td>None</td></tr>
+</table>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+Methods</h3>
+<table>
+<tr>
+<td><a style="color:#0000FF" href="#IpAclManager.__init__">IpAclManager</a></td>
+<td>Init IpAclManager class.</td>
+</tr><tr>
+<td><a style="color:#0000FF" href="#IpAclManager.__get_acl">__get_acl</a></td>
+<td>Getter fuer den rohen ACL-String.</td>
+</tr><tr>
+<td><a style="color:#0000FF" href="#IpAclManager.__refullmatch">__refullmatch</a></td>
+<td>re.fullmatch wegen alter python version aus wheezy nachgebaut.</td>
+</tr><tr>
+<td><a style="color:#0000FF" href="#IpAclManager.__set_acl">__set_acl</a></td>
+<td>Uebernimmt neue ACL-Liste fuer die Ausertung der Level.</td>
+</tr><tr>
+<td><a style="color:#0000FF" href="#IpAclManager.get_acllevel">get_acllevel</a></td>
+<td>Prueft IP gegen ACL List und gibt ACL-Wert aus.</td>
+</tr>
+</table>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+Static Methods</h3>
+<table>
+<tr><td>None</td></tr>
+</table>
+<a NAME="IpAclManager.__init__" ID="IpAclManager.__init__"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+IpAclManager (Constructor)</h3>
+<b>IpAclManager</b>(<i>acl=None, minlevel=0, maxlevel=1</i>)
+<p>
+Init IpAclManager class.
+</p><dl>
+<dt><i>acl</i></dt>
+<dd>
+ACL Liste fuer Berechtigungen als <class 'str'>
+</dd>
+</dl><a NAME="IpAclManager.__get_acl" ID="IpAclManager.__get_acl"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+IpAclManager.__get_acl</h3>
+<b>__get_acl</b>(<i></i>)
+<p>
+Getter fuer den rohen ACL-String.
+        return ACLs als <class 'str'>
+</p><a NAME="IpAclManager.__refullmatch" ID="IpAclManager.__refullmatch"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+IpAclManager.__refullmatch</h3>
+<b>__refullmatch</b>(<i>regex, string</i>)
+<p>
+re.fullmatch wegen alter python version aus wheezy nachgebaut.
+</p><dl>
+<dt><i>regex</i></dt>
+<dd>
+RegEx Statement
+</dd><dt><i>string</i></dt>
+<dd>
+Zeichenfolge gegen die getestet wird
+</dd>
+</dl><dl>
+<dt>Returns:</dt>
+<dd>
+True, wenn komplett passt sonst False
+</dd>
+</dl><a NAME="IpAclManager.__set_acl" ID="IpAclManager.__set_acl"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+IpAclManager.__set_acl</h3>
+<b>__set_acl</b>(<i>value</i>)
+<p>
+Uebernimmt neue ACL-Liste fuer die Ausertung der Level.
+</p><dl>
+<dt><i>value</i></dt>
+<dd>
+Neue ACL-Liste als <class 'str'>
+</dd>
+</dl><a NAME="IpAclManager.get_acllevel" ID="IpAclManager.get_acllevel"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+IpAclManager.get_acllevel</h3>
+<b>get_acllevel</b>(<i>ipaddress</i>)
+<p>
+Prueft IP gegen ACL List und gibt ACL-Wert aus.
+</p><dl>
+<dt><i>ipaddress</i></dt>
+<dd>
+zum pruefen
+</dd>
+</dl><dl>
+<dt>Returns:</dt>
+<dd>
+int() ACL Wert oder -1 wenn nicht gefunden
+</dd>
+</dl>
+<div align="right"><a style="color:#0000FF" href="#top">Up</a></div>
+<hr /><hr />
+<a NAME="_ipmatch" ID="_ipmatch"></a>
+<h2 style="background-color:#FFFFFF;color:#0000FF">_ipmatch</h2>
+<b>_ipmatch</b>(<i>ipaddress, dict_acl</i>)
+<p>
+Prueft IP gegen ACL List und gibt ACL aus.
+</p><dl>
+<dt><i>ipaddress</i></dt>
+<dd>
+zum pruefen
+</dd><dt><i>dict_acl</i></dt>
+<dd>
+ACL Dict gegen die IP zu pruefen ist
+</dd>
+</dl><dl>
+<dt>Returns:</dt>
+<dd>
+int() ACL Wert oder -1 wenn nicht gefunden
+</dd>
+</dl>
+<div align="right"><a style="color:#0000FF" href="#top">Up</a></div>
+<hr /><hr />
+<a NAME="_setuprt" ID="_setuprt"></a>
+<h2 style="background-color:#FFFFFF;color:#0000FF">_setuprt</h2>
+<b>_setuprt</b>(<i>pid, evt_exit</i>)
+<p>
+Konfiguriert Programm fuer den RT-Scheduler.
+</p><dl>
+<dt><i>pid</i></dt>
+<dd>
+PID, der angehoben werden soll
+</dd>
+</dl><dl>
+<dt>Returns:</dt>
+<dd>
+None
+</dd>
+</dl>
+<div align="right"><a style="color:#0000FF" href="#top">Up</a></div>
+<hr /><hr />
+<a NAME="_zeroprocimg" ID="_zeroprocimg"></a>
+<h2 style="background-color:#FFFFFF;color:#0000FF">_zeroprocimg</h2>
+<b>_zeroprocimg</b>(<i></i>)
+<p>
+Setzt Prozessabbild auf NULL.
+</p>
+<div align="right"><a style="color:#0000FF" href="#top">Up</a></div>
+<hr /><hr />
+<a NAME="refullmatch" ID="refullmatch"></a>
+<h2 style="background-color:#FFFFFF;color:#0000FF">refullmatch</h2>
+<b>refullmatch</b>(<i>regex, string</i>)
+<p>
+re.fullmatch wegen alter python version aus wheezy nachgebaut.
+</p><dl>
+<dt><i>regex</i></dt>
+<dd>
+RegEx Statement
+</dd><dt><i>string</i></dt>
+<dd>
+Zeichenfolge gegen die getestet wird
+</dd>
+</dl><dl>
+<dt>Returns:</dt>
+<dd>
+True, wenn komplett passt sonst False
+</dd>
+</dl>
+<div align="right"><a style="color:#0000FF" href="#top">Up</a></div>
+<hr />
+</body></html>

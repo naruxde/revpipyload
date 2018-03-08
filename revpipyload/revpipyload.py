@@ -39,7 +39,6 @@ import os
 import signal
 import tarfile
 import zipfile
-from concurrent import futures
 from configparser import ConfigParser
 from helper import refullmatch
 from json import loads as jloads
@@ -48,7 +47,7 @@ from tempfile import mkstemp
 from threading import Event
 from time import asctime
 from xmlrpc.client import Binary
-from xmlrpc.server import SimpleXMLRPCServer
+from xrpcserver import SaveXMLRPCServer
 
 pyloadversion = "0.6.0"
 re_ipacl = "(([\\d\\*]{1,3}\\.){3}[\\d\\*]{1,3},[0-1] ?)*"
@@ -76,7 +75,6 @@ class RevPiPyLoad():
         self.plc = None
         self.plc_pause = False
         self.tfile = {}
-        self.tpe = None
         self.xsrv = None
         self.xml_ps = None
 
@@ -172,13 +170,14 @@ class RevPiPyLoad():
         # XMLRPC-Server Instantiieren und konfigurieren
         if self.xmlrpc >= 1:
             proginit.logger.debug("create xmlrpc server")
-            self.xsrv = SimpleXMLRPCServer(
+            self.xsrv = SaveXMLRPCServer(
                 (
                     "",
                     int(self.globalconfig["DEFAULT"].get("xmlrpcport", 55123))
                 ),
                 logRequests=False,
-                allow_none=True
+                allow_none=True,
+                acl=self.xmlrpcacl
             )
             self.xsrv.register_introspection_functions()
             self.xsrv.register_multicall_functions()
@@ -387,8 +386,7 @@ class RevPiPyLoad():
 
         if self.xmlrpc >= 1:
             proginit.logger.info("start xmlrpc-server")
-            self.tpe = futures.ThreadPoolExecutor(max_workers=1)
-            self.tpe.submit(self.xsrv.serve_forever)
+            self.xsrv.start()
 
         if self.plcslave:
             # Slaveausfuehrung übergeben
@@ -450,9 +448,7 @@ class RevPiPyLoad():
 
         if self.xmlrpc >= 1:
             proginit.logger.info("shutting down xmlrpc-server")
-            self.xsrv.shutdown()
-            self.tpe.shutdown()
-            self.xsrv.server_close()
+            self.xsrv.stop()
 
         # Logreader schließen
         self.logr.closeall()

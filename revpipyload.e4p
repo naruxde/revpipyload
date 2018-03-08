@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE Project SYSTEM "Project-5.1.dtd">
 <!-- eric project file for project revpipyload -->
-<!-- Saved: 2018-03-08, 10:30:46 -->
+<!-- Saved: 2018-03-08, 10:56:15 -->
 <!-- Copyright (C) 2018 Sven Sager, akira@narux.de -->
 <Project version="5.1">
   <Language>en_US</Language>
@@ -21,8 +21,8 @@
     <Source>revpipyload/logsystem.py</Source>
     <Source>revpipyload/plcsystem.py</Source>
     <Source>revpipyload/picontrolserver.py</Source>
-    <Source>revpipyload/xmlinterface.py</Source>
     <Source>revpipyload/helper.py</Source>
+    <Source>revpipyload/xrpcserver.py</Source>
   </Sources>
   <Forms/>
   <Translations/>
