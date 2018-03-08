@@ -11,7 +11,7 @@ import proginit
 import shlex
 import subprocess
 from logsystem import PipeLogwriter
-from proginit import _setuprt
+from helper import _setuprt, _zeroprocimg
 from sys import stdout as sysstdout
 from threading import Event, Thread
 from time import sleep, asctime
@@ -145,7 +145,7 @@ class RevPiPlc(Thread):
                         )
                     )
                     if self.zeroonerror:
-                        proginit._zeroprocimg()
+                        _zeroprocimg()
                         proginit.logger.warning(
                             "set piControl0 to ZERO after PLC program error")
 
@@ -153,7 +153,7 @@ class RevPiPlc(Thread):
                     # PLC Python Programm sauber beendet
                     proginit.logger.info("plc program did a clean exit")
                     if self.zeroonexit:
-                        proginit._zeroprocimg()
+                        _zeroprocimg()
                         proginit.logger.info(
                             "set piControl0 to ZERO after PLC program returns "
                             "clean exitcode")
@@ -221,7 +221,7 @@ class RevPiPlc(Thread):
         self.exitcode = self._procplc.poll()
         if self.zeroonexit and self.exitcode == 0 \
                 or self.zeroonerror and self.exitcode != 0:
-            proginit._zeroprocimg()
+            _zeroprocimg()
 
         if self._plw is not None:
             self._plw.stop()

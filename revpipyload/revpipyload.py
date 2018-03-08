@@ -41,8 +41,8 @@ import tarfile
 import zipfile
 from concurrent import futures
 from configparser import ConfigParser
+from helper import refullmatch
 from json import loads as jloads
-from re import match as rematch
 from shutil import rmtree
 from tempfile import mkstemp
 from threading import Event
@@ -50,35 +50,8 @@ from time import asctime
 from xmlrpc.client import Binary
 from xmlrpc.server import SimpleXMLRPCServer
 
-pyloadversion = "0.5.3"
+pyloadversion = "0.6.0"
 re_ipacl = "(([\\d\\*]{1,3}\\.){3}[\\d\\*]{1,3},[0-1] ?)*"
-
-
-def _ipmatch(ipaddress, dict_acl):
-    """Prueft IP gegen ACL List und gibt ACL aus.
-
-    @param ipaddress zum pruefen
-    @param dict_acl ACL Dict gegen die IP zu pruefen ist
-    @return int() ACL Wert oder -1 wenn nicht gefunden
-
-    """
-    for aclip in sorted(dict_acl, reverse=True):
-        regex = aclip.replace(".", "\\.").replace("*", "\\d{1,3}")
-        if refullmatch(regex, ipaddress):
-            return dict_acl[aclip]
-    return -1
-
-
-def refullmatch(regex, string):
-    """re.fullmatch wegen alter python version aus wheezy nachgebaut.
-
-    @param regex RegEx Statement
-    @param string Zeichenfolge gegen die getestet wird
-    @return True, wenn komplett passt sonst False
-
-    """
-    m = rematch(regex, string)
-    return m is not None and m.end() == len(string)
 
 
 class RevPiPyLoad():

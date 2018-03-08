@@ -8,9 +8,9 @@
 """Modul fuer die Verwaltung der PLC-Slave Funktionen."""
 import proginit
 import socket
+from helper import _ipmatch
 from threading import Event, Thread
 from timeit import default_timer
-from revpipyload import _ipmatch
 
 
 class RevPiSlave(Thread):
