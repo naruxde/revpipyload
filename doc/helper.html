@@ -26,9 +26,6 @@ Classes</h3>
 Functions</h3>
 <table>
 <tr>
-<td><a style="color:#0000FF" href="#_ipmatch">_ipmatch</a></td>
-<td>Prueft IP gegen ACL List und gibt ACL aus.</td>
-</tr><tr>
 <td><a style="color:#0000FF" href="#_setuprt">_setuprt</a></td>
 <td>Konfiguriert Programm fuer den RT-Scheduler.</td>
 </tr><tr>
@@ -51,7 +48,7 @@ None
 <h3 style="background-color:#FFFFFF;color:#FF0000">
 Class Attributes</h3>
 <table>
-<tr><td>acl</td></tr>
+<tr><td>acl</td></tr><tr><td>regex_acl</td></tr>
 </table>
 <h3 style="background-color:#FFFFFF;color:#FF0000">
 Class Methods</h3>
@@ -68,14 +65,17 @@ Methods</h3>
 <td><a style="color:#0000FF" href="#IpAclManager.__get_acl">__get_acl</a></td>
 <td>Getter fuer den rohen ACL-String.</td>
 </tr><tr>
-<td><a style="color:#0000FF" href="#IpAclManager.__refullmatch">__refullmatch</a></td>
-<td>re.fullmatch wegen alter python version aus wheezy nachgebaut.</td>
+<td><a style="color:#0000FF" href="#IpAclManager.__get_regex_acl">__get_regex_acl</a></td>
+<td>Gibt formatierten RegEx-String zurueck.</td>
 </tr><tr>
 <td><a style="color:#0000FF" href="#IpAclManager.__set_acl">__set_acl</a></td>
 <td>Uebernimmt neue ACL-Liste fuer die Ausertung der Level.</td>
 </tr><tr>
 <td><a style="color:#0000FF" href="#IpAclManager.get_acllevel">get_acllevel</a></td>
 <td>Prueft IP gegen ACL List und gibt ACL-Wert aus.</td>
+</tr><tr>
+<td><a style="color:#0000FF" href="#IpAclManager.valid_acl_string">valid_acl_string</a></td>
+<td>Prueft ob ein ACL-String gueltig ist.</td>
 </tr>
 </table>
 <h3 style="background-color:#FFFFFF;color:#FF0000">
@@ -86,7 +86,7 @@ Static Methods</h3>
 <a NAME="IpAclManager.__init__" ID="IpAclManager.__init__"></a>
 <h3 style="background-color:#FFFFFF;color:#FF0000">
 IpAclManager (Constructor)</h3>
-<b>IpAclManager</b>(<i>acl=None, minlevel=0, maxlevel=1</i>)
+<b>IpAclManager</b>(<i>acl=None, minlevel=0, maxlevel=0</i>)
 <p>
 Init IpAclManager class.
 </p><dl>
@@ -101,26 +101,14 @@ IpAclManager.__get_acl</h3>
 <p>
 Getter fuer den rohen ACL-String.
         return ACLs als <class 'str'>
-</p><a NAME="IpAclManager.__refullmatch" ID="IpAclManager.__refullmatch"></a>
+</p><a NAME="IpAclManager.__get_regex_acl" ID="IpAclManager.__get_regex_acl"></a>
 <h3 style="background-color:#FFFFFF;color:#FF0000">
-IpAclManager.__refullmatch</h3>
-<b>__refullmatch</b>(<i>regex, string</i>)
+IpAclManager.__get_regex_acl</h3>
+<b>__get_regex_acl</b>(<i></i>)
 <p>
-re.fullmatch wegen alter python version aus wheezy nachgebaut.
-</p><dl>
-<dt><i>regex</i></dt>
-<dd>
-RegEx Statement
-</dd><dt><i>string</i></dt>
-<dd>
-Zeichenfolge gegen die getestet wird
-</dd>
-</dl><dl>
-<dt>Returns:</dt>
-<dd>
-True, wenn komplett passt sonst False
-</dd>
-</dl><a NAME="IpAclManager.__set_acl" ID="IpAclManager.__set_acl"></a>
+Gibt formatierten RegEx-String zurueck.
+        return RegEx Code als <class 'str'>
+</p><a NAME="IpAclManager.__set_acl" ID="IpAclManager.__set_acl"></a>
 <h3 style="background-color:#FFFFFF;color:#FF0000">
 IpAclManager.__set_acl</h3>
 <b>__set_acl</b>(<i>value</i>)
@@ -145,28 +133,19 @@ zum pruefen
 </dl><dl>
 <dt>Returns:</dt>
 <dd>
-int() ACL Wert oder -1 wenn nicht gefunden
+<class 'int'> ACL Wert oder -1 wenn nicht gefunden
 </dd>
-</dl>
-<div align="right"><a style="color:#0000FF" href="#top">Up</a></div>
-<hr /><hr />
-<a NAME="_ipmatch" ID="_ipmatch"></a>
-<h2 style="background-color:#FFFFFF;color:#0000FF">_ipmatch</h2>
-<b>_ipmatch</b>(<i>ipaddress, dict_acl</i>)
+</dl><a NAME="IpAclManager.valid_acl_string" ID="IpAclManager.valid_acl_string"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+IpAclManager.valid_acl_string</h3>
+<b>valid_acl_string</b>(<i>str_acl</i>)
 <p>
-Prueft IP gegen ACL List und gibt ACL aus.
+Prueft ob ein ACL-String gueltig ist.
 </p><dl>
-<dt><i>ipaddress</i></dt>
+<dt><i>str_acl</i></dt>
 <dd>
-zum pruefen
-</dd><dt><i>dict_acl</i></dt>
-<dd>
-ACL Dict gegen die IP zu pruefen ist
-</dd>
-</dl><dl>
-<dt>Returns:</dt>
-<dd>
-int() ACL Wert oder -1 wenn nicht gefunden
+<class 'str'> zum ueberpruefen
+        return ACL Level als <class 'int'>
 </dd>
 </dl>
 <div align="right"><a style="color:#0000FF" href="#top">Up</a></div>

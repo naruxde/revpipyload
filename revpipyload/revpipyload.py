@@ -40,7 +40,7 @@ import signal
 import tarfile
 import zipfile
 from configparser import ConfigParser
-from helper import refullmatch
+from helper import refullmatch, IpAclManager
 from json import loads as jloads
 from shutil import rmtree
 from tempfile import mkstemp
@@ -50,7 +50,6 @@ from xmlrpc.client import Binary
 from xrpcserver import SaveXMLRPCServer
 
 pyloadversion = "0.6.0"
-re_ipacl = "(([\\d\\*]{1,3}\\.){3}[\\d\\*]{1,3},[0-1] ?)*"
 
 
 class RevPiPyLoad():
@@ -120,36 +119,33 @@ class RevPiPyLoad():
             self.globalconfig["DEFAULT"].get("plcarguments", "")
         self.plcworkdir = \
             self.globalconfig["DEFAULT"].get("plcworkdir", ".")
-        self.plcslave = \
-            int(self.globalconfig["DEFAULT"].get("plcslave", 0))
 
         # PLC Slave ACL laden und prüfen
-        plcslaveacl = \
-            self.globalconfig["DEFAULT"].get("plcslaveacl", "")
-        if len(plcslaveacl) > 0 and not refullmatch(re_ipacl, plcslaveacl):
-            self.plcslaveacl = ""
+        self.plcslave = \
+            int(self.globalconfig["DEFAULT"].get("plcslave", 0))
+        self.plcslaveacl = IpAclManager(minlevel=0, maxlevel=1)
+        str_acl = self.globalconfig["DEFAULT"].get("plcslaveacl", "")
+        if not self.plcslaveacl.valid_acl_string(str_acl):
             proginit.logger.warning("can not load plcslaveacl - wrong format")
         else:
-            self.plcslaveacl = plcslaveacl
-
+            self.plcslaveacl.acl = str_acl
         self.plcslaveport = \
             int(self.globalconfig["DEFAULT"].get("plcslaveport", 55234))
+
         self.pythonver = \
             int(self.globalconfig["DEFAULT"].get("pythonversion", 3))
         self.rtlevel = \
             int(self.globalconfig["DEFAULT"].get("rtlevel", 0))
-        self.xmlrpc = \
-            int(self.globalconfig["DEFAULT"].get("xmlrpc", 0))
 
         # XML ACL laden und prüfen
-        # TODO: xmlrpcacl auswerten
-        xmlrpcacl = \
-            self.globalconfig["DEFAULT"].get("xmlrpcacl", "")
-        if len(xmlrpcacl) > 0 and not refullmatch(re_ipacl, xmlrpcacl):
-            self.xmlrpcacl = ""
+        self.xmlrpc = \
+            int(self.globalconfig["DEFAULT"].get("xmlrpc", 0))
+        self.xmlrpcacl = IpAclManager(minlevel=0, maxlevel=3)
+        str_acl = self.globalconfig["DEFAULT"].get("xmlrpcacl", "")
+        if not self.xmlrpcacl.valid_acl_string(str_acl):
             proginit.logger.warning("can not load xmlrpcacl - wrong format")
         else:
-            self.xmlrpcacl = xmlrpcacl
+            self.xmlrpcacl.acl = str_acl
 
         self.zeroonerror = \
             int(self.globalconfig["DEFAULT"].get("zeroonerror", 1))
@@ -177,7 +173,7 @@ class RevPiPyLoad():
                 ),
                 logRequests=False,
                 allow_none=True,
-                acl=self.xmlrpcacl
+                ipacl=self.xmlrpcacl
             )
             self.xsrv.register_introspection_functions()
             self.xsrv.register_multicall_functions()
@@ -466,12 +462,12 @@ class RevPiPyLoad():
         dc["plcprogram"] = self.plcprog
         dc["plcarguments"] = self.plcarguments
         dc["plcslave"] = self.plcslave
-        dc["plcslaveacl"] = self.plcslaveacl
+        dc["plcslaveacl"] = self.plcslaveacl.acl
         dc["plcslaveport"] = self.plcslaveport
         dc["pythonversion"] = self.pythonver
         dc["rtlevel"] = self.rtlevel
         dc["xmlrpc"] = self.xmlrpc
-        dc["xmlrpcacl"] = self.xmlrpcacl
+        dc["xmlrpcacl"] = self.xmlrpcacl.acl
         dc["zeroonerror"] = self.zeroonerror
         dc["zeroonexit"] = self.zeroonexit
         return dc
@@ -640,12 +636,12 @@ class RevPiPyLoad():
             "plcprogram": ".+",
             "plcarguments": ".*",
             "plcslave": "[01]",
-            "plcslaveacl": re_ipacl,
+            "plcslaveacl": self.plcslaveacl.regex_acl,
             "plcslaveport": "[0-9]{,5}",
             "pythonversion": "[23]",
             "rtlevel": "[0-1]",
             "xmlrpc": "[0-3]",
-            "xmlrpcacl": re_ipacl,
+            "xmlrpcacl": self.xmlrpcacl.regex_acl,
             "zeroonerror": "[01]",
             "zeroonexit": "[01]"
         }

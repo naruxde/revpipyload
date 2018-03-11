@@ -8,7 +8,6 @@
 """Modul fuer die Verwaltung der PLC-Slave Funktionen."""
 import proginit
 import socket
-from helper import _ipmatch
 from threading import Event, Thread
 from timeit import default_timer
 
@@ -24,11 +23,12 @@ class RevPiSlave(Thread):
 
     """
 
-    def __init__(self, acl, port=55234):
+    def __init__(self, ipacl, port=55234):
         """Instantiiert RevPiSlave-Klasse.
         @param acl Stringliste mit Leerstellen getrennt
         @param port Listen Port fuer plc Slaveserver"""
         super().__init__()
+        self.__ipacl = ipacl
         self._evt_exit = Event()
         self.exitcode = None
         self._port = port
@@ -36,13 +36,6 @@ class RevPiSlave(Thread):
         self._th_dev = []
         self.zeroonerror = False
         self.zeroonexit = False
-
-        # ACLs aufbereiten
-        self.dict_acl = {}
-        for host in acl.split():
-            aclsplit = host.split(",")
-            self.dict_acl[aclsplit[0]] = \
-                0 if len(aclsplit) == 1 else int(aclsplit[1])
 
     def newlogfile(self):
         """Konfiguriert die FileHandler auf neue Logdatei."""
@@ -78,7 +71,7 @@ class RevPiSlave(Thread):
                 continue
 
             # ACL prüfen
-            aclstatus = _ipmatch(tup_sock[1][0], self.dict_acl)
+            aclstatus = self.__ipacl.get_acllevel(tup_sock[1][0])
             if aclstatus == -1:
                 tup_sock[0].close()
                 proginit.logger.warning(
