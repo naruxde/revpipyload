@@ -50,7 +50,7 @@ class IpAclManager():
         if type(value) != str:
             raise ValueError("parameter acl must be <class 'str'>")
 
-        if not self.valid_acl_string(value):
+        if not refullmatch(self.__re_ipacl, value):
             raise ValueError("acl format ist not okay - 1.2.3.4,0 5.6.7.8,1")
 
         # Klassenwerte übernehmen
@@ -82,11 +82,14 @@ class IpAclManager():
 
         return -1
 
-    def valid_acl_string(self, str_acl):
-        """Prueft ob ein ACL-String gueltig ist.
-        @param str_acl <class 'str'> zum ueberpruefen
-        return ACL Level als <class 'int'>"""
-        return refullmatch(self.__re_ipacl, str_acl)
+    def loadacl(self, str_acl):
+        """Laed ACL String und gibt erfolg zurueck.
+        @param str_acl ACL als <class 'str'>
+        @return True, wenn erfolgreich uebernommen"""
+        if refullmatch(self.__re_ipacl, str_acl):
+            self.__set_acl(str_acl)
+            return True
+        return False
 
     acl = property(__get_acl, __set_acl)
     regex_acl = property(__get_regex_acl)

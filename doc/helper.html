@@ -74,8 +74,8 @@ Methods</h3>
 <td><a style="color:#0000FF" href="#IpAclManager.get_acllevel">get_acllevel</a></td>
 <td>Prueft IP gegen ACL List und gibt ACL-Wert aus.</td>
 </tr><tr>
-<td><a style="color:#0000FF" href="#IpAclManager.valid_acl_string">valid_acl_string</a></td>
-<td>Prueft ob ein ACL-String gueltig ist.</td>
+<td><a style="color:#0000FF" href="#IpAclManager.loadacl">loadacl</a></td>
+<td>Laed ACL String und gibt erfolg zurueck.</td>
 </tr>
 </table>
 <h3 style="background-color:#FFFFFF;color:#FF0000">
@@ -135,17 +135,21 @@ zum pruefen
 <dd>
 <class 'int'> ACL Wert oder -1 wenn nicht gefunden
 </dd>
-</dl><a NAME="IpAclManager.valid_acl_string" ID="IpAclManager.valid_acl_string"></a>
+</dl><a NAME="IpAclManager.loadacl" ID="IpAclManager.loadacl"></a>
 <h3 style="background-color:#FFFFFF;color:#FF0000">
-IpAclManager.valid_acl_string</h3>
-<b>valid_acl_string</b>(<i>str_acl</i>)
+IpAclManager.loadacl</h3>
+<b>loadacl</b>(<i>str_acl</i>)
 <p>
-Prueft ob ein ACL-String gueltig ist.
+Laed ACL String und gibt erfolg zurueck.
 </p><dl>
 <dt><i>str_acl</i></dt>
 <dd>
-<class 'str'> zum ueberpruefen
-        return ACL Level als <class 'int'>
+ACL als <class 'str'>
+</dd>
+</dl><dl>
+<dt>Returns:</dt>
+<dd>
+True, wenn erfolgreich uebernommen
 </dd>
 </dl>
 <div align="right"><a style="color:#0000FF" href="#top">Up</a></div>

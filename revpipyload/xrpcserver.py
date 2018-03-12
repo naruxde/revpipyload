@@ -35,15 +35,51 @@ class SaveXMLRPCServer(SimpleXMLRPCServer):
 
         # Klassenvariablen
         self.aclmgr = ipacl
+        self.funcacls = {}
+        self.requestacl = -1
         self.tpe = futures.ThreadPoolExecutor(max_workers=1)
         self.fut = None
 
         proginit.logger.debug("leave SaveXMLRPCServer.__init__()")
 
+    def _dispatch(self, method, params):
+        """Prueft ACL Level fuer angeforderte Methode.
+
+        @param method Angeforderte Methode
+        @param params Argumente fuer Methode
+        @return Dispatched data
+
+        """
+        # ACL Level für angeforderte Methode prüfen
+        if self.requestacl < self.funcacls.get(method, -1):
+            raise RuntimeError("function call not allowed")
+
+        # ACL Mode abfragen (Gibt ACL Level als Parameter)
+        if method == "xmlmodus":
+            params = (self.requestacl, )
+
+        return super()._dispatch(method, params)
+
     def isAlive(self):
         """Prueft ob der XML RPC Server laeuft.
         @return True, wenn Server noch laeuft"""
         return False if self.fut is None else self.fut.running()
+
+    def register_function(self, acl_level, function, name=None):
+        """Override register_function to add acl_level.
+
+        @param acl_level ACL level to call this function
+        @param function Function to register
+        @param name Alternative name to use
+
+        """
+        if type(acl_level) != int:
+            raise ValueError("parameter acl_level must be <class 'int'>")
+
+        if name is None:
+            name = function.__name__
+        self.funcs[name] = function
+        self.funcacls[name] = acl_level
 
     def start(self):
         """Startet den XML-RPC Server."""
@@ -83,15 +119,15 @@ class SaveXMLRPCRequestHandler(SimpleXMLRPCRequestHandler):
         if not super().parse_request():
             return False
 
-        # IP-Adresse prüfen
-        int_acl = self.server.aclmgr.get_acllevel(self.address_string())
-        if int_acl >= 0:
+        # ACL für IP-Adresse übernehmen
+        self.server.requestacl = \
+            self.server.aclmgr.get_acllevel(self.address_string())
+
+        if self.server.requestacl >= 0:
             return True
         else:
             self.send_error(
-                401,
-                "IP '{}' not allowed with acl level '{}'"
-                "".format(self.address_string(), int_acl)
+                401, "IP '{}' not allowed".format(self.address_string())
             )
 
         return False

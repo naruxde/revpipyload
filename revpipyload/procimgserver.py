@@ -173,13 +173,12 @@ class ProcimgServer():
             # Registriere Funktionen
             for xmlfunc in self.xmlreadfuncs:
                 self.xmlsrv.register_function(
-                    self.xmlreadfuncs[xmlfunc], xmlfunc
+                    1, self.xmlreadfuncs[xmlfunc], xmlfunc
                 )
-            if self.acl >= 3:
-                for xmlfunc in self.xmlwritefuncs:
-                    self.xmlsrv.register_function(
-                        self.xmlwritefuncs[xmlfunc], xmlfunc
-                    )
+            for xmlfunc in self.xmlwritefuncs:
+                self.xmlsrv.register_function(
+                    3, self.xmlwritefuncs[xmlfunc], xmlfunc
+                )
             ec = True
 
         proginit.logger.debug("leave ProcimgServer.start()")

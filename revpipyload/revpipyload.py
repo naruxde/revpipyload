@@ -108,49 +108,77 @@ class RevPiPyLoad():
         )
         self.globalconfig.read(proginit.globalconffile)
 
-        # Konfiguration verarbeiten
+        # Konfiguration verarbeiten [DEFAULT]
         self.autoreload = \
             int(self.globalconfig["DEFAULT"].get("autoreload", 1))
+        self.autoreloaddelay = \
+            int(self.globalconfig["DEFAULT"].get("autoreloaddelay", 5))
         self.autostart = \
             int(self.globalconfig["DEFAULT"].get("autostart", 0))
-        self.plcprog = \
+        self.plcworkdir = \
+            self.globalconfig["DEFAULT"].get("plcworkdir", ".")
+        self.plcprogram = \
             self.globalconfig["DEFAULT"].get("plcprogram", "none.py")
         self.plcarguments = \
             self.globalconfig["DEFAULT"].get("plcarguments", "")
-        self.plcworkdir = \
-            self.globalconfig["DEFAULT"].get("plcworkdir", ".")
-
-        # PLC Slave ACL laden und prüfen
-        self.plcslave = \
-            int(self.globalconfig["DEFAULT"].get("plcslave", 0))
-        self.plcslaveacl = IpAclManager(minlevel=0, maxlevel=1)
-        str_acl = self.globalconfig["DEFAULT"].get("plcslaveacl", "")
-        if not self.plcslaveacl.valid_acl_string(str_acl):
-            proginit.logger.warning("can not load plcslaveacl - wrong format")
-        else:
-            self.plcslaveacl.acl = str_acl
-        self.plcslaveport = \
-            int(self.globalconfig["DEFAULT"].get("plcslaveport", 55234))
-
-        self.pythonver = \
+        self.plcuid = \
+            int(self.globalconfig["DEFAULT"].get("plcuid", 65534))
+        self.plcgid = \
+            int(self.globalconfig["DEFAULT"].get("plcgid", 65534))
+        self.pythonversion = \
             int(self.globalconfig["DEFAULT"].get("pythonversion", 3))
         self.rtlevel = \
             int(self.globalconfig["DEFAULT"].get("rtlevel", 0))
-
-        # XML ACL laden und prüfen
-        self.xmlrpc = \
-            int(self.globalconfig["DEFAULT"].get("xmlrpc", 0))
-        self.xmlrpcacl = IpAclManager(minlevel=0, maxlevel=3)
-        str_acl = self.globalconfig["DEFAULT"].get("xmlrpcacl", "")
-        if not self.xmlrpcacl.valid_acl_string(str_acl):
-            proginit.logger.warning("can not load xmlrpcacl - wrong format")
-        else:
-            self.xmlrpcacl.acl = str_acl
-
         self.zeroonerror = \
             int(self.globalconfig["DEFAULT"].get("zeroonerror", 1))
         self.zeroonexit = \
             int(self.globalconfig["DEFAULT"].get("zeroonexit", 1))
+
+        # Konfiguration verarbeiten [PLCSLAVE]
+        self.plcslave = 0
+        if "PLCSLAVE" in self.globalconfig:
+            self.plcslave = \
+                int(self.globalconfig["PLCSLAVE"].get("plcslave", 0))
+            self.plcslaveacl = IpAclManager(minlevel=0, maxlevel=1)
+            if not self.plcslaveacl.loadacl(
+                    self.globalconfig["PLCSLAVE"].get("acl", "")):
+                proginit.logger.warning(
+                    "can not load plcslave acl - wrong format"
+                )
+
+            # Bind IP lesen und anpassen
+            self.plcslavebindip = \
+                self.globalconfig["PLCSLAVE"].get("bindip", "127.0.0.1")
+            if self.plcslavebindip == "*":
+                self.plcslavebindip = ""
+            elif self.plcslavebindip == "":
+                self.plcslavebindip = "127.0.0.1"
+
+            self.plcslaveport = \
+                int(self.globalconfig["PLCSLAVE"].get("port", 55234))
+
+        # Konfiguration verarbeiten [XMLRPC]
+        self.xmlrpc = 0
+        if "XMLRPC" in self.globalconfig:
+            self.xmlrpc = \
+                int(self.globalconfig["XMLRPC"].get("xmlrpc", 0))
+            self.xmlrpcacl = IpAclManager(minlevel=0, maxlevel=3)
+            if not self.xmlrpcacl.loadacl(
+                    self.globalconfig["XMLRPC"].get("acl", "")):
+                proginit.logger.warning(
+                    "can not load xmlrpc acl - wrong format"
+                )
+
+            # Bind IP lesen und anpassen
+            self.xmlrpcbindip = \
+                self.globalconfig["XMLRPC"].get("bindip", "127.0.0.1")
+            if self.xmlrpcbindip == "*":
+                self.xmlrpcbindip = ""
+            elif self.xmlrpcbindip == "":
+                self.xmlrpcbindip = "127.0.0.1"
+
+            self.xmlrpcport = \
+                int(self.globalconfig["XMLRPC"].get("port", 55123))
 
         # Workdirectory wechseln
         if not os.access(self.plcworkdir, os.R_OK | os.W_OK | os.X_OK):
@@ -159,18 +187,15 @@ class RevPiPyLoad():
             )
         os.chdir(self.plcworkdir)
 
-        # PLC Thread konfigurieren
+        # PLC Threads konfigurieren
         self.plc = self._plcthread()
         self.th_plcslave = self._plcslave()
 
         # XMLRPC-Server Instantiieren und konfigurieren
-        if self.xmlrpc >= 1:
+        if self.xmlrpc == 1:
             proginit.logger.debug("create xmlrpc server")
             self.xsrv = SaveXMLRPCServer(
-                (
-                    "",
-                    int(self.globalconfig["DEFAULT"].get("xmlrpcport", 55123))
-                ),
+                (self.xmlrpcbindip, self.xmlrpcport),
                 logRequests=False,
                 allow_none=True,
                 ipacl=self.xmlrpcacl
@@ -178,17 +203,27 @@ class RevPiPyLoad():
             self.xsrv.register_introspection_functions()
             self.xsrv.register_multicall_functions()
 
+            # Allgemeine Funktionen
+            self.xsrv.register_function(0, lambda: pyloadversion, "version")
+            self.xsrv.register_function(0, lambda acl: acl, "xmlmodus")
+
             # XML Modus 1 Nur Logs lesen und PLC Programm neu starten
-            self.xsrv.register_function(self.logr.load_applog, "load_applog")
-            self.xsrv.register_function(self.logr.load_plclog, "load_plclog")
-            self.xsrv.register_function(self.xml_plcexitcode, "plcexitcode")
-            self.xsrv.register_function(self.xml_plcrunning, "plcrunning")
-            self.xsrv.register_function(self.xml_plcstart, "plcstart")
-            self.xsrv.register_function(self.xml_plcstop, "plcstop")
-            self.xsrv.register_function(self.xml_reload, "reload")
             self.xsrv.register_function(
-                self.xml_plcslaverunning, "plcslaverunning"
-            )
+                0, self.logr.load_applog, "load_applog")
+            self.xsrv.register_function(
+                0, self.logr.load_plclog, "load_plclog")
+            self.xsrv.register_function(
+                0, self.xml_plcexitcode, "plcexitcode")
+            self.xsrv.register_function(
+                0, self.xml_plcrunning, "plcrunning")
+            self.xsrv.register_function(
+                0, self.xml_plcstart, "plcstart")
+            self.xsrv.register_function(
+                0, self.xml_plcstop, "plcstop")
+            self.xsrv.register_function(
+                0, self.xml_reload, "reload")
+            self.xsrv.register_function(
+                0, self.xml_plcslaverunning, "plcslaverunning")
 
             # Erweiterte Funktionen anmelden
             try:
@@ -196,8 +231,8 @@ class RevPiPyLoad():
                 self.xml_ps = procimgserver.ProcimgServer(
                     self.xsrv, self.xmlrpc
                 )
-                self.xsrv.register_function(self.xml_psstart, "psstart")
-                self.xsrv.register_function(self.xml_psstop, "psstop")
+                self.xsrv.register_function(1, self.xml_psstart, "psstart")
+                self.xsrv.register_function(1, self.xml_psstop, "psstop")
             except:
                 self.xml_ps = None
                 proginit.logger.warning(
@@ -208,38 +243,36 @@ class RevPiPyLoad():
                 )
 
             # XML Modus 2 Einstellungen lesen und Programm herunterladen
-            if self.xmlrpc >= 2:
-                self.xsrv.register_function(
-                    self.xml_getconfig, "get_config")
-                self.xsrv.register_function(
-                    self.xml_getfilelist, "get_filelist")
-                self.xsrv.register_function(
-                    self.xml_getpictoryrsc, "get_pictoryrsc")
-                self.xsrv.register_function(
-                    self.xml_getprocimg, "get_procimg")
-                self.xsrv.register_function(
-                    self.xml_plcdownload, "plcdownload")
+            self.xsrv.register_function(
+                2, self.xml_getconfig, "get_config")
+            self.xsrv.register_function(
+                2, self.xml_getfilelist, "get_filelist")
+            self.xsrv.register_function(
+                2, self.xml_getpictoryrsc, "get_pictoryrsc")
+            self.xsrv.register_function(
+                2, self.xml_getprocimg, "get_procimg")
+            self.xsrv.register_function(
+                2, self.xml_plcdownload, "plcdownload")
 
             # XML Modus 3 Programm und Konfiguration hochladen
-            if self.xmlrpc >= 3:
-                self.xsrv.register_function(
-                    self.xml_plcupload, "plcupload")
-                self.xsrv.register_function(
-                    self.xml_plcuploadclean, "plcuploadclean")
-                self.xsrv.register_function(
-                    lambda: os.system(proginit.picontrolreset),
-                    "resetpicontrol")
-                self.xsrv.register_function(
-                    self.xml_plcslavestart, "plcslavestart")
-                self.xsrv.register_function(
-                    self.xml_plcslavestop, "plcslavestop")
-                self.xsrv.register_function(
-                    self.xml_setconfig, "set_config")
-                self.xsrv.register_function(
-                    self.xml_setpictoryrsc, "set_pictoryrsc")
+            self.xsrv.register_function(
+                3, self.xml_plcupload, "plcupload")
+            self.xsrv.register_function(
+                3, self.xml_plcuploadclean, "plcuploadclean")
+            self.xsrv.register_function(
+                3,
+                lambda: os.system(proginit.picontrolreset),
+                "resetpicontrol"
+            )
+            self.xsrv.register_function(
+                3, self.xml_plcslavestart, "plcslavestart")
+            self.xsrv.register_function(
+                3, self.xml_plcslavestop, "plcslavestop")
+            self.xsrv.register_function(
+                3, self.xml_setconfig, "set_config")
+            self.xsrv.register_function(
+                3, self.xml_setpictoryrsc, "set_pictoryrsc")
 
-            self.xsrv.register_function(lambda: pyloadversion, "version")
-            self.xsrv.register_function(lambda: self.xmlrpc, "xmlmodus")
             proginit.logger.debug("created xmlrpc server")
 
         if pauseproc:
@@ -257,21 +290,21 @@ class RevPiPyLoad():
         th_plc = None
 
         # Prüfen ob Programm existiert
-        if not os.path.exists(os.path.join(self.plcworkdir, self.plcprog)):
+        if not os.path.exists(os.path.join(self.plcworkdir, self.plcprogram)):
             proginit.logger.error("plc file does not exists {}".format(
-                os.path.join(self.plcworkdir, self.plcprog)
+                os.path.join(self.plcworkdir, self.plcprogram)
             ))
             return None
 
         proginit.logger.debug("create PLC watcher")
         th_plc = plcsystem.RevPiPlc(
-            os.path.join(self.plcworkdir, self.plcprog),
+            os.path.join(self.plcworkdir, self.plcprogram),
             self.plcarguments,
-            self.pythonver
+            self.pythonversion
         )
         th_plc.autoreload = self.autoreload
-        th_plc.gid = int(self.globalconfig["DEFAULT"].get("plcgid", 65534))
-        th_plc.uid = int(self.globalconfig["DEFAULT"].get("plcuid", 65534))
+        th_plc.gid = self.plcgid
+        th_plc.uid = self.plcuid
         th_plc.rtlevel = self.rtlevel
         th_plc.zeroonerror = self.zeroonerror
         th_plc.zeroonexit = self.zeroonexit
@@ -459,12 +492,12 @@ class RevPiPyLoad():
         dc["autoreload"] = self.autoreload
         dc["autostart"] = self.autostart
         dc["plcworkdir"] = self.plcworkdir
-        dc["plcprogram"] = self.plcprog
+        dc["plcprogram"] = self.plcprogram
         dc["plcarguments"] = self.plcarguments
         dc["plcslave"] = self.plcslave
         dc["plcslaveacl"] = self.plcslaveacl.acl
         dc["plcslaveport"] = self.plcslaveport
-        dc["pythonversion"] = self.pythonver
+        dc["pythonversion"] = self.pythonversion
         dc["rtlevel"] = self.rtlevel
         dc["xmlrpc"] = self.xmlrpc
         dc["xmlrpcacl"] = self.xmlrpcacl.acl

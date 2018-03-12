@@ -101,8 +101,14 @@ Methods</h3>
 <td><a style="color:#0000FF" href="#SaveXMLRPCServer.__init__">SaveXMLRPCServer</a></td>
 <td>Init SaveXMLRPCServer class.</td>
 </tr><tr>
+<td><a style="color:#0000FF" href="#SaveXMLRPCServer._dispatch">_dispatch</a></td>
+<td>Prueft ACL Level fuer angeforderte Methode.</td>
+</tr><tr>
 <td><a style="color:#0000FF" href="#SaveXMLRPCServer.isAlive">isAlive</a></td>
 <td>Prueft ob der XML RPC Server laeuft.</td>
+</tr><tr>
+<td><a style="color:#0000FF" href="#SaveXMLRPCServer.register_function">register_function</a></td>
+<td>Override register_function to add acl_level.</td>
 </tr><tr>
 <td><a style="color:#0000FF" href="#SaveXMLRPCServer.start">start</a></td>
 <td>Startet den XML-RPC Server.</td>
@@ -122,7 +128,26 @@ SaveXMLRPCServer (Constructor)</h3>
 <b>SaveXMLRPCServer</b>(<i>addr, logRequests=True, allow_none=False, use_builtin_types=False, ipacl=IpAclManager()</i>)
 <p>
 Init SaveXMLRPCServer class.
-</p><a NAME="SaveXMLRPCServer.isAlive" ID="SaveXMLRPCServer.isAlive"></a>
+</p><a NAME="SaveXMLRPCServer._dispatch" ID="SaveXMLRPCServer._dispatch"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+SaveXMLRPCServer._dispatch</h3>
+<b>_dispatch</b>(<i>method, params</i>)
+<p>
+Prueft ACL Level fuer angeforderte Methode.
+</p><dl>
+<dt><i>method</i></dt>
+<dd>
+Angeforderte Methode
+</dd><dt><i>params</i></dt>
+<dd>
+Argumente fuer Methode
+</dd>
+</dl><dl>
+<dt>Returns:</dt>
+<dd>
+Dispatched data
+</dd>
+</dl><a NAME="SaveXMLRPCServer.isAlive" ID="SaveXMLRPCServer.isAlive"></a>
 <h3 style="background-color:#FFFFFF;color:#FF0000">
 SaveXMLRPCServer.isAlive</h3>
 <b>isAlive</b>(<i></i>)
@@ -132,6 +157,23 @@ Prueft ob der XML RPC Server laeuft.
 <dt>Returns:</dt>
 <dd>
 True, wenn Server noch laeuft
+</dd>
+</dl><a NAME="SaveXMLRPCServer.register_function" ID="SaveXMLRPCServer.register_function"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+SaveXMLRPCServer.register_function</h3>
+<b>register_function</b>(<i>acl_level, function, name=None</i>)
+<p>
+Override register_function to add acl_level.
+</p><dl>
+<dt><i>acl_level</i></dt>
+<dd>
+ACL level to call this function
+</dd><dt><i>function</i></dt>
+<dd>
+Function to register
+</dd><dt><i>name</i></dt>
+<dd>
+Alternative name to use
 </dd>
 </dl><a NAME="SaveXMLRPCServer.start" ID="SaveXMLRPCServer.start"></a>
 <h3 style="background-color:#FFFFFF;color:#FF0000">
