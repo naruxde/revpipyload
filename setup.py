@@ -27,11 +27,12 @@ setup(
 
     license="LGPLv3",
     name="revpipyload",
-    version="0.6.0",
+    version="0.6.1",
 
     scripts=["data/revpipyload"],
 
     install_requires=["revpimodio2"],
+    python_requires=">=3.2",
 
     data_files=[
         ("/etc/avahi/services", [

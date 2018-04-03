@@ -16,17 +16,28 @@ class IpAclManager():
 
     """Verwaltung fuer IP Adressen und deren ACL Level."""
 
-    def __init__(self, acl=None, minlevel=0, maxlevel=0):
+    def __init__(self, minlevel, maxlevel, acl=None):
         """Init IpAclManager class.
-        @param acl ACL Liste fuer Berechtigungen als <class 'str'>"""
-        if minlevel > maxlevel:
-            raise ValueError("minlevel is smaller than maxlevel")
+
+        @param minlevel Smallest access level (min. 0)
+        @param maxlevel Biggest access level (max. 9)
+        @param acl ACL Liste fuer Berechtigungen als <class 'str'>
+
+        """
+        if type(minlevel) != int:
+            raise ValueError("parameter minlevel must be <class 'int'>")
+        if type(maxlevel) != int:
+            raise ValueError("parameter maxlevel must be <class 'int'>")
         if minlevel < 0:
             raise ValueError("minlevel must be 0 or more")
+        if maxlevel > 9:
+            raise ValueError("maxlevel maximum is 9")
+        if minlevel > maxlevel:
+            raise ValueError("minlevel is smaller than maxlevel")
 
         self.__dict_acl = {}
-        self.__dict_ips = {}
-        self.__rawacl = ""
+        self.__dict_regex = {}
+        self.__dict_knownips = {}
         self.__re_ipacl = "(([\\d\\*]{1,3}\\.){3}[\\d\\*]{1,3},[" \
             + str(minlevel) + "-" + str(maxlevel) + "] ?)*"
 
@@ -34,10 +45,18 @@ class IpAclManager():
         if acl is not None:
             self.__set_acl(acl)
 
+    def __iter__(self):
+        """Gibt einzelne ACLs als <class 'tuple'> aus."""
+        for aclip in sorted(self.__dict_acl):
+            yield (aclip, self.__dict_acl[aclip])
+
     def __get_acl(self):
         """Getter fuer den rohen ACL-String.
         return ACLs als <class 'str'>"""
-        return self.__rawacl
+        str_acl = ""
+        for aclip in sorted(self.__dict_acl):
+            str_acl += "{},{} ".format(aclip, self.__dict_acl[aclip])
+        return str_acl.strip()
 
     def __get_regex_acl(self):
         """Gibt formatierten RegEx-String zurueck.
@@ -50,32 +69,34 @@ class IpAclManager():
         if type(value) != str:
             raise ValueError("parameter acl must be <class 'str'>")
 
+        value = value.strip()
         if not refullmatch(self.__re_ipacl, value):
             raise ValueError("acl format ist not okay - 1.2.3.4,0 5.6.7.8,1")
 
         # Klassenwerte übernehmen
         self.__dict_acl = {}
-        self.__dict_ips = {}
-        self.__rawacl = value
+        self.__dict_regex = {}
+        self.__dict_knownips = {}
 
         # Liste neu füllen mit regex Strings
         for ip_level in value.split():
             ip, level = ip_level.split(",", 1)
-            ip = ip.replace(".", "\\.").replace("*", "\\d{1,3}")
             self.__dict_acl[ip] = int(level)
+            self.__dict_regex[ip] = \
+                ip.replace(".", "\\.").replace("*", "\\d{1,3}")
 
     def get_acllevel(self, ipaddress):
         """Prueft IP gegen ACL List und gibt ACL-Wert aus.
         @param ipaddress zum pruefen
         @return <class 'int'> ACL Wert oder -1 wenn nicht gefunden"""
         # Bei bereits aufgelösten IPs direkt ACL auswerten
-        if ipaddress in self.__dict_ips:
-            return self.__dict_ips[ipaddress]
+        if ipaddress in self.__dict_knownips:
+            return self.__dict_knownips[ipaddress]
 
         for aclip in sorted(self.__dict_acl, reverse=True):
-            if refullmatch(aclip, ipaddress):
+            if refullmatch(self.__dict_regex[aclip], ipaddress):
                 # IP und Level merken
-                self.__dict_ips[ipaddress] = self.__dict_acl[aclip]
+                self.__dict_knownips[ipaddress] = self.__dict_acl[aclip]
 
                 # Level zurückgeben
                 return self.__dict_acl[aclip]
@@ -86,10 +107,10 @@ class IpAclManager():
         """Laed ACL String und gibt erfolg zurueck.
         @param str_acl ACL als <class 'str'>
         @return True, wenn erfolgreich uebernommen"""
-        if refullmatch(self.__re_ipacl, str_acl):
-            self.__set_acl(str_acl)
-            return True
-        return False
+        if not refullmatch(self.__re_ipacl, str_acl):
+            return False
+        self.__set_acl(str_acl)
+        return True
 
     acl = property(__get_acl, __set_acl)
     regex_acl = property(__get_regex_acl)

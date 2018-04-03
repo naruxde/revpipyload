@@ -49,7 +49,7 @@ from time import asctime
 from xmlrpc.client import Binary
 from xrpcserver import SaveXMLRPCServer
 
-pyloadversion = "0.6.0"
+pyloadversion = "0.6.1"
 
 
 class RevPiPyLoad():
@@ -305,6 +305,7 @@ class RevPiPyLoad():
             self.pythonversion
         )
         th_plc.autoreload = bool(self.autoreload)
+        th_plc.autoreloaddelay = self.autoreloaddelay
         th_plc.gid = int(self.plcgid)
         th_plc.uid = int(self.plcuid)
         th_plc.rtlevel = int(self.rtlevel)

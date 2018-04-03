@@ -68,6 +68,9 @@ Methods</h3>
 <td><a style="color:#0000FF" href="#IpAclManager.__get_regex_acl">__get_regex_acl</a></td>
 <td>Gibt formatierten RegEx-String zurueck.</td>
 </tr><tr>
+<td><a style="color:#0000FF" href="#IpAclManager.__iter__">__iter__</a></td>
+<td>Gibt einzelne ACLs als <class 'tuple'> aus.</td>
+</tr><tr>
 <td><a style="color:#0000FF" href="#IpAclManager.__set_acl">__set_acl</a></td>
 <td>Uebernimmt neue ACL-Liste fuer die Ausertung der Level.</td>
 </tr><tr>
@@ -86,11 +89,17 @@ Static Methods</h3>
 <a NAME="IpAclManager.__init__" ID="IpAclManager.__init__"></a>
 <h3 style="background-color:#FFFFFF;color:#FF0000">
 IpAclManager (Constructor)</h3>
-<b>IpAclManager</b>(<i>acl=None, minlevel=0, maxlevel=0</i>)
+<b>IpAclManager</b>(<i>minlevel, maxlevel, acl=None</i>)
 <p>
 Init IpAclManager class.
 </p><dl>
-<dt><i>acl</i></dt>
+<dt><i>minlevel</i></dt>
+<dd>
+Smallest access level (min. 0)
+</dd><dt><i>maxlevel</i></dt>
+<dd>
+Biggest access level (max. 9)
+</dd><dt><i>acl</i></dt>
 <dd>
 ACL Liste fuer Berechtigungen als <class 'str'>
 </dd>
@@ -108,6 +117,12 @@ IpAclManager.__get_regex_acl</h3>
 <p>
 Gibt formatierten RegEx-String zurueck.
         return RegEx Code als <class 'str'>
+</p><a NAME="IpAclManager.__iter__" ID="IpAclManager.__iter__"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+IpAclManager.__iter__</h3>
+<b>__iter__</b>(<i></i>)
+<p>
+Gibt einzelne ACLs als <class 'tuple'> aus.
 </p><a NAME="IpAclManager.__set_acl" ID="IpAclManager.__set_acl"></a>
 <h3 style="background-color:#FFFFFF;color:#FF0000">
 IpAclManager.__set_acl</h3>

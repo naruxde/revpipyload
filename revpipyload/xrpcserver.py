@@ -18,7 +18,7 @@ class SaveXMLRPCServer(SimpleXMLRPCServer):
 
     def __init__(
             self, addr, logRequests=True, allow_none=False,
-            use_builtin_types=False, ipacl=IpAclManager()):
+            use_builtin_types=False, ipacl=None):
         """Init SaveXMLRPCServer class."""
         proginit.logger.debug("enter SaveXMLRPCServer.__init__()")
 
@@ -34,7 +34,10 @@ class SaveXMLRPCServer(SimpleXMLRPCServer):
         )
 
         # Klassenvariablen
-        self.aclmgr = ipacl
+        if ipacl is None:
+            self.aclmgr = IpAclManager(0, 0)
+        else:
+            self.aclmgr = ipacl
         self.funcacls = {}
         self.requestacl = -1
         self.tpe = futures.ThreadPoolExecutor(max_workers=1)

@@ -39,6 +39,7 @@ class RevPiPlc(Thread):
         self._procplc = None
         self._pversion = pversion
         self.autoreload = False
+        self.autoreloaddelay = 5 * 2
         self.exitcode = None
         self.gid = 65534
         self.uid = 65534
@@ -131,44 +132,54 @@ class RevPiPlc(Thread):
             _setuprt(self._procplc.pid, self._evt_exit)
 
         # Überwachung starten
+        delaycounter = self.autoreloaddelay
         while not self._evt_exit.is_set():
 
             # Auswerten
             self.exitcode = self._procplc.poll()
 
             if self.exitcode is not None:
-                if self.exitcode > 0:
-                    # PLC Python Programm abgestürzt
-                    proginit.logger.error(
-                        "plc program crashed - exitcode: {}".format(
-                            self.exitcode
+                if delaycounter == self.autoreloaddelay:
+                    if self.exitcode > 0:
+                        # PLC Python Programm abgestürzt
+                        proginit.logger.error(
+                            "plc program crashed - exitcode: {}".format(
+                                self.exitcode
+                            )
                         )
-                    )
-                    if self.zeroonerror:
-                        _zeroprocimg()
-                        proginit.logger.warning(
-                            "set piControl0 to ZERO after PLC program error")
+                        if self.zeroonerror:
+                            _zeroprocimg()
+                            proginit.logger.warning(
+                                "set piControl0 to ZERO after "
+                                "PLC program error"
+                            )
 
-                else:
-                    # PLC Python Programm sauber beendet
-                    proginit.logger.info("plc program did a clean exit")
-                    if self.zeroonexit:
-                        _zeroprocimg()
-                        proginit.logger.info(
-                            "set piControl0 to ZERO after PLC program returns "
-                            "clean exitcode")
+                    else:
+                        # PLC Python Programm sauber beendet
+                        proginit.logger.info("plc program did a clean exit")
+                        if self.zeroonexit:
+                            _zeroprocimg()
+                            proginit.logger.info(
+                                "set piControl0 to ZERO after "
+                                "PLC program returns clean exitcode"
+                            )
 
                 if not self._evt_exit.is_set() and self.autoreload:
-                    # Prozess neu starten
-                    self._procplc = self._spopen(lst_proc)
-                    if self.exitcode == 0:
-                        proginit.logger.warning(
-                            "restart plc program after clean exit"
-                        )
+                    if delaycounter > 0:
+                        delaycounter -= 1
                     else:
-                        proginit.logger.warning(
-                            "restart plc program after crash"
-                        )
+                        delaycounter = self.autoreloaddelay
+
+                        # Prozess neu starten
+                        self._procplc = self._spopen(lst_proc)
+                        if self.exitcode == 0:
+                            proginit.logger.warning(
+                                "restart plc program after clean exit"
+                            )
+                        else:
+                            proginit.logger.warning(
+                                "restart plc program after crash"
+                            )
                 else:
                     break
 
