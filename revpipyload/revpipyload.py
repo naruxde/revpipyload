@@ -162,7 +162,7 @@ class RevPiPyLoad():
         if "XMLRPC" in self.globalconfig:
             self.xmlrpc = \
                 int(self.globalconfig["XMLRPC"].get("xmlrpc", 0))
-            self.xmlrpcacl = IpAclManager(minlevel=0, maxlevel=3)
+            self.xmlrpcacl = IpAclManager(minlevel=0, maxlevel=4)
             if not self.xmlrpcacl.loadacl(
                     self.globalconfig["XMLRPC"].get("acl", "")):
                 proginit.logger.warning(
@@ -268,10 +268,12 @@ class RevPiPyLoad():
                 3, self.xml_plcslavestart, "plcslavestart")
             self.xsrv.register_function(
                 3, self.xml_plcslavestop, "plcslavestop")
+
+            # XML Modus 4 Einstellungen ändern
             self.xsrv.register_function(
-                3, self.xml_setconfig, "set_config")
+                4, self.xml_setconfig, "set_config")
             self.xsrv.register_function(
-                3, self.xml_setpictoryrsc, "set_pictoryrsc")
+                4, self.xml_setpictoryrsc, "set_pictoryrsc")
 
             proginit.logger.debug("created xmlrpc server")
 
@@ -302,12 +304,12 @@ class RevPiPyLoad():
             self.plcarguments,
             self.pythonversion
         )
-        th_plc.autoreload = self.autoreload
-        th_plc.gid = self.plcgid
-        th_plc.uid = self.plcuid
-        th_plc.rtlevel = self.rtlevel
-        th_plc.zeroonerror = self.zeroonerror
-        th_plc.zeroonexit = self.zeroonexit
+        th_plc.autoreload = bool(self.autoreload)
+        th_plc.gid = int(self.plcgid)
+        th_plc.uid = int(self.plcuid)
+        th_plc.rtlevel = int(self.rtlevel)
+        th_plc.zeroonerror = bool(self.zeroonerror)
+        th_plc.zeroonexit = bool(self.zeroonexit)
 
         proginit.logger.debug("leave RevPiPyLoad._plcthread()")
         return th_plc
@@ -489,20 +491,32 @@ class RevPiPyLoad():
         @return dict() der Konfiguration"""
         proginit.logger.debug("xmlrpc call getconfig")
         dc = {}
+
+        # DEFAULT Sektion
         dc["autoreload"] = self.autoreload
+        dc["autoreloaddelay"] = self.autoreloaddelay
         dc["autostart"] = self.autostart
         dc["plcworkdir"] = self.plcworkdir
         dc["plcprogram"] = self.plcprogram
         dc["plcarguments"] = self.plcarguments
-        dc["plcslave"] = self.plcslave
-        dc["plcslaveacl"] = self.plcslaveacl.acl
-        dc["plcslaveport"] = self.plcslaveport
+        # dc["plcuid"] = self.plcuid
+        # dc["plcgid"] = self.plcgid
         dc["pythonversion"] = self.pythonversion
         dc["rtlevel"] = self.rtlevel
-        dc["xmlrpc"] = self.xmlrpc
-        dc["xmlrpcacl"] = self.xmlrpcacl.acl
         dc["zeroonerror"] = self.zeroonerror
         dc["zeroonexit"] = self.zeroonexit
+
+        # PLCSLAVE Sektion
+        dc["plcslave"] = self.plcslave
+        dc["plcslaveacl"] = self.plcslaveacl.acl
+        dc["plcslavebindip"] = self.plcslavebindip
+        dc["plcslaveport"] = self.plcslaveport
+
+        # XMLRPC Sektion
+        dc["xmlrpc"] = self.xmlrpc
+        dc["xmlrpcacl"] = self.xmlrpcacl.acl
+        dc["xmlrpcbindip"] = self.xmlrpcbindip
+
         return dc
 
     def xml_getfilelist(self):
@@ -664,32 +678,51 @@ class RevPiPyLoad():
         @return True, wenn erfolgreich angewendet"""
         proginit.logger.debug("xmlrpc call setconfig")
         keys = {
-            "autoreload": "[01]",
-            "autostart": "[01]",
-            "plcprogram": ".+",
-            "plcarguments": ".*",
-            "plcslave": "[01]",
-            "plcslaveacl": self.plcslaveacl.regex_acl,
-            "plcslaveport": "[0-9]{,5}",
-            "pythonversion": "[23]",
-            "rtlevel": "[0-1]",
-            "xmlrpc": "[0-3]",
-            "xmlrpcacl": self.xmlrpcacl.regex_acl,
-            "zeroonerror": "[01]",
-            "zeroonexit": "[01]"
+            "DEFAULT": {
+                "autoreload": "[01]",
+                "autoreloaddelay": "[0-9]+",
+                "autostart": "[01]",
+                "plcprogram": ".+",
+                "plcarguments": ".*",
+                # "plcuid": "[0-9]{,5}",
+                # "plcgid": "[0-9]{,5}",
+                "pythonversion": "[23]",
+                "rtlevel": "[0-1]",
+                "zeroonerror": "[01]",
+                "zeroonexit": "[01]",
+            },
+            "PLCSLAVE": {
+                "plcslave": "[01]",
+                "plcslaveacl": self.plcslaveacl.regex_acl,
+                # "plcslavebindip": "^((([\\d]{1,3}\\.){3}[\\d]{1,3})|\\*)+$",
+                "plcslaveport": "[0-9]{,5}",
+            },
+            "XMLRPC": {
+                "xmlrpc": "[01]",
+                "xmlrpcacl": self.xmlrpcacl.regex_acl,
+                # "xmlrpcbindip": "^((([\\d]{1,3}\\.){3}[\\d]{1,3})|\\*)+$",
+                # "xmlslaveport": "[0-9]{,5}",
+            }
         }
 
         # Werte übernehmen
-        for key in keys:
-            if key in dc:
-                if not refullmatch(keys[key], str(dc[key])):
-                    proginit.logger.error(
-                        "got wrong setting '{}' with value '{}'".format(
-                            key, dc[key]
+        for sektion in keys:
+            suffix = sektion.lower()
+            for key in keys[sektion]:
+                if key in dc:
+                    localkey = key.replace(suffix, "")
+                    if not refullmatch(keys[sektion][key], str(dc[key])):
+                        proginit.logger.error(
+                            "got wrong setting '{}' with value '{}'".format(
+                                key, dc[key]
+                            )
                         )
+                        return False
+                    self.globalconfig.set(
+                        sektion,
+                        key if localkey == "" else localkey,
+                        str(dc[key])
                     )
-                    return False
-                self.globalconfig.set("DEFAULT", key, str(dc[key]))
 
         # conf-Datei schreiben
         with open(proginit.globalconffile, "w") as fh:

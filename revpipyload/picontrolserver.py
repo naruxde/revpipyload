@@ -12,6 +12,7 @@ from threading import Event, Thread
 from timeit import default_timer
 
 
+# NOTE: Sollte dies als Process ausgeführt werden?
 class RevPiSlave(Thread):
 
     """RevPi PLC-Server.
