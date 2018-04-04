@@ -1,12 +1,3 @@
-helper.IpAclManager.__get_acl?6()
-helper.IpAclManager.__get_regex_acl?6()
-helper.IpAclManager.__iter__?6()
-helper.IpAclManager.__set_acl?6(value)
-helper.IpAclManager.acl?7
-helper.IpAclManager.get_acllevel?4(ipaddress)
-helper.IpAclManager.loadacl?4(str_acl)
-helper.IpAclManager.regex_acl?7
-helper.IpAclManager?1(minlevel, maxlevel, acl=None)
 helper._setuprt?5(pid, evt_exit)
 helper._zeroprocimg?5()
 helper.refullmatch?4(regex, string)
@@ -42,7 +33,7 @@ procimgserver.ProcimgServer.setvalue?4(device, io, value)
 procimgserver.ProcimgServer.start?4()
 procimgserver.ProcimgServer.stop?4()
 procimgserver.ProcimgServer.values?4()
-procimgserver.ProcimgServer?1(xmlserver, aclmode)
+procimgserver.ProcimgServer?1(xmlserver)
 proginit.cleanup?4()
 proginit.configure?4()
 proginit.forked?7
@@ -85,6 +76,20 @@ revpipyload.RevPiPyLoad.xml_setconfig?4(dc, loadnow=False)
 revpipyload.RevPiPyLoad.xml_setpictoryrsc?4(filebytes, reset=False)
 revpipyload.RevPiPyLoad?1()
 revpipyload.pyloadversion?7
+revpipyload.shared.ipaclmanager.IpAclManager.__get_acl?6()
+revpipyload.shared.ipaclmanager.IpAclManager.__get_filename?6()
+revpipyload.shared.ipaclmanager.IpAclManager.__get_regex_acl?6()
+revpipyload.shared.ipaclmanager.IpAclManager.__iter__?6()
+revpipyload.shared.ipaclmanager.IpAclManager.__set_acl?6(value)
+revpipyload.shared.ipaclmanager.IpAclManager.acl?7
+revpipyload.shared.ipaclmanager.IpAclManager.filename?7
+revpipyload.shared.ipaclmanager.IpAclManager.get_acllevel?4(ipaddress)
+revpipyload.shared.ipaclmanager.IpAclManager.loadacl?4(str_acl)
+revpipyload.shared.ipaclmanager.IpAclManager.loadaclfile?4(filename)
+revpipyload.shared.ipaclmanager.IpAclManager.regex_acl?7
+revpipyload.shared.ipaclmanager.IpAclManager.writeaclfile?4(filename=None, aclname=None)
+revpipyload.shared.ipaclmanager.IpAclManager?1(minlevel, maxlevel, acl=None)
+revpipyload.shared.ipaclmanager.refullmatch?4(regex, string)
 xrpcserver.SaveXMLRPCRequestHandler.parse_request?4()
 xrpcserver.SaveXMLRPCServer._dispatch?5(method, params)
 xrpcserver.SaveXMLRPCServer.isAlive?4()

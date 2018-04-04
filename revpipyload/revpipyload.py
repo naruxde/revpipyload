@@ -40,8 +40,9 @@ import signal
 import tarfile
 import zipfile
 from configparser import ConfigParser
-from helper import refullmatch, IpAclManager
+from helper import refullmatch
 from json import loads as jloads
+from shared.ipaclmanager import IpAclManager
 from shutil import rmtree
 from tempfile import mkstemp
 from threading import Event
@@ -49,7 +50,7 @@ from time import asctime
 from xmlrpc.client import Binary
 from xrpcserver import SaveXMLRPCServer
 
-pyloadversion = "0.6.1"
+pyloadversion = "0.6.2"
 
 
 class RevPiPyLoad():
@@ -140,8 +141,8 @@ class RevPiPyLoad():
             self.plcslave = \
                 int(self.globalconfig["PLCSLAVE"].get("plcslave", 0))
             self.plcslaveacl = IpAclManager(minlevel=0, maxlevel=1)
-            if not self.plcslaveacl.loadacl(
-                    self.globalconfig["PLCSLAVE"].get("acl", "")):
+            if not self.plcslaveacl.loadaclfile(
+                    self.globalconfig["PLCSLAVE"].get("aclfile", "")):
                 proginit.logger.warning(
                     "can not load plcslave acl - wrong format"
                 )
@@ -163,8 +164,8 @@ class RevPiPyLoad():
             self.xmlrpc = \
                 int(self.globalconfig["XMLRPC"].get("xmlrpc", 0))
             self.xmlrpcacl = IpAclManager(minlevel=0, maxlevel=4)
-            if not self.xmlrpcacl.loadacl(
-                    self.globalconfig["XMLRPC"].get("acl", "")):
+            if not self.xmlrpcacl.loadaclfile(
+                    self.globalconfig["XMLRPC"].get("aclfile", "")):
                 proginit.logger.warning(
                     "can not load xmlrpc acl - wrong format"
                 )
@@ -228,9 +229,7 @@ class RevPiPyLoad():
             # Erweiterte Funktionen anmelden
             try:
                 import procimgserver
-                self.xml_ps = procimgserver.ProcimgServer(
-                    self.xsrv, self.xmlrpc
-                )
+                self.xml_ps = procimgserver.ProcimgServer(self.xsrv)
                 self.xsrv.register_function(1, self.xml_psstart, "psstart")
                 self.xsrv.register_function(1, self.xml_psstop, "psstop")
             except:
@@ -719,11 +718,46 @@ class RevPiPyLoad():
                             )
                         )
                         return False
-                    self.globalconfig.set(
-                        sektion,
-                        key if localkey == "" else localkey,
-                        str(dc[key])
+                    if localkey != "acl":
+                        self.globalconfig.set(
+                            sektion,
+                            key if localkey == "" else localkey,
+                            str(dc[key])
+                        )
+
+        # ACLs sofort übernehmen und schreiben
+        str_acl = dc.get("plcslaveacl", None)
+        if str_acl is not None and self.plcslaveacl.acl != str_acl:
+            self.plcslaveacl.acl = str_acl
+            if not self.plcslaveacl.writeaclfile(aclname="PLC-SLAVE"):
+                proginit.logger.error(
+                    "can not write acl file '{}' for PLC-SLAVE".format(
+                        self.plcslaveacl.filename
                     )
+                )
+                return False
+            else:
+                proginit.logger.info(
+                    "wrote new acl file '{}' for PLC-SLAVE".format(
+                        self.plcslaveacl.filename
+                    )
+                )
+        str_acl = dc.get("xmlrpcacl", None)
+        if str_acl is not None and self.xmlrpcacl.acl != str_acl:
+            self.xmlrpcacl.acl = str_acl
+            if not self.xmlrpcacl.writeaclfile(aclname="XML-RPC"):
+                proginit.logger.error(
+                    "can not write acl file '{}' for XML-RPC".format(
+                        self.xmlrpcacl.filename
+                    )
+                )
+                return False
+            else:
+                proginit.logger.info(
+                    "wrote new acl file '{}' for XML-RPC".format(
+                        self.xmlrpcacl.filename
+                    )
+                )
 
         # conf-Datei schreiben
         with open(proginit.globalconffile, "w") as fh:

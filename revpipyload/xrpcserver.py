@@ -7,7 +7,7 @@
 #
 """XML-RPC Server anpassungen fuer Absicherung."""
 import proginit
-from helper import IpAclManager
+from shared.ipaclmanager import IpAclManager
 from concurrent import futures
 from xmlrpc.server import SimpleXMLRPCServer, SimpleXMLRPCRequestHandler
 
@@ -19,8 +19,12 @@ class SaveXMLRPCServer(SimpleXMLRPCServer):
     def __init__(
             self, addr, logRequests=True, allow_none=False,
             use_builtin_types=False, ipacl=None):
-        """Init SaveXMLRPCServer class."""
+        """Init SaveXMLRPCServer class.
+        @param ipacl AclManager <class 'IpAclManager'>"""
         proginit.logger.debug("enter SaveXMLRPCServer.__init__()")
+
+        if ipacl is not None and type(ipacl) != IpAclManager:
+            raise ValueError("parameter ipacl must be <class 'IpAclManager'>")
 
         # Vererbte Klasse instantiieren
         super().__init__(

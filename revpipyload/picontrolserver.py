@@ -8,6 +8,7 @@
 """Modul fuer die Verwaltung der PLC-Slave Funktionen."""
 import proginit
 import socket
+from shared.ipaclmanager import IpAclManager
 from threading import Event, Thread
 from timeit import default_timer
 
@@ -26,8 +27,13 @@ class RevPiSlave(Thread):
 
     def __init__(self, ipacl, port=55234):
         """Instantiiert RevPiSlave-Klasse.
-        @param acl Stringliste mit Leerstellen getrennt
+        @param ipacl AclManager <class 'IpAclManager'>
         @param port Listen Port fuer plc Slaveserver"""
+        if not type(ipacl) == IpAclManager:
+            raise ValueError("parameter ipacl must be <class 'IpAclManager'>")
+        if not type(port) == int:
+            raise ValueError("parameter port must be <class 'int'>")
+
         super().__init__()
         self.__ipacl = ipacl
         self._evt_exit = Event()

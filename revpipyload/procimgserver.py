@@ -28,17 +28,12 @@ class ProcimgServer():
 
     """
 
-    def __init__(self, xmlserver, aclmode):
+    def __init__(self, xmlserver):
         """Instantiiert RevPiCheckServer()-Klasse.
-
-        @param xmlserver XML-RPC Server
-        @param aclmode Zugriffsrechte
-
-        """
+        @param xmlserver XML-RPC Server"""
         # Logger übernehmen
         proginit.logger.debug("enter ProcimgServer.__init__()")
 
-        self.acl = aclmode
         self.rpi = None
 
         # XML-Server übernehmen
@@ -121,13 +116,6 @@ class ProcimgServer():
         @return list() [device, io, status, msg]
 
         """
-        # Zugriffsrechte prüfen
-        if self.acl < 3:
-            return [
-                device, io, False,
-                "not allowed in XML-RPC permission mode {}".format(self.acl)
-            ]
-
         # Binary() in bytes() umwandeln
         if type(value) == Binary:
             value = value.data
@@ -192,9 +180,8 @@ class ProcimgServer():
         for xmlfunc in self.xmlreadfuncs:
             if xmlfunc in self.xmlsrv.funcs:
                 del self.xmlsrv.funcs[xmlfunc]
-        if self.acl >= 3:
-            for xmlfunc in self.xmlwritefuncs:
-                if xmlfunc in self.xmlsrv.funcs:
-                    del self.xmlsrv.funcs[xmlfunc]
+        for xmlfunc in self.xmlwritefuncs:
+            if xmlfunc in self.xmlsrv.funcs:
+                del self.xmlsrv.funcs[xmlfunc]
 
         proginit.logger.debug("leave ProcimgServer.stop()")
