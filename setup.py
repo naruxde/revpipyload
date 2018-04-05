@@ -27,7 +27,7 @@ setup(
 
     license="LGPLv3",
     name="revpipyload",
-    version="0.6.2",
+    version="0.6.3",
 
     scripts=["data/revpipyload"],
 
@@ -39,9 +39,12 @@ setup(
             "data/etc/avahi/services/revpipyload.service",
         ]),
         ("/etc/revpipyload", [
+            "data/etc/revpipyload/aclplcslave.conf",
+            "data/etc/revpipyload/aclxmlrpc.conf",
             "data/etc/revpipyload/revpipyload.conf",
         ]),
         ("share/revpipyload", glob("revpipyload/*.*")),
+        ("share/revpipyload/shared", glob("revpipyload/shared/*.*")),
         ("/var/lib/revpipyload", [
             "data/var/lib/revpipyload/.placeholder",
         ])

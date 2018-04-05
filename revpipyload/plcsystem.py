@@ -33,6 +33,8 @@ class RevPiPlc(Thread):
         super().__init__()
 
         self._arguments = arguments
+        self._autoreloaddelay = 5 * 2
+        self._delaycounter = 5 * 2
         self._evt_exit = Event()
         self._plw = self._configureplw()
         self._program = program
@@ -46,6 +48,18 @@ class RevPiPlc(Thread):
         self.rtlevel = 0
         self.zeroonerror = False
         self.zeroonexit = False
+
+    def __get_autoreloaddelay(self):
+        """Getter fuer autoreloaddelay.
+        @return Delayzeit in Sekunden <class 'int'>"""
+        return int(self._autoreloaddelay / 2)
+
+    def __set_autoreloaddelay(self, value):
+        """Setter fuer autoreloaddelay."""
+        if type(value) != int:
+            raise RuntimeError("parameter value must be <class 'int'>")
+        self._autoreloaddelay = value * 2
+        self._delaycounter = value * 2
 
     def _configureplw(self):
         """Konfiguriert den PipeLogwriter fuer Ausgaben der PLCAPP.
@@ -132,14 +146,13 @@ class RevPiPlc(Thread):
             _setuprt(self._procplc.pid, self._evt_exit)
 
         # Überwachung starten
-        delaycounter = self.autoreloaddelay
         while not self._evt_exit.is_set():
 
             # Auswerten
             self.exitcode = self._procplc.poll()
 
             if self.exitcode is not None:
-                if delaycounter == self.autoreloaddelay:
+                if self._delaycounter == self.autoreloaddelay:
                     if self.exitcode > 0:
                         # PLC Python Programm abgestürzt
                         proginit.logger.error(
@@ -165,10 +178,10 @@ class RevPiPlc(Thread):
                             )
 
                 if not self._evt_exit.is_set() and self.autoreload:
-                    if delaycounter > 0:
-                        delaycounter -= 1
+                    if self._delaycounter > 0:
+                        self._delaycounter -= 1
                     else:
-                        delaycounter = self.autoreloaddelay
+                        self._delaycounter = self.autoreloaddelay
 
                         # Prozess neu starten
                         self._procplc = self._spopen(lst_proc)
@@ -240,3 +253,5 @@ class RevPiPlc(Thread):
             proginit.logger.debug("log pipes successfully closed")
 
         proginit.logger.debug("leave RevPiPlc.stop()")
+
+    autoreloaddelay = property(__get_autoreloaddelay, __set_autoreloaddelay)

@@ -69,7 +69,7 @@ class RevPiSlave(Thread):
             self.exitcode = -1
 
             # Verbindung annehmen
-            proginit.logger.debug("accept new connection")
+            proginit.logger.info("accept new connection for revpinetio")
             try:
                 tup_sock = self.so.accept()
             except:

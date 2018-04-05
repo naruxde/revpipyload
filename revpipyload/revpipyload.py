@@ -50,7 +50,7 @@ from time import asctime
 from xmlrpc.client import Binary
 from xrpcserver import SaveXMLRPCServer
 
-pyloadversion = "0.6.2"
+pyloadversion = "0.6.3"
 
 
 class RevPiPyLoad():
@@ -72,11 +72,17 @@ class RevPiPyLoad():
         self.evt_loadconfig = Event()
         self.globalconfig = ConfigParser()
         self.logr = logsystem.LogReader()
-        self.plc = None
-        self.plc_pause = False
         self.tfile = {}
         self.xsrv = None
         self.xml_ps = None
+
+        # Berechtigungsmanger
+        self.plcslaveacl = IpAclManager(minlevel=0, maxlevel=1)
+        self.xmlrpcacl = IpAclManager(minlevel=0, maxlevel=4)
+
+        # Threads/Prozesse
+        self.th_plcslave = None
+        self.plc = None
 
         # Konfiguration laden
         self._loadconfig()
@@ -89,25 +95,69 @@ class RevPiPyLoad():
 
         proginit.logger.debug("leave RevPiPyLoad.__init__()")
 
+    def _check_mustrestart_plcslave(self):
+        """Prueft ob sich kritische Werte veraendert haben.
+        @return True, wenn Subsystemneustart noetig ist"""
+        if self.th_plcslave is None:
+            return True
+        elif "PLCSLAVE" not in self.globalconfig:
+            return True
+        else:
+            ip = self.globalconfig["PLCSLAVE"].get("bindip", "127.0.0.1")
+            if ip == "*":
+                ip = ""
+            elif ip == "":
+                ip = "127.0.0.1"
+            port = int(self.globalconfig["PLCSLAVE"].get("port", 55234))
+
+            return (
+                self.plcslave !=
+                int(self.globalconfig["PLCSLAVE"].get("plcslave", 0))
+                or self.plcslavebindip != ip
+                or self.plcslaveport != port
+            )
+
+    def _check_mustrestart_plcprogram(self):
+        """Prueft ob sich kritische Werte veraendert haben.
+        @return True, wenn Subsystemneustart noetig ist"""
+        if self.plc is None:
+            return True
+        elif "XMLRPC" not in self.globalconfig:
+            return True
+        else:
+            return (
+                self.plcworkdir !=
+                self.globalconfig["DEFAULT"].get("plcworkdir", ".")
+                or self.plcprogram !=
+                self.globalconfig["DEFAULT"].get("plcprogram", "none.py")
+                or self.plcarguments !=
+                self.globalconfig["DEFAULT"].get("plcarguments", "")
+                or self.plcuid !=
+                int(self.globalconfig["DEFAULT"].get("plcuid", 65534))
+                or self.plcgid !=
+                int(self.globalconfig["DEFAULT"].get("plcgid", 65534))
+                or self.pythonversion !=
+                int(self.globalconfig["DEFAULT"].get("pythonversion", 3))
+                or self.rtlevel !=
+                int(self.globalconfig["DEFAULT"].get("rtlevel", 0))
+            )
+
     def _loadconfig(self):
         """Load configuration file and setup modul."""
         proginit.logger.debug("enter RevPiPyLoad._loadconfig()")
 
-        self.evt_loadconfig.clear()
-        pauseproc = False
-
-        if not self._exit:
-            proginit.logger.info(
-                "shutdown revpipyload while getting new config"
-            )
-            self.stop()
-            pauseproc = True
+        # Subsysteme herunterfahren
+        self.stop_xmlrpcserver()
 
         # Konfigurationsdatei laden
         proginit.logger.info(
             "loading config file: {}".format(proginit.globalconffile)
         )
         self.globalconfig.read(proginit.globalconffile)
+
+        # Merker für Subsystem-Neustart nach laden, vor setzen
+        restart_plcslave = self._check_mustrestart_plcslave()
+        restart_plcprogram = self._check_mustrestart_plcprogram()
 
         # Konfiguration verarbeiten [DEFAULT]
         self.autoreload = \
@@ -140,12 +190,15 @@ class RevPiPyLoad():
         if "PLCSLAVE" in self.globalconfig:
             self.plcslave = \
                 int(self.globalconfig["PLCSLAVE"].get("plcslave", 0))
-            self.plcslaveacl = IpAclManager(minlevel=0, maxlevel=1)
+
+            # Berechtigungen laden, wenn aktiv ist
             if not self.plcslaveacl.loadaclfile(
                     self.globalconfig["PLCSLAVE"].get("aclfile", "")):
                 proginit.logger.warning(
                     "can not load plcslave acl - wrong format"
                 )
+            if self.plcslave != 1:
+                self.stop_plcslave()
 
             # Bind IP lesen und anpassen
             self.plcslavebindip = \
@@ -163,7 +216,7 @@ class RevPiPyLoad():
         if "XMLRPC" in self.globalconfig:
             self.xmlrpc = \
                 int(self.globalconfig["XMLRPC"].get("xmlrpc", 0))
-            self.xmlrpcacl = IpAclManager(minlevel=0, maxlevel=4)
+
             if not self.xmlrpcacl.loadaclfile(
                     self.globalconfig["XMLRPC"].get("aclfile", "")):
                 proginit.logger.warning(
@@ -188,12 +241,37 @@ class RevPiPyLoad():
             )
         os.chdir(self.plcworkdir)
 
-        # PLC Threads konfigurieren
-        self.plc = self._plcthread()
-        self.th_plcslave = self._plcslave()
+        # PLC Programm konfigurieren
+        if restart_plcprogram:
+            self.stop_plcprogram()
+            self.plc = self._plcthread()
+
+            if not self._exit and self.plc is not None and self.autostart:
+                proginit.logger.info("restart plc program after reload")
+                self.plc.start()
+
+        else:
+            proginit.logger.info(
+                "configure plc program parameters after reload"
+            )
+            self.plc.autoreload = self.autoreload
+            self.plc.autoreloaddelay = self.autoreloaddelay
+            self.plc.zeroonerror = self.zeroonerror
+            self.plc.zeroonexit = self.zeroonexit
+
+        # PLC-Slave konfigurieren
+        if restart_plcslave:
+            self.stop_plcslave()
+            self.th_plcslave = self._plcslave()
+
+            if not self._exit and self.th_plcslave is not None:
+                proginit.logger.info("restart plc slave after reload")
+                self.th_plcslave.start()
 
         # XMLRPC-Server Instantiieren und konfigurieren
-        if self.xmlrpc == 1:
+        if self.xmlrpc == 0:
+            self.xmlrpc = None
+        else:
             proginit.logger.debug("create xmlrpc server")
             self.xsrv = SaveXMLRPCServer(
                 (self.xmlrpcbindip, self.xmlrpcport),
@@ -276,11 +354,13 @@ class RevPiPyLoad():
 
             proginit.logger.debug("created xmlrpc server")
 
-        if pauseproc:
-            proginit.logger.info(
-                "start revpipyload after getting new config"
-            )
-            self.start()
+            # Neustart bei reload
+            if not self._exit:
+                proginit.logger.info("start xmlrpc-server")
+                self.xsrv.start()
+
+        # Konfiguration abschließen
+        self.evt_loadconfig.clear()
 
         proginit.logger.debug("leave RevPiPyLoad._loadconfig()")
 
@@ -297,7 +377,7 @@ class RevPiPyLoad():
             ))
             return None
 
-        proginit.logger.debug("create PLC watcher")
+        proginit.logger.debug("create PLC program watcher")
         th_plc = plcsystem.RevPiPlc(
             os.path.join(self.plcworkdir, self.plcprogram),
             self.plcarguments,
@@ -423,17 +503,21 @@ class RevPiPyLoad():
             # Slaveausfuehrung übergeben
             self.th_plcslave.start()
 
-        if self.autostart:
-            proginit.logger.debug("starting revpiplc-thread")
-            if self.plc is not None:
-                self.plc.start()
+        # PLC Programm automatisch starten
+        if self.autostart and self.plc is not None:
+            self.plc.start()
 
-        while not self._exit \
-                and not self.evt_loadconfig.is_set():
+        # mainloop
+        while not self._exit:
+
+            # Neue Konfiguration laden
+            if self.evt_loadconfig.is_set():
+                proginit.logger.info("got reqeust to reload config")
+                self._loadconfig()
 
             # PLC Server Thread prüfen
-            if self.plcslave \
-                    and not (self.plc_pause or self.th_plcslave.is_alive()):
+            if self.plcslave and self.th_plcslave is not None \
+                    and not self.th_plcslave.is_alive():
                 proginit.logger.warning(
                     "restart plc slave after thread was not running"
                 )
@@ -452,39 +536,57 @@ class RevPiPyLoad():
 
             self.evt_loadconfig.wait(1)
 
-        if not self._exit:
-            proginit.logger.info("exit python plc program to reload config")
-            self._loadconfig()
+        proginit.logger.info("stopping revpipyload")
+
+        # Alle Sub-Systeme beenden
+        self.stop_plcslave()
+        self.stop_plcprogram()
+        self.stop_xmlrpcserver()
+
+        # Logreader schließen
+        self.logr.closeall()
 
         proginit.logger.debug("leave RevPiPyLoad.start()")
 
     def stop(self):
         """Stop revpipyload."""
         proginit.logger.debug("enter RevPiPyLoad.stop()")
-
-        proginit.logger.info("stopping revpipyload")
         self._exit = True
+        proginit.logger.debug("leave RevPiPyLoad.stop()")
 
-        if self.th_plcslave is not None and self.th_plcslave.is_alive():
-            proginit.logger.debug("stopping revpi slave thread")
-            self.th_plcslave.stop()
-            self.th_plcslave.join()
-            proginit.logger.debug("revpi slave thread successfully closed")
+    def stop_plcprogram(self):
+        """Beendet PLC Programm."""
+        proginit.logger.debug("enter RevPiPyLoad.stop_plcprogram()")
 
         if self.plc is not None and self.plc.is_alive():
-            proginit.logger.debug("stopping revpiplc thread")
+            proginit.logger.info("stopping revpiplc thread")
             self.plc.stop()
             self.plc.join()
             proginit.logger.debug("revpiplc thread successfully closed")
 
-        if self.xmlrpc >= 1:
+        proginit.logger.debug("leave RevPiPyLoad.stop_plcprogram()")
+
+    def stop_plcslave(self):
+        """Beendet PLC Slave."""
+        proginit.logger.debug("enter RevPiPyLoad.stop_plcslave()")
+
+        if self.th_plcslave is not None and self.th_plcslave.is_alive():
+            proginit.logger.info("stopping revpi slave thread")
+            self.th_plcslave.stop()
+            self.th_plcslave.join()
+            proginit.logger.debug("revpi slave thread successfully closed")
+
+        proginit.logger.debug("leave RevPiPyLoad.stop_plcslave()")
+
+    def stop_xmlrpcserver(self):
+        """Beendet XML-RPC."""
+        proginit.logger.debug("enter RevPiPyLoad.stop_xmlrpcserver()")
+
+        if self.xsrv is not None:
             proginit.logger.info("shutting down xmlrpc-server")
             self.xsrv.stop()
 
-        # Logreader schließen
-        self.logr.closeall()
-
-        proginit.logger.debug("leave RevPiPyLoad.stop()")
+        proginit.logger.debug("leave RevPiPyLoad.stop_xmlrpcserver()")
 
     def xml_getconfig(self):
         """Uebertraegt die RevPiPyLoad Konfiguration.
@@ -618,9 +720,7 @@ class RevPiPyLoad():
         """
         proginit.logger.debug("xmlrpc call plcstop")
         if self.plc is not None and self.plc.is_alive():
-            self.plc.stop()
-            self.plc.join()
-            proginit.logger.debug("revpiplc thread successfully closed")
+            self.stop_plcprogram()
             return self.plc.exitcode
         else:
             return -1
@@ -725,6 +825,13 @@ class RevPiPyLoad():
                             str(dc[key])
                         )
 
+        # conf-Datei schreiben
+        with open(proginit.globalconffile, "w") as fh:
+            self.globalconfig.write(fh)
+        proginit.logger.info(
+            "got new config and wrote it to {}".format(proginit.globalconffile)
+        )
+
         # ACLs sofort übernehmen und schreiben
         str_acl = dc.get("plcslaveacl", None)
         if str_acl is not None and self.plcslaveacl.acl != str_acl:
@@ -759,16 +866,8 @@ class RevPiPyLoad():
                     )
                 )
 
-        # conf-Datei schreiben
-        with open(proginit.globalconffile, "w") as fh:
-            self.globalconfig.write(fh)
-        proginit.logger.info(
-            "got new config and wrote it to {}".format(proginit.globalconffile)
-        )
-
-        if loadnow:
-            # RevPiPyLoad neu konfigurieren
-            self.evt_loadconfig.set()
+        # RevPiPyLoad neu konfigurieren
+        self.evt_loadconfig.set()
 
         return True
 
@@ -862,7 +961,6 @@ class RevPiPyLoad():
             -2: Laeuft bereits
 
         """
-        self.plc_pause = False
         if self.th_plcslave is not None and self.th_plcslave.is_alive():
             return -2
         else:
@@ -876,9 +974,9 @@ class RevPiPyLoad():
     def xml_plcslavestop(self):
         """Stoppt den PLC Slave Server.
         @return True, wenn stop erfolgreich"""
-        self.plc_pause = True
         if self.th_plcslave is not None:
-            self.th_plcslave.stop()
+            self.stop_plcslave()
+            self.th_plcslave = None
             return True
         else:
             return False

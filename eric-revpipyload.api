@@ -19,9 +19,12 @@ picontrolserver.RevPiSlave?1(ipacl, port=55234)
 picontrolserver.RevPiSlaveDev.run?4()
 picontrolserver.RevPiSlaveDev.stop?4()
 picontrolserver.RevPiSlaveDev?1(devcon, acl)
+plcsystem.RevPiPlc.__get_autoreloaddelay?6()
+plcsystem.RevPiPlc.__set_autoreloaddelay?6(value)
 plcsystem.RevPiPlc._configureplw?5()
 plcsystem.RevPiPlc._setuppopen?5()
 plcsystem.RevPiPlc._spopen?5(lst_proc)
+plcsystem.RevPiPlc.autoreloaddelay?7
 plcsystem.RevPiPlc.newlogfile?4()
 plcsystem.RevPiPlc.run?4()
 plcsystem.RevPiPlc.stop?4()
@@ -45,6 +48,8 @@ proginit.pargs?7
 proginit.picontrolreset?7
 proginit.rapcatalog?7
 proginit.startdir?7
+revpipyload.RevPiPyLoad._check_mustrestart_plcprogram?5()
+revpipyload.RevPiPyLoad._check_mustrestart_plcslave?5()
 revpipyload.RevPiPyLoad._loadconfig?5()
 revpipyload.RevPiPyLoad._plcslave?5()
 revpipyload.RevPiPyLoad._plcthread?5()
@@ -55,6 +60,9 @@ revpipyload.RevPiPyLoad.packapp?4(mode="tar", pictory=False)
 revpipyload.RevPiPyLoad.root?7
 revpipyload.RevPiPyLoad.start?4()
 revpipyload.RevPiPyLoad.stop?4()
+revpipyload.RevPiPyLoad.stop_plcprogram?4()
+revpipyload.RevPiPyLoad.stop_plcslave?4()
+revpipyload.RevPiPyLoad.stop_xmlrpcserver?4()
 revpipyload.RevPiPyLoad.xml_getconfig?4()
 revpipyload.RevPiPyLoad.xml_getfilelist?4()
 revpipyload.RevPiPyLoad.xml_getpictoryrsc?4()

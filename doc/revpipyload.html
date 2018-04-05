@@ -78,6 +78,12 @@ Methods</h3>
 <td><a style="color:#0000FF" href="#RevPiPyLoad.__init__">RevPiPyLoad</a></td>
 <td>Instantiiert RevPiPyLoad-Klasse.</td>
 </tr><tr>
+<td><a style="color:#0000FF" href="#RevPiPyLoad._check_mustrestart_plcprogram">_check_mustrestart_plcprogram</a></td>
+<td>Prueft ob sich kritische Werte veraendert haben.</td>
+</tr><tr>
+<td><a style="color:#0000FF" href="#RevPiPyLoad._check_mustrestart_plcslave">_check_mustrestart_plcslave</a></td>
+<td>Prueft ob sich kritische Werte veraendert haben.</td>
+</tr><tr>
 <td><a style="color:#0000FF" href="#RevPiPyLoad._loadconfig">_loadconfig</a></td>
 <td>Load configuration file and setup modul.</td>
 </tr><tr>
@@ -104,6 +110,15 @@ Methods</h3>
 </tr><tr>
 <td><a style="color:#0000FF" href="#RevPiPyLoad.stop">stop</a></td>
 <td>Stop revpipyload.</td>
+</tr><tr>
+<td><a style="color:#0000FF" href="#RevPiPyLoad.stop_plcprogram">stop_plcprogram</a></td>
+<td>Beendet PLC Programm.</td>
+</tr><tr>
+<td><a style="color:#0000FF" href="#RevPiPyLoad.stop_plcslave">stop_plcslave</a></td>
+<td>Beendet PLC Slave.</td>
+</tr><tr>
+<td><a style="color:#0000FF" href="#RevPiPyLoad.stop_xmlrpcserver">stop_xmlrpcserver</a></td>
+<td>Beendet XML-RPC.</td>
 </tr><tr>
 <td><a style="color:#0000FF" href="#RevPiPyLoad.xml_getconfig">xml_getconfig</a></td>
 <td>Uebertraegt die RevPiPyLoad Konfiguration.</td>
@@ -174,7 +189,29 @@ RevPiPyLoad (Constructor)</h3>
 <b>RevPiPyLoad</b>(<i></i>)
 <p>
 Instantiiert RevPiPyLoad-Klasse.
-</p><a NAME="RevPiPyLoad._loadconfig" ID="RevPiPyLoad._loadconfig"></a>
+</p><a NAME="RevPiPyLoad._check_mustrestart_plcprogram" ID="RevPiPyLoad._check_mustrestart_plcprogram"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+RevPiPyLoad._check_mustrestart_plcprogram</h3>
+<b>_check_mustrestart_plcprogram</b>(<i></i>)
+<p>
+Prueft ob sich kritische Werte veraendert haben.
+</p><dl>
+<dt>Returns:</dt>
+<dd>
+True, wenn Subsystemneustart noetig ist
+</dd>
+</dl><a NAME="RevPiPyLoad._check_mustrestart_plcslave" ID="RevPiPyLoad._check_mustrestart_plcslave"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+RevPiPyLoad._check_mustrestart_plcslave</h3>
+<b>_check_mustrestart_plcslave</b>(<i></i>)
+<p>
+Prueft ob sich kritische Werte veraendert haben.
+</p><dl>
+<dt>Returns:</dt>
+<dd>
+True, wenn Subsystemneustart noetig ist
+</dd>
+</dl><a NAME="RevPiPyLoad._loadconfig" ID="RevPiPyLoad._loadconfig"></a>
 <h3 style="background-color:#FFFFFF;color:#FF0000">
 RevPiPyLoad._loadconfig</h3>
 <b>_loadconfig</b>(<i></i>)
@@ -251,6 +288,24 @@ RevPiPyLoad.stop</h3>
 <b>stop</b>(<i></i>)
 <p>
 Stop revpipyload.
+</p><a NAME="RevPiPyLoad.stop_plcprogram" ID="RevPiPyLoad.stop_plcprogram"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+RevPiPyLoad.stop_plcprogram</h3>
+<b>stop_plcprogram</b>(<i></i>)
+<p>
+Beendet PLC Programm.
+</p><a NAME="RevPiPyLoad.stop_plcslave" ID="RevPiPyLoad.stop_plcslave"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+RevPiPyLoad.stop_plcslave</h3>
+<b>stop_plcslave</b>(<i></i>)
+<p>
+Beendet PLC Slave.
+</p><a NAME="RevPiPyLoad.stop_xmlrpcserver" ID="RevPiPyLoad.stop_xmlrpcserver"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+RevPiPyLoad.stop_xmlrpcserver</h3>
+<b>stop_xmlrpcserver</b>(<i></i>)
+<p>
+Beendet XML-RPC.
 </p><a NAME="RevPiPyLoad.xml_getconfig" ID="RevPiPyLoad.xml_getconfig"></a>
 <h3 style="background-color:#FFFFFF;color:#FF0000">
 RevPiPyLoad.xml_getconfig</h3>
