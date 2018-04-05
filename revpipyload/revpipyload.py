@@ -50,7 +50,7 @@ from time import asctime
 from xmlrpc.client import Binary
 from xrpcserver import SaveXMLRPCServer
 
-pyloadversion = "0.6.3"
+pyloadversion = "0.6.4"
 
 
 class RevPiPyLoad():
@@ -191,7 +191,7 @@ class RevPiPyLoad():
             self.plcslave = \
                 int(self.globalconfig["PLCSLAVE"].get("plcslave", 0))
 
-            # Berechtigungen laden, wenn aktiv ist
+            # Berechtigungen laden
             if not self.plcslaveacl.loadaclfile(
                     self.globalconfig["PLCSLAVE"].get("aclfile", "")):
                 proginit.logger.warning(
@@ -267,6 +267,10 @@ class RevPiPyLoad():
             if not self._exit and self.th_plcslave is not None:
                 proginit.logger.info("restart plc slave after reload")
                 self.th_plcslave.start()
+
+        # PLC-Slave ACL prüfen
+        if self.th_plcslave is not None:
+            self.th_plcslave.check_connectedacl()
 
         # XMLRPC-Server Instantiieren und konfigurieren
         if self.xmlrpc == 0:

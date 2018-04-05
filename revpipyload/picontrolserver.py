@@ -44,6 +44,25 @@ class RevPiSlave(Thread):
         self.zeroonerror = False
         self.zeroonexit = False
 
+    def check_connectedacl(self):
+        """Prueft bei neuen ACLs bestehende Verbindungen."""
+        for dev in self._th_dev:
+            ip,  port = dev._addr
+            level = self.__ipacl.get_acllevel(ip)
+            if level < 0:
+                # Verbindung killen
+                proginit.logger.warning(
+                    "client {} not in acl - disconnect!".format(ip)
+                )
+                dev.stop()
+            elif level != dev._acl:
+                # ACL Level anpassen
+                proginit.logger.warning(
+                    "change acl level from {} to {} on existing connection {}"
+                    "".format(level, dev._acl, ip)
+                )
+                dev._acl = level
+
     def newlogfile(self):
         """Konfiguriert die FileHandler auf neue Logdatei."""
         pass
