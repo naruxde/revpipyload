@@ -17,8 +17,7 @@ class SaveXMLRPCServer(SimpleXMLRPCServer):
     """Erstellt einen erweiterten XMLRPCServer."""
 
     def __init__(
-            self, addr, logRequests=True, allow_none=False,
-            use_builtin_types=False, ipacl=None):
+            self, addr, logRequests=True, allow_none=False, ipacl=None):
         """Init SaveXMLRPCServer class.
         @param ipacl AclManager <class 'IpAclManager'>"""
         proginit.logger.debug("enter SaveXMLRPCServer.__init__()")
@@ -34,7 +33,6 @@ class SaveXMLRPCServer(SimpleXMLRPCServer):
             allow_none=allow_none,
             encoding="utf-8",
             bind_and_activate=False,
-            use_builtin_types=use_builtin_types
         )
 
         # Klassenvariablen
@@ -128,13 +126,13 @@ class SaveXMLRPCRequestHandler(SimpleXMLRPCRequestHandler):
 
         # ACL für IP-Adresse übernehmen
         self.server.requestacl = \
-            self.server.aclmgr.get_acllevel(self.address_string())
+            self.server.aclmgr.get_acllevel(self.client_address[0])
 
         if self.server.requestacl >= 0:
             return True
         else:
             self.send_error(
-                401, "IP '{}' not allowed".format(self.address_string())
+                401, "IP '{}' not allowed".format(self.client_address[0])
             )
 
         return False

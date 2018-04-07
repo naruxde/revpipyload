@@ -50,7 +50,7 @@ from time import asctime
 from xmlrpc.client import Binary
 from xrpcserver import SaveXMLRPCServer
 
-pyloadversion = "0.6.4"
+pyloadversion = "0.6.5"
 
 
 class RevPiPyLoad():
@@ -742,6 +742,9 @@ class RevPiPyLoad():
 
         if filedata is None or filename is None:
             return False
+
+        # Windowszeichen prüfen
+        filename = filename.replace("\\", "/")
 
         # Absoluten Pfad prüfen
         dirname = os.path.join(self.plcworkdir, os.path.dirname(filename))
