@@ -7,6 +7,7 @@
 #
 """Stellt die MQTT Uebertragung fuer IoT-Zwecke bereit."""
 import proginit
+from json import load as jload
 from ssl import CERT_NONE
 from paho.mqtt.client import Client
 from threading import Thread, Event
@@ -39,9 +40,10 @@ class MqttServer(Thread):
         # Klassenvariablen
         self.__exit = False
         self._evt_data = Event()
-        self._sendinterval = sendinterval
         self._host = host
+        self._procimglength = self._get_procimglength()
         self._port = port
+        self._sendinterval = sendinterval
 
         # Topics konfigurieren
         self._mqtt_picontrol = "{}/picontrol".format(basetopic)
@@ -60,9 +62,45 @@ class MqttServer(Thread):
         self._mq.on_message = self._on_message
         # TODO: self._mq.on_disconnect = self._on_disconnect
 
+    def _get_procimglength(self):
+        """Ermittelt aus piCtory Konfiguraiton die laenge.
+        @return Laenge des Prozessabbilds <class 'int'>"""
+        try:
+            with open(proginit.pargs.configrsc, "r") as fh:
+                rsc = jload(fh)
+        except:
+            return 0
+
+        length = 0
+
+        # piCtory Config prüfen
+        if "Devices" not in rsc:
+            return 0
+
+        # Letzes piCtory Device laden
+        last_dev = rsc["Devices"].pop()
+        length += last_dev["offset"]
+
+        # bei mem beginnen, weil nur der höchste IO benötigt wird
+        for type_iom in ["mem", "out", "inp"]:
+            lst_iom = sorted(
+                last_dev[type_iom],
+                key=lambda x: int(x),
+                reverse=True
+            )
+
+            if len(lst_iom) > 0:
+                # Daten des letzen IOM auswerten
+                last_iom = last_dev[type_iom][str(lst_iom[0])]
+                bitlength = int(last_iom[2])
+                length += int(last_iom[3])
+                length += 1 if bitlength == 1 else int(bitlength / 8)
+                break
+
+        return length
+
     def _on_connect(self, client, userdata, flags, rc):
         """Verbindung zu MQTT Broker."""
-        print("Connect rc:", rc)
         if rc > 0:
             self.__mqttend = True
             raise RuntimeError("can not connect to mqtt server")
@@ -73,6 +111,7 @@ class MqttServer(Thread):
     def _on_message(self, client, userdata, msg):
         """Sendet piCtory Konfiguration."""
 
+        # piCtory Konfiguration senden
         with open(proginit.pargs.configrsc, "rb") as fh:
             client.publish(self._mqtt_pictory, fh.read())
 
@@ -105,8 +144,11 @@ class MqttServer(Thread):
         while not self.__exit:
             self._evt_data.clear()
 
-            # FIXME: Ganzes Prozessabbild übertragen
-            self._mq.publish(self._mqtt_picontrol, fh_proc.read(4096))
+            # Prozessabbild mit Daten übertragen
+            self._mq.publish(
+                self._mqtt_picontrol,
+                fh_proc.read(self._procimglength)
+            )
             fh_proc.seek(0)
 
             self._evt_data.wait(self._sendinterval)

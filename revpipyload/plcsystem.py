@@ -226,7 +226,12 @@ class RevPiPlc(Thread):
         # Prozess beenden
         count = 0
         proginit.logger.info("term plc program {}".format(self._program))
-        self._procplc.terminate()
+        try:
+            self._procplc.terminate()
+        except ProcessLookupError:
+            proginit.logger.error("plc program was terminated unexpectedly")
+            proginit.logger.debug("leave RevPiPlc.stop()")
+            return
 
         while self._procplc.poll() is None and count < 10:
             count += 1

@@ -32,7 +32,6 @@ begrenzt werden!
 """
 import gzip
 import logsystem
-import mqttserver
 import picontrolserver
 import plcsystem
 import proginit
@@ -402,7 +401,8 @@ class RevPiPyLoad():
         th_plc = None
         if self.mqtt:
             try:
-                th_plc = mqttserver.MqttServer(
+                from mqttserver import MqttServer
+                th_plc = MqttServer(
                     self.mqttbasetopic,
                     self.mqttsendinterval,
                     self.mqtthost,
@@ -413,6 +413,7 @@ class RevPiPyLoad():
                     self.mqttclient_id
                 )
             except:
+                # TODO: Fehlermeldung ausgeben bezüglich paho.mqtt
                 pass
 
         proginit.logger.debug("leave RevPiPyLoad._plcmqtt()")
@@ -553,8 +554,8 @@ class RevPiPyLoad():
             proginit.logger.info("start xmlrpc-server")
             self.xsrv.start()
 
-        if self.mqtt:
-            # MQTT Uebertragung starten
+        # MQTT Uebertragung starten
+        if self.mqtt and self.th_mqtt is not None:
             self.th_mqtt.start()
 
         if self.plcslave:
@@ -599,9 +600,9 @@ class RevPiPyLoad():
         proginit.logger.info("stopping revpipyload")
 
         # Alle Sub-Systeme beenden
+        self.stop_plcprogram()
         self.stop_plcmqtt()
         self.stop_plcslave()
-        self.stop_plcprogram()
         self.stop_xmlrpcserver()
 
         # Logreader schließen
