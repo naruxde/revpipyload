@@ -87,6 +87,9 @@ Methods</h3>
 <td><a style="color:#0000FF" href="#RevPiPyLoad._loadconfig">_loadconfig</a></td>
 <td>Load configuration file and setup modul.</td>
 </tr><tr>
+<td><a style="color:#0000FF" href="#RevPiPyLoad._plcmqtt">_plcmqtt</a></td>
+<td>Konfiguriert den MQTT-Thread fuer die Ausfuehrung.</td>
+</tr><tr>
 <td><a style="color:#0000FF" href="#RevPiPyLoad._plcslave">_plcslave</a></td>
 <td>Erstellt den PlcSlave-Server Thread.</td>
 </tr><tr>
@@ -110,6 +113,9 @@ Methods</h3>
 </tr><tr>
 <td><a style="color:#0000FF" href="#RevPiPyLoad.stop">stop</a></td>
 <td>Stop revpipyload.</td>
+</tr><tr>
+<td><a style="color:#0000FF" href="#RevPiPyLoad.stop_plcmqtt">stop_plcmqtt</a></td>
+<td>Beendet MQTT Sender.</td>
 </tr><tr>
 <td><a style="color:#0000FF" href="#RevPiPyLoad.stop_plcprogram">stop_plcprogram</a></td>
 <td>Beendet PLC Programm.</td>
@@ -217,7 +223,18 @@ RevPiPyLoad._loadconfig</h3>
 <b>_loadconfig</b>(<i></i>)
 <p>
 Load configuration file and setup modul.
-</p><a NAME="RevPiPyLoad._plcslave" ID="RevPiPyLoad._plcslave"></a>
+</p><a NAME="RevPiPyLoad._plcmqtt" ID="RevPiPyLoad._plcmqtt"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+RevPiPyLoad._plcmqtt</h3>
+<b>_plcmqtt</b>(<i></i>)
+<p>
+Konfiguriert den MQTT-Thread fuer die Ausfuehrung.
+</p><dl>
+<dt>Returns:</dt>
+<dd>
+MQTT-Thread Object or None
+</dd>
+</dl><a NAME="RevPiPyLoad._plcslave" ID="RevPiPyLoad._plcslave"></a>
 <h3 style="background-color:#FFFFFF;color:#FF0000">
 RevPiPyLoad._plcslave</h3>
 <b>_plcslave</b>(<i></i>)
@@ -288,6 +305,12 @@ RevPiPyLoad.stop</h3>
 <b>stop</b>(<i></i>)
 <p>
 Stop revpipyload.
+</p><a NAME="RevPiPyLoad.stop_plcmqtt" ID="RevPiPyLoad.stop_plcmqtt"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+RevPiPyLoad.stop_plcmqtt</h3>
+<b>stop_plcmqtt</b>(<i></i>)
+<p>
+Beendet MQTT Sender.
 </p><a NAME="RevPiPyLoad.stop_plcprogram" ID="RevPiPyLoad.stop_plcprogram"></a>
 <h3 style="background-color:#FFFFFF;color:#FF0000">
 RevPiPyLoad.stop_plcprogram</h3>

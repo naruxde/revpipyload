@@ -32,6 +32,7 @@ begrenzt werden!
 """
 import gzip
 import logsystem
+import mqttserver
 import picontrolserver
 import plcsystem
 import proginit
@@ -185,6 +186,28 @@ class RevPiPyLoad():
         self.zeroonexit = \
             int(self.globalconfig["DEFAULT"].get("zeroonexit", 1))
 
+        # Konfiguration verarbeiten [MQTT]
+        self.mqtt = 0
+        if "MQTT" in self.globalconfig:
+            self.mqtt = \
+                int(self.globalconfig["MQTT"].get("mqtt", 0))
+            self.mqttbasetopic = \
+                self.globalconfig["MQTT"].get("basetopic", "")
+            self.mqttsendinterval = \
+                int(self.globalconfig["MQTT"].get("sendinterval", 15))
+            self.mqtthost = \
+                self.globalconfig["MQTT"].get("host", "")
+            self.mqttport = \
+                int(self.globalconfig["MQTT"].get("port", 1883))
+            self.mqtttls_set = \
+                int(self.globalconfig["MQTT"].get("tls_set", 0))
+            self.mqttusername = \
+                self.globalconfig["MQTT"].get("username", "")
+            self.mqttpassword = \
+                self.globalconfig["MQTT"].get("password", "")
+            self.mqttclient_id = \
+                self.globalconfig["MQTT"].get("client_id", "")
+
         # Konfiguration verarbeiten [PLCSLAVE]
         self.plcslave = 0
         if "PLCSLAVE" in self.globalconfig:
@@ -240,6 +263,9 @@ class RevPiPyLoad():
                 "can not access plcworkdir '{}'".format(self.plcworkdir)
             )
         os.chdir(self.plcworkdir)
+
+        # MQTT konfigurieren
+        self.th_mqtt = self._plcmqtt()
 
         # PLC Programm konfigurieren
         if restart_plcprogram:
@@ -367,6 +393,30 @@ class RevPiPyLoad():
         self.evt_loadconfig.clear()
 
         proginit.logger.debug("leave RevPiPyLoad._loadconfig()")
+
+    def _plcmqtt(self):
+        """Konfiguriert den MQTT-Thread fuer die Ausfuehrung.
+        @return MQTT-Thread Object or None"""
+        proginit.logger.debug("enter RevPiPyLoad._plcmqtt()")
+
+        th_plc = None
+        if self.mqtt:
+            try:
+                th_plc = mqttserver.MqttServer(
+                    self.mqttbasetopic,
+                    self.mqttsendinterval,
+                    self.mqtthost,
+                    self.mqttport,
+                    self.mqtttls_set,
+                    self.mqttusername,
+                    self.mqttpassword,
+                    self.mqttclient_id
+                )
+            except:
+                pass
+
+        proginit.logger.debug("leave RevPiPyLoad._plcmqtt()")
+        return th_plc
 
     def _plcthread(self):
         """Konfiguriert den PLC-Thread fuer die Ausfuehrung.
@@ -503,6 +553,10 @@ class RevPiPyLoad():
             proginit.logger.info("start xmlrpc-server")
             self.xsrv.start()
 
+        if self.mqtt:
+            # MQTT Uebertragung starten
+            self.th_mqtt.start()
+
         if self.plcslave:
             # Slaveausfuehrung übergeben
             self.th_plcslave.start()
@@ -518,6 +572,8 @@ class RevPiPyLoad():
             if self.evt_loadconfig.is_set():
                 proginit.logger.info("got reqeust to reload config")
                 self._loadconfig()
+
+            # TODO: MQTT prüfen und neu starten
 
             # PLC Server Thread prüfen
             if self.plcslave and self.th_plcslave is not None \
@@ -543,6 +599,7 @@ class RevPiPyLoad():
         proginit.logger.info("stopping revpipyload")
 
         # Alle Sub-Systeme beenden
+        self.stop_plcmqtt()
         self.stop_plcslave()
         self.stop_plcprogram()
         self.stop_xmlrpcserver()
@@ -557,6 +614,18 @@ class RevPiPyLoad():
         proginit.logger.debug("enter RevPiPyLoad.stop()")
         self._exit = True
         proginit.logger.debug("leave RevPiPyLoad.stop()")
+
+    def stop_plcmqtt(self):
+        """Beendet MQTT Sender."""
+        proginit.logger.debug("enter RevPiPyLoad.stop_plcmqtt()")
+
+        if self.th_mqtt is not None and self.th_mqtt.is_alive():
+            proginit.logger.info("stopping revpiplc thread")
+            self.th_mqtt.stop()
+            self.th_mqtt.join()
+            proginit.logger.debug("mqtt thread successfully closed")
+
+        proginit.logger.debug("leave RevPiPyLoad.stop_plcmqtt()")
 
     def stop_plcprogram(self):
         """Beendet PLC Programm."""
