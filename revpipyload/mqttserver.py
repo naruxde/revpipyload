@@ -60,7 +60,6 @@ class MqttServer(Thread):
         # Handler konfigurieren
         self._mq.on_connect = self._on_connect
         self._mq.on_message = self._on_message
-        # TODO: self._mq.on_disconnect = self._on_disconnect
 
     def _get_procimglength(self):
         """Ermittelt aus piCtory Konfiguraiton die laenge.
@@ -69,7 +68,7 @@ class MqttServer(Thread):
             with open(proginit.pargs.configrsc, "r") as fh:
                 rsc = jload(fh)
         except:
-            return 0
+            return 4096
 
         length = 0
 
@@ -104,6 +103,9 @@ class MqttServer(Thread):
         if rc > 0:
             self.__mqttend = True
             raise RuntimeError("can not connect to mqtt server")
+
+        # piCtory übertragen um alle RevPiMqttIO zu benachrichtigen
+        self._on_message(client, userdata, None)
 
         # Subscribe piCtory Anforderung
         client.subscribe(self._mqtt_sendpictory)
