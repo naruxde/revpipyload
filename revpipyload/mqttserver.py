@@ -62,7 +62,7 @@ class MqttServer(Thread):
         self._mq.on_message = self._on_message
 
     def _get_procimglength(self):
-        """Ermittelt aus piCtory Konfiguraiton die laenge.
+        """Ermittelt aus piCtory Konfiguration die laenge.
         @return Laenge des Prozessabbilds <class 'int'>"""
         try:
             with open(proginit.pargs.configrsc, "r") as fh:
@@ -101,24 +101,35 @@ class MqttServer(Thread):
     def _on_connect(self, client, userdata, flags, rc):
         """Verbindung zu MQTT Broker."""
         if rc > 0:
-            self.__mqttend = True
-            raise RuntimeError("can not connect to mqtt server")
+            proginit.warning("can not connect to mqtt broker - will retry")
+        else:
+            # piCtory übertragen um alle RevPiMqttIO zu benachrichtigen
+            self._send_pictory_conf()
 
-        # piCtory übertragen um alle RevPiMqttIO zu benachrichtigen
-        self._on_message(client, userdata, None)
+            # Subscribe piCtory Anforderung
+            client.subscribe(self._mqtt_sendpictory)
 
-        # Subscribe piCtory Anforderung
-        client.subscribe(self._mqtt_sendpictory)
+    def _on_disconnect(self, client, userdata, rc):
+        """Wertet Verbindungsabbruch aus."""
+        if rc != 0:
+            proginit.warning(
+                "unexpected disconnection from mqtt broker - "
+                "will try to reconnect"
+            )
 
     def _on_message(self, client, userdata, msg):
         """Sendet piCtory Konfiguration."""
 
         # piCtory Konfiguration senden
-        with open(proginit.pargs.configrsc, "rb") as fh:
-            client.publish(self._mqtt_pictory, fh.read())
+        self._send_pictory_conf()
 
         # Prozessabbild senden
         self._evt_data.set()
+
+    def _send_pictory_conf(self):
+        """Sendet piCtory Konfiguration."""
+        with open(proginit.pargs.configrsc, "rb") as fh:
+            self._mq.publish(self._mqtt_pictory, fh.read())
 
     def newlogfile(self):
         """Konfiguriert die FileHandler auf neue Logdatei."""
@@ -139,19 +150,34 @@ class MqttServer(Thread):
             )
 
         # MQTT verbinden
-        self._mq.connect(self._host, self._port, keepalive=60)
+        self._mq.connect_async(self._host, self._port, keepalive=60)
         self._mq.loop_start()
 
         # mainloop
+        buff = b''
+        err_count = 0
         while not self.__exit:
             self._evt_data.clear()
 
-            # Prozessabbild mit Daten übertragen
-            self._mq.publish(
-                self._mqtt_picontrol,
-                fh_proc.read(self._procimglength)
-            )
-            fh_proc.seek(0)
+            # Prozessabbild lesen
+            try:
+                fh_proc.seek(0)
+                buff = fh_proc.read(self._procimglength)
+                if err_count > 0:
+                    proginit.warning(
+                        "resume mqtt publishing after {} errors on "
+                        "processimage".format(err_count)
+                    )
+                err_count = 0
+            except IOError:
+                if err_count == 0:
+                    proginit.logger.error(
+                        "could not read process image for mqtt publishing"
+                    )
+                err_count += 1
+            else:
+                # Prozessabbild übertragen
+                self._mq.publish(self._mqtt_picontrol, buff)
 
             self._evt_data.wait(self._sendinterval)
 

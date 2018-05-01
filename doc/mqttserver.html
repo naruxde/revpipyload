@@ -54,12 +54,18 @@ Methods</h3>
 <td>Init MqttServer class.</td>
 </tr><tr>
 <td><a style="color:#0000FF" href="#MqttServer._get_procimglength">_get_procimglength</a></td>
-<td>Ermittelt aus piCtory Konfiguraiton die laenge.</td>
+<td>Ermittelt aus piCtory Konfiguration die laenge.</td>
 </tr><tr>
 <td><a style="color:#0000FF" href="#MqttServer._on_connect">_on_connect</a></td>
 <td>Verbindung zu MQTT Broker.</td>
 </tr><tr>
+<td><a style="color:#0000FF" href="#MqttServer._on_disconnect">_on_disconnect</a></td>
+<td>Wertet Verbindungsabbruch aus.</td>
+</tr><tr>
 <td><a style="color:#0000FF" href="#MqttServer._on_message">_on_message</a></td>
+<td>Sendet piCtory Konfiguration.</td>
+</tr><tr>
+<td><a style="color:#0000FF" href="#MqttServer._send_pictory_conf">_send_pictory_conf</a></td>
 <td>Sendet piCtory Konfiguration.</td>
 </tr><tr>
 <td><a style="color:#0000FF" href="#MqttServer.newlogfile">newlogfile</a></td>
@@ -117,7 +123,7 @@ MQTT ClientID, wenn leer automatisch random erzeugung
 MqttServer._get_procimglength</h3>
 <b>_get_procimglength</b>(<i></i>)
 <p>
-Ermittelt aus piCtory Konfiguraiton die laenge.
+Ermittelt aus piCtory Konfiguration die laenge.
 </p><dl>
 <dt>Returns:</dt>
 <dd>
@@ -129,10 +135,22 @@ MqttServer._on_connect</h3>
 <b>_on_connect</b>(<i>client, userdata, flags, rc</i>)
 <p>
 Verbindung zu MQTT Broker.
+</p><a NAME="MqttServer._on_disconnect" ID="MqttServer._on_disconnect"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+MqttServer._on_disconnect</h3>
+<b>_on_disconnect</b>(<i>client, userdata, rc</i>)
+<p>
+Wertet Verbindungsabbruch aus.
 </p><a NAME="MqttServer._on_message" ID="MqttServer._on_message"></a>
 <h3 style="background-color:#FFFFFF;color:#FF0000">
 MqttServer._on_message</h3>
 <b>_on_message</b>(<i>client, userdata, msg</i>)
+<p>
+Sendet piCtory Konfiguration.
+</p><a NAME="MqttServer._send_pictory_conf" ID="MqttServer._send_pictory_conf"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+MqttServer._send_pictory_conf</h3>
+<b>_send_pictory_conf</b>(<i></i>)
 <p>
 Sendet piCtory Konfiguration.
 </p><a NAME="MqttServer.newlogfile" ID="MqttServer.newlogfile"></a>

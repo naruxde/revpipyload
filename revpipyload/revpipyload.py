@@ -267,6 +267,9 @@ class RevPiPyLoad():
 
         # MQTT konfigurieren
         self.th_mqtt = self._plcmqtt()
+        if self.th_mqtt is not None and not self._exit:
+            proginit.logger.info("start mqtt publisher")
+            self.th_mqtt.start()
 
         # PLC Programm konfigurieren
         if restart_plcprogram:
@@ -629,7 +632,7 @@ class RevPiPyLoad():
         proginit.logger.debug("enter RevPiPyLoad.stop_plcmqtt()")
 
         if self.th_mqtt is not None and self.th_mqtt.is_alive():
-            proginit.logger.info("stopping revpiplc thread")
+            proginit.logger.info("stopping mqtt thread")
             self.th_mqtt.stop()
             self.th_mqtt.join()
             proginit.logger.debug("mqtt thread successfully closed")
