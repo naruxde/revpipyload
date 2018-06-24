@@ -50,7 +50,7 @@ from time import asctime
 from xmlrpc.client import Binary
 from xrpcserver import SaveXMLRPCServer
 
-pyloadversion = "0.6.5"
+pyloadversion = "0.6.6"
 
 
 class RevPiPyLoad():
@@ -108,11 +108,11 @@ class RevPiPyLoad():
                 ip = ""
             elif ip == "":
                 ip = "127.0.0.1"
-            port = int(self.globalconfig["PLCSLAVE"].get("port", 55234))
+            port = self.globalconfig["PLCSLAVE"].getint("port", 55234)
 
             return (
                 self.plcslave !=
-                int(self.globalconfig["PLCSLAVE"].get("plcslave", 0))
+                self.globalconfig["PLCSLAVE"].getboolean("plcslave", False)
                 or self.plcslavebindip != ip
                 or self.plcslaveport != port
             )
@@ -133,13 +133,13 @@ class RevPiPyLoad():
                 or self.plcarguments !=
                 self.globalconfig["DEFAULT"].get("plcarguments", "")
                 or self.plcuid !=
-                int(self.globalconfig["DEFAULT"].get("plcuid", 65534))
+                self.globalconfig["DEFAULT"].getint("plcuid", 65534)
                 or self.plcgid !=
-                int(self.globalconfig["DEFAULT"].get("plcgid", 65534))
+                self.globalconfig["DEFAULT"].getint("plcgid", 65534)
                 or self.pythonversion !=
-                int(self.globalconfig["DEFAULT"].get("pythonversion", 3))
+                self.globalconfig["DEFAULT"].getint("pythonversion", 3)
                 or self.rtlevel !=
-                int(self.globalconfig["DEFAULT"].get("rtlevel", 0))
+                self.globalconfig["DEFAULT"].getint("rtlevel", 0)
             )
 
     def _loadconfig(self):
@@ -161,11 +161,11 @@ class RevPiPyLoad():
 
         # Konfiguration verarbeiten [DEFAULT]
         self.autoreload = \
-            int(self.globalconfig["DEFAULT"].get("autoreload", 1))
+            self.globalconfig["DEFAULT"].getboolean("autoreload", True)
         self.autoreloaddelay = \
-            int(self.globalconfig["DEFAULT"].get("autoreloaddelay", 5))
+            self.globalconfig["DEFAULT"].getint("autoreloaddelay", 5)
         self.autostart = \
-            int(self.globalconfig["DEFAULT"].get("autostart", 0))
+            self.globalconfig["DEFAULT"].getboolean("autostart", False)
         self.plcworkdir = \
             self.globalconfig["DEFAULT"].get("plcworkdir", ".")
         self.plcprogram = \
@@ -173,23 +173,23 @@ class RevPiPyLoad():
         self.plcarguments = \
             self.globalconfig["DEFAULT"].get("plcarguments", "")
         self.plcuid = \
-            int(self.globalconfig["DEFAULT"].get("plcuid", 65534))
+            self.globalconfig["DEFAULT"].getint("plcuid", 65534)
         self.plcgid = \
-            int(self.globalconfig["DEFAULT"].get("plcgid", 65534))
+            self.globalconfig["DEFAULT"].getint("plcgid", 65534)
         self.pythonversion = \
-            int(self.globalconfig["DEFAULT"].get("pythonversion", 3))
+            self.globalconfig["DEFAULT"].getint("pythonversion", 3)
         self.rtlevel = \
-            int(self.globalconfig["DEFAULT"].get("rtlevel", 0))
+            self.globalconfig["DEFAULT"].getint("rtlevel", 0)
         self.zeroonerror = \
-            int(self.globalconfig["DEFAULT"].get("zeroonerror", 1))
+            self.globalconfig["DEFAULT"].getboolean("zeroonerror", True)
         self.zeroonexit = \
-            int(self.globalconfig["DEFAULT"].get("zeroonexit", 1))
+            self.globalconfig["DEFAULT"].getboolean("zeroonexit", True)
 
         # Konfiguration verarbeiten [PLCSLAVE]
-        self.plcslave = 0
+        self.plcslave = False
         if "PLCSLAVE" in self.globalconfig:
             self.plcslave = \
-                int(self.globalconfig["PLCSLAVE"].get("plcslave", 0))
+                self.globalconfig["PLCSLAVE"].getboolean("plcslave", False)
 
             # Berechtigungen laden
             if not self.plcslaveacl.loadaclfile(
@@ -197,7 +197,7 @@ class RevPiPyLoad():
                 proginit.logger.warning(
                     "can not load plcslave acl - wrong format"
                 )
-            if self.plcslave != 1:
+            if not self.plcslave:
                 self.stop_plcslave()
 
             # Bind IP lesen und anpassen
@@ -209,13 +209,13 @@ class RevPiPyLoad():
                 self.plcslavebindip = "127.0.0.1"
 
             self.plcslaveport = \
-                int(self.globalconfig["PLCSLAVE"].get("port", 55234))
+                self.globalconfig["PLCSLAVE"].getint("port", 55234)
 
         # Konfiguration verarbeiten [XMLRPC]
-        self.xmlrpc = 0
+        self.xmlrpc = False
         if "XMLRPC" in self.globalconfig:
             self.xmlrpc = \
-                int(self.globalconfig["XMLRPC"].get("xmlrpc", 0))
+                self.globalconfig["XMLRPC"].getboolean("xmlrpc", False)
 
             if not self.xmlrpcacl.loadaclfile(
                     self.globalconfig["XMLRPC"].get("aclfile", "")):
@@ -232,7 +232,7 @@ class RevPiPyLoad():
                 self.xmlrpcbindip = "127.0.0.1"
 
             self.xmlrpcport = \
-                int(self.globalconfig["XMLRPC"].get("port", 55123))
+                self.globalconfig["XMLRPC"].getint("port", 55123)
 
         # Workdirectory wechseln
         if not os.access(self.plcworkdir, os.R_OK | os.W_OK | os.X_OK):
@@ -273,8 +273,9 @@ class RevPiPyLoad():
             self.th_plcslave.check_connectedacl()
 
         # XMLRPC-Server Instantiieren und konfigurieren
-        if self.xmlrpc == 0:
-            self.xmlrpc = None
+        if not self.xmlrpc:
+            # Nach Reload und Deaktivierung alte XML Instanz löschen
+            self.xsrv = None
         else:
             proginit.logger.debug("create xmlrpc server")
             self.xsrv = SaveXMLRPCServer(
@@ -387,13 +388,13 @@ class RevPiPyLoad():
             self.plcarguments,
             self.pythonversion
         )
-        th_plc.autoreload = bool(self.autoreload)
+        th_plc.autoreload = self.autoreload
         th_plc.autoreloaddelay = self.autoreloaddelay
         th_plc.gid = int(self.plcgid)
         th_plc.uid = int(self.plcuid)
         th_plc.rtlevel = int(self.rtlevel)
-        th_plc.zeroonerror = bool(self.zeroonerror)
-        th_plc.zeroonexit = bool(self.zeroonexit)
+        th_plc.zeroonerror = self.zeroonerror
+        th_plc.zeroonexit = self.zeroonexit
 
         proginit.logger.debug("leave RevPiPyLoad._plcthread()")
         return th_plc
@@ -499,7 +500,7 @@ class RevPiPyLoad():
         proginit.logger.info("starting revpipyload")
         self._exit = False
 
-        if self.xmlrpc >= 1:
+        if self.xmlrpc and self.xsrv is not None:
             proginit.logger.info("start xmlrpc-server")
             self.xsrv.start()
 

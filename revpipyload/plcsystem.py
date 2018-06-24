@@ -41,7 +41,6 @@ class RevPiPlc(Thread):
         self._procplc = None
         self._pversion = pversion
         self.autoreload = False
-        self.autoreloaddelay = 5 * 2
         self.exitcode = None
         self.gid = 65534
         self.uid = 65534
@@ -152,7 +151,7 @@ class RevPiPlc(Thread):
             self.exitcode = self._procplc.poll()
 
             if self.exitcode is not None:
-                if self._delaycounter == self.autoreloaddelay:
+                if self._delaycounter == self._autoreloaddelay:
                     if self.exitcode > 0:
                         # PLC Python Programm abgestürzt
                         proginit.logger.error(
@@ -178,10 +177,9 @@ class RevPiPlc(Thread):
                             )
 
                 if not self._evt_exit.is_set() and self.autoreload:
-                    if self._delaycounter > 0:
-                        self._delaycounter -= 1
-                    else:
-                        self._delaycounter = self.autoreloaddelay
+                    self._delaycounter -= 1
+                    if self._delaycounter < 0:
+                        self._delaycounter = self._autoreloaddelay
 
                         # Prozess neu starten
                         self._procplc = self._spopen(lst_proc)
