@@ -27,11 +27,11 @@ setup(
 
     license="LGPLv3",
     name="revpipyload",
-    version="0.6.6",
+    version="0.6.7",
 
     scripts=["data/revpipyload"],
 
-    install_requires=["revpimodio2"],
+    install_requires=["revpimodio2 >= 2.1.6"],
     python_requires=">=3.2",
 
     data_files=[

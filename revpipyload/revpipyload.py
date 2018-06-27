@@ -50,7 +50,7 @@ from time import asctime
 from xmlrpc.client import Binary
 from xrpcserver import SaveXMLRPCServer
 
-pyloadversion = "0.6.6"
+pyloadversion = "0.6.7"
 
 
 class RevPiPyLoad():
@@ -319,7 +319,7 @@ class RevPiPyLoad():
                 self.xml_ps = None
                 proginit.logger.warning(
                     "can not load revpimodio2 module. maybe its not installed "
-                    "or an old version (required at least 2.0.5). if you "
+                    "or an old version (required at least 2.1.6). if you "
                     "like to use the process monitor feature, update/install "
                     "revpimodio2: 'apt-get install python3-revpimodio2'"
                 )

@@ -143,7 +143,7 @@ class ProcimgServer():
         """Liefert Prozessabbild an Client.
         @return Binary() bytes or None"""
         if self.rpi.readprocimg() and self.rpi.syncoutputs():
-            bytebuff = b''
+            bytebuff = bytearray()
             for dev in self.rpi.device:
                 bytebuff += bytes(dev)
             return Binary(bytebuff)
