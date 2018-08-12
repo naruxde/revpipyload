@@ -1,13 +1,8 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
-#
-# RevPiPyLoad
-# Version: see global var pyloadversion
-#
-# Webpage: https://revpimodio.org/revpipyplc/
-# (c) Sven Sager, License: LGPLv3
-#
 """Revolution Pi Python PLC Loader.
+
+Webpage: https://revpimodio.org/revpipyplc/
 
 Stellt das RevPiPyLoad Programm bereit. Dieses Programm lauft als Daemon auf
 dem Revolution Pi. Es stellt Funktionen bereit, die es ermoeglichen ein Python
@@ -30,6 +25,10 @@ Die Zugriffsmoeglichkeiten koennen ueber einen Konfigurationsparameter
 begrenzt werden!
 
 """
+__author__ = "Sven Sager"
+__copyright__ = "Copyright (C) 2018 Sven Sager"
+__license__ = "GPLv3"
+__version__ = "0.6.7"
 import gzip
 import logsystem
 import picontrolserver
@@ -49,8 +48,6 @@ from threading import Event
 from time import asctime
 from xmlrpc.client import Binary
 from xrpcserver import SaveXMLRPCServer
-
-pyloadversion = "0.6.7"
 
 
 class RevPiPyLoad():
@@ -112,9 +109,9 @@ class RevPiPyLoad():
 
             return (
                 self.plcslave !=
-                self.globalconfig["PLCSLAVE"].getboolean("plcslave", False)
-                or self.plcslavebindip != ip
-                or self.plcslaveport != port
+                self.globalconfig["PLCSLAVE"].getboolean("plcslave", False) or
+                self.plcslavebindip != ip or
+                self.plcslaveport != port
             )
 
     def _check_mustrestart_plcprogram(self):
@@ -127,18 +124,18 @@ class RevPiPyLoad():
         else:
             return (
                 self.plcworkdir !=
-                self.globalconfig["DEFAULT"].get("plcworkdir", ".")
-                or self.plcprogram !=
-                self.globalconfig["DEFAULT"].get("plcprogram", "none.py")
-                or self.plcarguments !=
-                self.globalconfig["DEFAULT"].get("plcarguments", "")
-                or self.plcuid !=
-                self.globalconfig["DEFAULT"].getint("plcuid", 65534)
-                or self.plcgid !=
-                self.globalconfig["DEFAULT"].getint("plcgid", 65534)
-                or self.pythonversion !=
-                self.globalconfig["DEFAULT"].getint("pythonversion", 3)
-                or self.rtlevel !=
+                self.globalconfig["DEFAULT"].get("plcworkdir", ".") or
+                self.plcprogram !=
+                self.globalconfig["DEFAULT"].get("plcprogram", "none.py") or
+                self.plcarguments !=
+                self.globalconfig["DEFAULT"].get("plcarguments", "") or
+                self.plcuid !=
+                self.globalconfig["DEFAULT"].getint("plcuid", 65534) or
+                self.plcgid !=
+                self.globalconfig["DEFAULT"].getint("plcgid", 65534) or
+                self.pythonversion !=
+                self.globalconfig["DEFAULT"].getint("pythonversion", 3) or
+                self.rtlevel !=
                 self.globalconfig["DEFAULT"].getint("rtlevel", 0)
             )
 
@@ -151,7 +148,7 @@ class RevPiPyLoad():
 
         # Konfigurationsdatei laden
         proginit.logger.info(
-            "loading config file: {}".format(proginit.globalconffile)
+            "loading config file: {0}".format(proginit.globalconffile)
         )
         self.globalconfig.read(proginit.globalconffile)
 
@@ -237,7 +234,7 @@ class RevPiPyLoad():
         # Workdirectory wechseln
         if not os.access(self.plcworkdir, os.R_OK | os.W_OK | os.X_OK):
             raise ValueError(
-                "can not access plcworkdir '{}'".format(self.plcworkdir)
+                "can not access plcworkdir '{0}'".format(self.plcworkdir)
             )
         os.chdir(self.plcworkdir)
 
@@ -288,7 +285,7 @@ class RevPiPyLoad():
             self.xsrv.register_multicall_functions()
 
             # Allgemeine Funktionen
-            self.xsrv.register_function(0, lambda: pyloadversion, "version")
+            self.xsrv.register_function(0, lambda: __version__, "version")
             self.xsrv.register_function(0, lambda acl: acl, "xmlmodus")
 
             # XML Modus 1 Nur Logs lesen und PLC Programm neu starten
@@ -315,7 +312,7 @@ class RevPiPyLoad():
                 self.xml_ps = procimgserver.ProcimgServer(self.xsrv)
                 self.xsrv.register_function(1, self.xml_psstart, "psstart")
                 self.xsrv.register_function(1, self.xml_psstop, "psstop")
-            except:
+            except Exception:
                 self.xml_ps = None
                 proginit.logger.warning(
                     "can not load revpimodio2 module. maybe its not installed "
@@ -377,7 +374,7 @@ class RevPiPyLoad():
 
         # Prüfen ob Programm existiert
         if not os.path.exists(os.path.join(self.plcworkdir, self.plcprogram)):
-            proginit.logger.error("plc file does not exists {}".format(
+            proginit.logger.error("plc file does not exists {0}".format(
                 os.path.join(self.plcworkdir, self.plcprogram)
             ))
             return None
@@ -431,7 +428,7 @@ class RevPiPyLoad():
 
         # Logger neu konfigurieren
         proginit.configure()
-        proginit.logger.warning("start new logfile: {}".format(asctime()))
+        proginit.logger.warning("start new logfile: {0}".format(asctime()))
 
         # stdout für revpipyplc
         if self.plc is not None:
@@ -473,7 +470,7 @@ class RevPiPyLoad():
                     fh_pack.write(
                         proginit.pargs.configrsc, arcname="config.rsc"
                     )
-            except:
+            except Exception:
                 filename = ""
             finally:
                 fh_pack.close()
@@ -485,7 +482,7 @@ class RevPiPyLoad():
                 fh_pack.add(".", arcname=os.path.basename(self.plcworkdir))
                 if pictory:
                     fh_pack.add(proginit.pargs.configrsc, arcname="config.rsc")
-            except:
+            except Exception:
                 filename = ""
             finally:
                 fh_pack.close()
@@ -772,7 +769,7 @@ class RevPiPyLoad():
         proginit.logger.debug("xmlrpc call plcuploadclean")
         try:
             rmtree(".", ignore_errors=True)
-        except:
+        except Exception:
             return False
         return True
 
@@ -821,7 +818,7 @@ class RevPiPyLoad():
                     localkey = key.replace(suffix, "")
                     if not refullmatch(keys[sektion][key], str(dc[key])):
                         proginit.logger.error(
-                            "got wrong setting '{}' with value '{}'".format(
+                            "got wrong setting '{0}' with value '{1}'".format(
                                 key, dc[key]
                             )
                         )
@@ -837,7 +834,8 @@ class RevPiPyLoad():
         with open(proginit.globalconffile, "w") as fh:
             self.globalconfig.write(fh)
         proginit.logger.info(
-            "got new config and wrote it to {}".format(proginit.globalconffile)
+            "got new config and wrote it to {0}"
+            "".format(proginit.globalconffile)
         )
 
         # ACLs sofort übernehmen und schreiben
@@ -846,32 +844,28 @@ class RevPiPyLoad():
             self.plcslaveacl.acl = str_acl
             if not self.plcslaveacl.writeaclfile(aclname="PLC-SLAVE"):
                 proginit.logger.error(
-                    "can not write acl file '{}' for PLC-SLAVE".format(
-                        self.plcslaveacl.filename
-                    )
+                    "can not write acl file '{0}' for PLC-SLAVE"
+                    "".format(self.plcslaveacl.filename)
                 )
                 return False
             else:
                 proginit.logger.info(
-                    "wrote new acl file '{}' for PLC-SLAVE".format(
-                        self.plcslaveacl.filename
-                    )
+                    "wrote new acl file '{0}' for PLC-SLAVE"
+                    "".format(self.plcslaveacl.filename)
                 )
         str_acl = dc.get("xmlrpcacl", None)
         if str_acl is not None and self.xmlrpcacl.acl != str_acl:
             self.xmlrpcacl.acl = str_acl
             if not self.xmlrpcacl.writeaclfile(aclname="XML-RPC"):
                 proginit.logger.error(
-                    "can not write acl file '{}' for XML-RPC".format(
-                        self.xmlrpcacl.filename
-                    )
+                    "can not write acl file '{0}' for XML-RPC"
+                    "".format(self.xmlrpcacl.filename)
                 )
                 return False
             else:
                 proginit.logger.info(
-                    "wrote new acl file '{}' for XML-RPC".format(
-                        self.xmlrpcacl.filename
-                    )
+                    "wrote new acl file '{0}' for XML-RPC"
+                    "".format(self.xmlrpcacl.filename)
                 )
 
         # RevPiPyLoad neu konfigurieren
@@ -899,7 +893,7 @@ class RevPiPyLoad():
         # Datei als JSON laden
         try:
             jconfigrsc = jloads(filebytes.data.decode())
-        except:
+        except Exception:
             return -1
 
         # Elemente prüfen
@@ -928,7 +922,7 @@ class RevPiPyLoad():
         try:
             with open(proginit.pargs.configrsc, "wb") as fh:
                 fh.write(filebytes.data)
-        except:
+        except Exception:
             return -3
         else:
             if reset:

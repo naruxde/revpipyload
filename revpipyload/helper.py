@@ -1,11 +1,8 @@
 # -*- coding: utf-8 -*-
-#
-# RevPiPyLoad
-#
-# Webpage: https://revpimodio.org/revpipyplc/
-# (c) Sven Sager, License: LGPLv3
-#
 """Helperfunktionen fuer das gesamte RevPiPyLoad-System."""
+__author__ = "Sven Sager"
+__copyright__ = "Copyright (C) 2018 Sven Sager"
+__license__ = "GPLv3"
 import os
 import proginit
 from re import match as rematch
@@ -49,7 +46,7 @@ def _setuprt(pid, evt_exit):
         try:
             kpiddat = kpidps.communicate()[0]
             lst_kpids = kpiddat.split()
-        except:
+        except Exception:
             kpidps.kill()
             if proginit.logger is not None:
                 proginit.logger.error(
@@ -66,7 +63,7 @@ def _setuprt(pid, evt_exit):
             if not kpid.isdigit():
                 if proginit.logger is not None:
                     proginit.logger.error(
-                        "pid={} and prio={} are not valid - no rt active"
+                        "pid={0} and prio={1} are not valid - no rt active"
                         "".format(kpid, kprio)
                     )
                 return None
@@ -80,7 +77,7 @@ def _setuprt(pid, evt_exit):
 
             if kprio < 10:
                 # Profile anpassen
-                ec = os.system("/usr/bin/env chrt -fp {} {}".format(
+                ec = os.system("/usr/bin/env chrt -fp {0} {1}".format(
                     dict_change[ps_change], kpid
                 ))
                 if ec != 0:
@@ -92,12 +89,12 @@ def _setuprt(pid, evt_exit):
 
     # SCHED_RR für pid setzen
     if proginit.logger is not None:
-        proginit.logger.info("set scheduler profile of pid {}".format(pid))
+        proginit.logger.info("set scheduler profile of pid {0}".format(pid))
 
-    ec = os.system("/usr/bin/env chrt -p 1 {}".format(pid))
+    ec = os.system("/usr/bin/env chrt -p 1 {0}".format(pid))
     if ec != 0 and proginit.logger is not None:
         proginit.logger.error(
-            "could not set scheduler profile of pid {}"
+            "could not set scheduler profile of pid {0}"
             "".format(pid)
         )
 

@@ -1,11 +1,9 @@
 # -*- coding: utf-8 -*-
-#
-# IpAclManager
-#
-# (c) Sven Sager, License: LGPLv3
-# Version 0.1.0
-#
 """Verwaltet IP Adressen und deren ACLs."""
+__author__ = "Sven Sager"
+__copyright__ = "Copyright (C) 2018 Sven Sager"
+__license__ = "GPLv3"
+__version__ = "0.1.0"
 from os import access, R_OK, W_OK
 from re import match as rematch
 
@@ -66,7 +64,7 @@ class IpAclManager():
         return ACLs als <class 'str'>"""
         str_acl = ""
         for aclip in sorted(self.__dict_acl):
-            str_acl += "{},{} ".format(aclip, self.__dict_acl[aclip])
+            str_acl += "{0},{1} ".format(aclip, self.__dict_acl[aclip])
         return str_acl.strip()
 
     def __get_filename(self):
@@ -173,14 +171,14 @@ class IpAclManager():
         if not access(filename, W_OK):
             return False
 
-        header = "# {}Access Control List (acl)\n" \
+        header = "# {0}Access Control List (acl)\n" \
             "# One entry per Line IPADRESS,LEVEL\n" \
             "#\n".format("" if aclname is None else aclname + " ")
 
         with open(filename, "w") as fh:
             fh.write(header)
             for aclip in sorted(self.__dict_acl):
-                fh.write("{},{}\n".format(aclip, self.__dict_acl[aclip]))
+                fh.write("{0},{1}\n".format(aclip, self.__dict_acl[aclip]))
 
         return True
 

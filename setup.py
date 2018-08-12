@@ -1,9 +1,9 @@
 #! /usr/bin/env python3
-#
-# (c) Sven Sager, License: LGPLv3
-#
 # -*- coding: utf-8 -*-
 """Setupscript fuer RevPiPyLoad."""
+__author__ = "Sven Sager"
+__copyright__ = "Copyright (C) 2018 Sven Sager"
+__license__ = "GPLv3"
 import distutils.command.install_egg_info
 from glob import glob
 from distutils.core import setup

@@ -1,11 +1,8 @@
 # -*- coding: utf-8 -*-
-#
-# RevPiPyLoad
-#
-# Webpage: https://revpimodio.org/revpipyplc/
-# (c) Sven Sager, License: LGPLv3
-#
 """Main functions of our program."""
+__author__ = "Sven Sager"
+__copyright__ = "Copyright (C) 2018 Sven Sager"
+__license__ = "GPLv3"
 import logging
 import os
 import sys
@@ -81,7 +78,7 @@ def configure():
         # Prüfen ob daemon schon läuft
         if os.path.exists(pidfile):
             raise SystemError(
-                "program already running as daemon. check {}".format(pidfile)
+                "program already running as daemon. check {0}".format(pidfile)
             )
 
         # Zum daemon machen
@@ -94,17 +91,18 @@ def configure():
             forked = True
 
     # piCtory Konfiguration prüfen
+    lst_rsc = ["/etc/revpi/config.rsc", "/opt/KUNBUS/config.rsc"]
     if pargs.configrsc is None:
-        lst_rsc = ["/etc/revpi/config.rsc", "/opt/KUNBUS/config.rsc"]
         for rscfile in lst_rsc:
             if os.access(rscfile, os.F_OK | os.R_OK):
                 pargs.configrsc = rscfile
                 break
     elif not os.access(pargs.configrsc, os.F_OK | os.R_OK):
         pargs.configrsc = None
+
     if pargs.configrsc is None:
         raise RuntimeError(
-            "can not find known pictory configurations at {}"
+            "can not find known pictory configurations at {0}"
             "".format(", ".join(lst_rsc))
         )
 

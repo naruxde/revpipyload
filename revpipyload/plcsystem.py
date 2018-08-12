@@ -1,11 +1,8 @@
 # -*- coding: utf-8 -*-
-#
-# RevPiPyLoad
-#
-# Webpage: https://revpimodio.org/revpipyplc/
-# (c) Sven Sager, License: LGPLv3
-#
 """Modul fuer die Verwaltung der PLC Funktionen."""
+__author__ = "Sven Sager"
+__copyright__ = "Copyright (C) 2018 Sven Sager"
+__license__ = "GPLv3"
 import os
 import proginit
 import shlex
@@ -81,7 +78,7 @@ class RevPiPlc(Thread):
     def _setuppopen(self):
         """Setzt UID und GID fuer das PLC Programm."""
         proginit.logger.info(
-            "set uid {} and gid {} for plc program".format(
+            "set uid {0} and gid {1} for plc program".format(
                 self.uid, self.gid)
             )
         os.setgid(self.gid)
@@ -91,7 +88,7 @@ class RevPiPlc(Thread):
         """Startet das PLC Programm.
         @param lst_proc Prozessliste
         @return subprocess"""
-        proginit.logger.debug("enter RevPiPlc._spopen({})".format(lst_proc))
+        proginit.logger.debug("enter RevPiPlc._spopen({0})".format(lst_proc))
 
         sp = subprocess.Popen(
             lst_proc,
@@ -111,7 +108,7 @@ class RevPiPlc(Thread):
         if self._plw is not None:
             self._plw.newlogfile()
             self._plw.logline("-" * 55)
-            self._plw.logline("start new logfile: {}".format(asctime()))
+            self._plw.logline("start new logfile: {0}".format(asctime()))
 
         proginit.logger.debug("leave RevPiPlc.newlogfile()")
 
@@ -122,20 +119,20 @@ class RevPiPlc(Thread):
         # LogWriter starten und Logausgaben schreiben
         if self._plw is not None:
             self._plw.logline("-" * 55)
-            self._plw.logline("plc: {} started: {}".format(
+            self._plw.logline("plc: {0} started: {1}".format(
                 os.path.basename(self._program), asctime()
             ))
             self._plw.start()
 
         # Befehlstliste aufbauen
-        lst_proc = shlex.split("/usr/bin/env {} -u {} {}".format(
+        lst_proc = shlex.split("/usr/bin/env {0} -u {1} {2}".format(
             "python2" if self._pversion == 2 else "python3",
             self._program,
             self._arguments
         ))
 
         # Prozess erstellen
-        proginit.logger.info("start plc program {}".format(self._program))
+        proginit.logger.info("start plc program {0}".format(self._program))
         self._procplc = self._spopen(lst_proc)
 
         # RealTime Scheduler nutzen nach 5 Sekunden Programmvorlauf
@@ -155,7 +152,7 @@ class RevPiPlc(Thread):
                     if self.exitcode > 0:
                         # PLC Python Programm abgestürzt
                         proginit.logger.error(
-                            "plc program crashed - exitcode: {}".format(
+                            "plc program crashed - exitcode: {0}".format(
                                 self.exitcode
                             )
                         )
@@ -198,7 +195,7 @@ class RevPiPlc(Thread):
 
         if self._plw is not None:
             self._plw.logline("-" * 55)
-            self._plw.logline("plc: {} stopped: {}".format(
+            self._plw.logline("plc: {0} stopped: {1}".format(
                 os.path.basename(self._program), asctime()
             ))
 
@@ -223,18 +220,18 @@ class RevPiPlc(Thread):
 
         # Prozess beenden
         count = 0
-        proginit.logger.info("term plc program {}".format(self._program))
+        proginit.logger.info("term plc program {0}".format(self._program))
         self._procplc.terminate()
 
         while self._procplc.poll() is None and count < 10:
             count += 1
             proginit.logger.info(
-                "wait term plc program {} seconds".format(count * 0.5)
+                "wait term plc program {0} seconds".format(count * 0.5)
             )
             sleep(0.5)
         if self._procplc.poll() is None:
             proginit.logger.warning(
-                "can not term plc program {}".format(self._program)
+                "can not term plc program {0}".format(self._program)
             )
             self._procplc.kill()
             proginit.logger.warning("killed plc program")

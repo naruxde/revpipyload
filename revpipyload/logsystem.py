@@ -1,11 +1,8 @@
 # -*- coding: utf-8 -*-
-#
-# RevPiPyLoad
-#
-# Webpage: https://revpimodio.org/revpipyplc/
-# (c) Sven Sager, License: LGPLv3
-#
 """Modul fuer die Verwaltung der Logdateien."""
+__author__ = "Sven Sager"
+__copyright__ = "Copyright (C) 2018 Sven Sager"
+__license__ = "GPLv3"
 import os
 import proginit
 from threading import Event, Lock, Thread
@@ -100,7 +97,7 @@ class PipeLogwriter(Thread):
 
         # Pipes öffnen
         self._fdr, self.fdw = os.pipe()
-        proginit.logger.debug("pipe fd read: {} / write: {}".format(
+        proginit.logger.debug("pipe fd read: {0} / write: {1}".format(
             self._fdr, self.fdw
         ))
 
@@ -121,7 +118,7 @@ class PipeLogwriter(Thread):
         if os.access(dirname, os.R_OK | os.W_OK):
             logfile = open(self.logfile, "a")
         else:
-            raise RuntimeError("can not open logfile {}".format(self.logfile))
+            raise RuntimeError("can not open logfile {0}".format(self.logfile))
 
         proginit.logger.debug("leave PipeLogwriter._configurefh()")
         return logfile
@@ -130,7 +127,7 @@ class PipeLogwriter(Thread):
         """Schreibt eine Zeile in die Logdatei oder stdout.
         @param message Logzeile zum Schreiben"""
         with self._lckfh:
-            self._fh.write("{}\n".format(message))
+            self._fh.write("{0}\n".format(message))
             self._fh.flush()
 
     def newlogfile(self):
@@ -152,7 +149,7 @@ class PipeLogwriter(Thread):
             try:
                 self._fh.write(line)
                 self._fh.flush()
-            except:
+            except Exception:
                 proginit.logger.exception("PipeLogwriter in write log line")
             finally:
                 self._lckfh.release()
@@ -178,7 +175,7 @@ class PipeLogwriter(Thread):
         # Letzten Log in Pipe schreiben zum befreien
         try:
             os.write(self.fdw, b"\n")
-        except:
+        except Exception:
             pass
         finally:
             self._lckfh.release()

@@ -1,11 +1,8 @@
 # -*- coding: utf-8 -*-
-#
-# RevPiPyLoad
-#
-# Webpage: https://revpimodio.org/revpipyplc/
-# (c) Sven Sager, License: LGPLv3
-#
 """XML-RPC Server anpassungen fuer Absicherung."""
+__author__ = "Sven Sager"
+__copyright__ = "Copyright (C) 2018 Sven Sager"
+__license__ = "GPLv3"
 import proginit
 from shared.ipaclmanager import IpAclManager
 from concurrent import futures
@@ -61,7 +58,7 @@ class SaveXMLRPCServer(SimpleXMLRPCServer):
 
         # ACL Mode abfragen (Gibt ACL Level als Parameter)
         if method == "xmlmodus":
-            params = (self.requestacl, )
+            params = (self.requestacl,)
 
         return super()._dispatch(method, params)
 
@@ -132,7 +129,7 @@ class SaveXMLRPCRequestHandler(SimpleXMLRPCRequestHandler):
             return True
         else:
             self.send_error(
-                401, "IP '{}' not allowed".format(self.client_address[0])
+                401, "IP '{0}' not allowed".format(self.client_address[0])
             )
 
         return False

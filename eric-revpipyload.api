@@ -1,3 +1,6 @@
+helper.__author__?9
+helper.__copyright__?9
+helper.__license__?9
 helper._setuprt?5(pid, evt_exit)
 helper._zeroprocimg?5()
 helper.refullmatch?4(regex, string)
@@ -12,6 +15,9 @@ logsystem.PipeLogwriter.newlogfile?4()
 logsystem.PipeLogwriter.run?4()
 logsystem.PipeLogwriter.stop?4()
 logsystem.PipeLogwriter?1(logfilename)
+logsystem.__author__?9
+logsystem.__copyright__?9
+logsystem.__license__?9
 picontrolserver.RevPiSlave.check_connectedacl?4()
 picontrolserver.RevPiSlave.newlogfile?4()
 picontrolserver.RevPiSlave.run?4()
@@ -20,6 +26,9 @@ picontrolserver.RevPiSlave?1(ipacl, port=55234)
 picontrolserver.RevPiSlaveDev.run?4()
 picontrolserver.RevPiSlaveDev.stop?4()
 picontrolserver.RevPiSlaveDev?1(devcon, acl)
+picontrolserver.__author__?9
+picontrolserver.__copyright__?9
+picontrolserver.__license__?9
 plcsystem.RevPiPlc.__get_autoreloaddelay?6()
 plcsystem.RevPiPlc.__set_autoreloaddelay?6(value)
 plcsystem.RevPiPlc._configureplw?5()
@@ -30,14 +39,23 @@ plcsystem.RevPiPlc.newlogfile?4()
 plcsystem.RevPiPlc.run?4()
 plcsystem.RevPiPlc.stop?4()
 plcsystem.RevPiPlc?1(program, arguments, pversion)
+plcsystem.__author__?9
+plcsystem.__copyright__?9
+plcsystem.__license__?9
 procimgserver.ProcimgServer.devices?4()
-procimgserver.ProcimgServer.ios?4(type)
+procimgserver.ProcimgServer.ios?4(iotype)
 procimgserver.ProcimgServer.loadrevpimodio?4()
 procimgserver.ProcimgServer.setvalue?4(device, io, value)
 procimgserver.ProcimgServer.start?4()
 procimgserver.ProcimgServer.stop?4()
 procimgserver.ProcimgServer.values?4()
 procimgserver.ProcimgServer?1(xmlserver)
+procimgserver.__author__?9
+procimgserver.__copyright__?9
+procimgserver.__license__?9
+proginit.__author__?9
+proginit.__copyright__?9
+proginit.__license__?9
 proginit.cleanup?4()
 proginit.configure?4()
 proginit.forked?7
@@ -84,7 +102,13 @@ revpipyload.RevPiPyLoad.xml_reload?4()
 revpipyload.RevPiPyLoad.xml_setconfig?4(dc, loadnow=False)
 revpipyload.RevPiPyLoad.xml_setpictoryrsc?4(filebytes, reset=False)
 revpipyload.RevPiPyLoad?1()
-revpipyload.pyloadversion?7
+revpipyload.__author__?9
+revpipyload.__copyright__?9
+revpipyload.__license__?9
+revpipyload.__version__?9
+revpipyload.shared.__author__?9
+revpipyload.shared.__copyright__?9
+revpipyload.shared.__license__?9
 revpipyload.shared.ipaclmanager.IpAclManager.__get_acl?6()
 revpipyload.shared.ipaclmanager.IpAclManager.__get_filename?6()
 revpipyload.shared.ipaclmanager.IpAclManager.__get_regex_acl?6()
@@ -98,6 +122,10 @@ revpipyload.shared.ipaclmanager.IpAclManager.loadaclfile?4(filename)
 revpipyload.shared.ipaclmanager.IpAclManager.regex_acl?7
 revpipyload.shared.ipaclmanager.IpAclManager.writeaclfile?4(filename=None, aclname=None)
 revpipyload.shared.ipaclmanager.IpAclManager?1(minlevel, maxlevel, acl=None)
+revpipyload.shared.ipaclmanager.__author__?9
+revpipyload.shared.ipaclmanager.__copyright__?9
+revpipyload.shared.ipaclmanager.__license__?9
+revpipyload.shared.ipaclmanager.__version__?9
 revpipyload.shared.ipaclmanager.refullmatch?4(regex, string)
 xrpcserver.SaveXMLRPCRequestHandler.parse_request?4()
 xrpcserver.SaveXMLRPCServer._dispatch?5(method, params)
@@ -106,3 +134,6 @@ xrpcserver.SaveXMLRPCServer.register_function?4(acl_level, function, name=None)
 xrpcserver.SaveXMLRPCServer.start?4()
 xrpcserver.SaveXMLRPCServer.stop?4()
 xrpcserver.SaveXMLRPCServer?1(addr, logRequests=True, allow_none=False, ipacl=None)
+xrpcserver.__author__?9
+xrpcserver.__copyright__?9
+xrpcserver.__license__?9

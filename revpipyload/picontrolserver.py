@@ -1,11 +1,8 @@
 # -*- coding: utf-8 -*-
-#
-# RevPiPyLoad
-#
-# Webpage: https://revpimodio.org/revpipyplc/
-# (c) Sven Sager, License: LGPLv3
-#
 """Modul fuer die Verwaltung der PLC-Slave Funktionen."""
+__author__ = "Sven Sager"
+__copyright__ = "Copyright (C) 2018 Sven Sager"
+__license__ = "GPLv3"
 import proginit
 import socket
 from shared.ipaclmanager import IpAclManager
@@ -52,14 +49,14 @@ class RevPiSlave(Thread):
             if level < 0:
                 # Verbindung killen
                 proginit.logger.warning(
-                    "client {} not in acl - disconnect!".format(ip)
+                    "client {0} not in acl - disconnect!".format(ip)
                 )
                 dev.stop()
             elif level != dev._acl:
                 # ACL Level anpassen
                 proginit.logger.warning(
-                    "change acl level from {} to {} on existing connection {}"
-                    "".format(level, dev._acl, ip)
+                    "change acl level from {0} to {1} on existing "
+                    "connection {2}".format(level, dev._acl, ip)
                 )
                 dev._acl = level
 
@@ -76,7 +73,7 @@ class RevPiSlave(Thread):
         while not self._evt_exit.is_set():
             try:
                 self.so.bind(("", self._port))
-            except:
+            except Exception:
                 proginit.logger.warning("can not bind socket - retry")
                 self._evt_exit.wait(1)
             else:
@@ -91,7 +88,7 @@ class RevPiSlave(Thread):
             proginit.logger.info("accept new connection for revpinetio")
             try:
                 tup_sock = self.so.accept()
-            except:
+            except Exception:
                 if not self._evt_exit.is_set():
                     proginit.logger.exception("accept exception")
                 continue
@@ -101,7 +98,7 @@ class RevPiSlave(Thread):
             if aclstatus == -1:
                 tup_sock[0].close()
                 proginit.logger.warning(
-                    "host ip '{}' does not match revpiacl - disconnect"
+                    "host ip '{0}' does not match revpiacl - disconnect"
                     "".format(tup_sock[1][0])
                 )
             else:
@@ -135,7 +132,7 @@ class RevPiSlave(Thread):
         if self.so is not None:
             try:
                 self.so.shutdown(socket.SHUT_RDWR)
-            except:
+            except Exception:
                 pass
 
         proginit.logger.debug("leave RevPiSlave.stop()")
@@ -174,7 +171,7 @@ class RevPiSlaveDev(Thread):
         proginit.logger.debug("enter RevPiSlaveDev.run()")
 
         proginit.logger.info(
-            "got new connection from host {} with acl {}".format(
+            "got new connection from host {0} with acl {1}".format(
                 self._addr, self._acl
             )
         )
@@ -182,11 +179,11 @@ class RevPiSlaveDev(Thread):
         # Prozessabbild öffnen
         try:
             fh_proc = open(proginit.pargs.procimg, "r+b", 0)
-        except:
+        except Exception:
             fh_proc = None
             self._evt_exit.set()
             proginit.logger.error(
-                "can not open process image {}".format(proginit.pargs.procimg)
+                "can not open process image {0}".format(proginit.pargs.procimg)
             )
 
         dirty = True
@@ -197,14 +194,14 @@ class RevPiSlaveDev(Thread):
             # Meldung erhalten
             try:
                 netcmd = self._devcon.recv(16)
-            except:
+            except Exception:
                 break
 
             # Wenn Meldung ungültig ist aussteigen
             if netcmd[0:1] != b'\x01' or netcmd[-1:] != b'\x17':
                 if netcmd != b'':
                     proginit.logger.error(
-                        "net cmd not valid {}".format(netcmd)
+                        "net cmd not valid {0}".format(netcmd)
                     )
                 break
 
@@ -219,7 +216,7 @@ class RevPiSlaveDev(Thread):
                 fh_proc.seek(position)
                 try:
                     self._devcon.sendall(fh_proc.read(length))
-                except:
+                except Exception:
                     proginit.logger.error("error while send read data")
                     break
 
@@ -235,7 +232,7 @@ class RevPiSlaveDev(Thread):
                     # Empfange Datenblock zu schreiben nach Meldung
                     try:
                         block = self._devcon.recv(length)
-                    except:
+                    except Exception:
                         proginit.logger.error("error while recv data to write")
                         self._writeerror = True
                         break
@@ -267,7 +264,7 @@ class RevPiSlaveDev(Thread):
 
                 try:
                     timeoutms = int.from_bytes(netcmd[3:5], byteorder="little")
-                except:
+                except Exception:
                     proginit.logger.error("can not convert timeout value")
                     break
 
@@ -306,7 +303,7 @@ class RevPiSlaveDev(Thread):
                     # Record seperator character
                     self._devcon.send(b'\x1e')
                     proginit.logger.info(
-                        "cleared dirty bytes on position {}"
+                        "cleared dirty bytes on position {0}"
                         "".format(position)
                     )
 
@@ -321,7 +318,7 @@ class RevPiSlaveDev(Thread):
                             if block == b'':
                                 break
 
-                    except:
+                    except Exception:
                         proginit.logger.error("error while recv dirty bytes")
                         break
 
@@ -335,14 +332,14 @@ class RevPiSlaveDev(Thread):
                     # Record seperator character
                     self._devcon.send(b'\x1e')
                     proginit.logger.info(
-                        "got dirty bytes to write on error on position {}"
+                        "got dirty bytes to write on error on position {0}"
                         "".format(position)
                     )
 
             elif cmd == b'PI':
                 # piCtory Konfiguration senden
                 proginit.logger.debug(
-                    "transfair pictory configuration: {}"
+                    "transfair pictory configuration: {0}"
                     "".format(proginit.pargs.configrsc)
                 )
                 fh_pic = open(proginit.pargs.configrsc, "rb")
@@ -374,7 +371,7 @@ class RevPiSlaveDev(Thread):
                 comtime = default_timer() - ot
                 if comtime > self._deadtime:
                     proginit.logger.warning(
-                        "runtime more than {} ms: {}!".format(
+                        "runtime more than {0} ms: {1}!".format(
                             int(self._deadtime * 1000), comtime
                         )
                     )
@@ -393,7 +390,7 @@ class RevPiSlaveDev(Thread):
         self._devcon.close()
         self._devcon = None
 
-        proginit.logger.info("disconnected from {}".format(self._addr))
+        proginit.logger.info("disconnected from {0}".format(self._addr))
         proginit.logger.debug("leave RevPiSlaveDev.run()")
 
     def stop(self):

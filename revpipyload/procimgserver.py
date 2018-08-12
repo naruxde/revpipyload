@@ -1,16 +1,13 @@
 # -*- coding: utf-8 -*-
-#
-# RevPiPyLoad
-#
-# Webpage: https://revpimodio.org/revpipyplc/
-# (c) Sven Sager, License: LGPLv3
-#
 """Stellt Funktionen bereit um das Prozessabbild zu ueberwachen.
 
 Bei ausreichend Rechten koennen Ausgaenge auch gesetzt werden um einen
 IO-Check bei Inbetriebname durchzufuehren.
 
 """
+__author__ = "Sven Sager"
+__copyright__ = "Copyright (C) 2018 Sven Sager"
+__license__ = "GPLv3"
 import pickle
 import proginit
 import revpimodio2
@@ -59,18 +56,18 @@ class ProcimgServer():
             (dev.position, dev.name) for dev in self.rpi.device
         ]
 
-    def ios(self, type):
+    def ios(self, iotype):
         """Generiert ein dict() der Devices und IOs.
-        @param type IO Typ inp/out
+        @param iotype IO Typ inp/out
         @return pickled dict()"""
         dict_ios = {}
         for dev in self.rpi.device:
             dict_ios[dev.position] = []
 
             # IO Typen auswerten
-            if type == "inp":
+            if iotype == "inp":
                 lst_io = dev.get_inputs()
-            elif type == "out":
+            elif iotype == "out":
                 lst_io = dev.get_outputs()
             else:
                 lst_io = []
@@ -98,7 +95,7 @@ class ProcimgServer():
                 configrsc=proginit.pargs.configrsc,
                 procimg=proginit.pargs.procimg
             )
-        except:
+        except Exception:
             self.rpi = None
             proginit.logger.error("piCtory configuration not loadable")
             return False

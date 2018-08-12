@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE Project SYSTEM "Project-5.1.dtd">
 <!-- eric project file for project revpipyload -->
-<!-- Saved: 2018-06-27, 11:29:04 -->
+<!-- Saved: 2018-08-12, 18:40:18 -->
 <!-- Copyright (C) 2018 Sven Sager, akira@narux.de -->
 <Project version="5.1">
   <Language>en_US</Language>
@@ -14,27 +14,27 @@
   <Email>akira@narux.de</Email>
   <Eol index="1"/>
   <Sources>
-    <Source>revpipyload/proginit.py</Source>
-    <Source>setup.py</Source>
-    <Source>revpipyload/revpipyload.py</Source>
-    <Source>revpipyload/procimgserver.py</Source>
-    <Source>revpipyload/logsystem.py</Source>
-    <Source>revpipyload/plcsystem.py</Source>
-    <Source>revpipyload/picontrolserver.py</Source>
     <Source>revpipyload/helper.py</Source>
-    <Source>revpipyload/xrpcserver.py</Source>
-    <Source>revpipyload/shared/ipaclmanager.py</Source>
+    <Source>revpipyload/logsystem.py</Source>
+    <Source>revpipyload/picontrolserver.py</Source>
+    <Source>revpipyload/plcsystem.py</Source>
+    <Source>revpipyload/procimgserver.py</Source>
+    <Source>revpipyload/proginit.py</Source>
+    <Source>revpipyload/revpipyload.py</Source>
     <Source>revpipyload/shared/__init__.py</Source>
+    <Source>revpipyload/shared/ipaclmanager.py</Source>
+    <Source>revpipyload/xrpcserver.py</Source>
+    <Source>setup.py</Source>
   </Sources>
   <Forms/>
   <Translations/>
   <Resources/>
   <Interfaces/>
   <Others>
-    <Other>data</Other>
     <Other>MANIFEST.in</Other>
-    <Other>doc</Other>
+    <Other>data</Other>
     <Other>debian</Other>
+    <Other>doc</Other>
     <Other>eric-revpipyload.api</Other>
     <Other>stdeb.cfg</Other>
   </Others>
@@ -141,9 +141,6 @@
         </value>
       </dict>
     </VcsOptions>
-    <VcsOtherData>
-      <dict/>
-    </VcsOtherData>
   </Vcs>
   <FiletypeAssociations>
     <FiletypeAssociation pattern="*.idl" type="INTERFACES"/>
@@ -241,14 +238,6 @@
               <bool>False</bool>
             </value>
             <key>
-              <string>sourceExtensions</string>
-            </key>
-            <value>
-              <list>
-                <string></string>
-              </list>
-            </value>
-            <key>
               <string>useRecursion</string>
             </key>
             <value>
@@ -268,6 +257,41 @@
         <value>
           <dict>
             <key>
+              <string>BuiltinsChecker</string>
+            </key>
+            <value>
+              <dict>
+                <key>
+                  <string>chr</string>
+                </key>
+                <value>
+                  <list>
+                    <string>unichr</string>
+                  </list>
+                </value>
+                <key>
+                  <string>str</string>
+                </key>
+                <value>
+                  <list>
+                    <string>unicode</string>
+                  </list>
+                </value>
+              </dict>
+            </value>
+            <key>
+              <string>CopyrightAuthor</string>
+            </key>
+            <value>
+              <string></string>
+            </value>
+            <key>
+              <string>CopyrightMinFileSize</string>
+            </key>
+            <value>
+              <int>0</int>
+            </value>
+            <key>
               <string>DocstringType</string>
             </key>
             <value>
@@ -277,13 +301,13 @@
               <string>ExcludeFiles</string>
             </key>
             <value>
-              <string>demo/*</string>
+              <string>*/demo/*</string>
             </value>
             <key>
               <string>ExcludeMessages</string>
             </key>
             <value>
-              <string>E123,E226,E24</string>
+              <string>E123,E226,E24,C101</string>
             </value>
             <key>
               <string>FixCodes</string>
@@ -298,6 +322,12 @@
               <bool>False</bool>
             </value>
             <key>
+              <string>FutureChecker</string>
+            </key>
+            <value>
+              <string></string>
+            </value>
+            <key>
               <string>HangClosing</string>
             </key>
             <value>
@@ -308,6 +338,24 @@
             </key>
             <value>
               <string></string>
+            </value>
+            <key>
+              <string>LineComplexity</string>
+            </key>
+            <value>
+              <int>15</int>
+            </value>
+            <key>
+              <string>LineComplexityScore</string>
+            </key>
+            <value>
+              <int>10</int>
+            </value>
+            <key>
+              <string>MaxCodeComplexity</string>
+            </key>
+            <value>
+              <int>10</int>
             </value>
             <key>
               <string>MaxLineLength</string>
@@ -332,6 +380,12 @@
             </key>
             <value>
               <bool>False</bool>
+            </value>
+            <key>
+              <string>ValidEncodings</string>
+            </key>
+            <value>
+              <string>latin-1, utf-8</string>
             </value>
           </dict>
         </value>
