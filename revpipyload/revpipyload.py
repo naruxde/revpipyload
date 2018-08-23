@@ -28,7 +28,7 @@ begrenzt werden!
 __author__ = "Sven Sager"
 __copyright__ = "Copyright (C) 2018 Sven Sager"
 __license__ = "GPLv3"
-__version__ = "0.6.7"
+__version__ = "0.6.8"
 import gzip
 import logsystem
 import picontrolserver

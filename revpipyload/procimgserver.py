@@ -143,7 +143,7 @@ class ProcimgServer():
             bytebuff = bytearray()
             for dev in self.rpi.device:
                 bytebuff += bytes(dev)
-            return Binary(bytebuff)
+            return Binary(bytes(bytebuff))
         else:
             return None
 

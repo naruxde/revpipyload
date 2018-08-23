@@ -220,9 +220,14 @@ class RevPiSlaveDev(Thread):
                     proginit.logger.error("error while send read data")
                     break
 
-            elif cmd == b'SD' and self._acl == 1:
+            elif cmd == b'SD':
                 # Ausgänge setzen, wenn acl es erlaubt
                 # bCMiiiic0000000b = 16
+
+                # Berechtigung prüfen und ggf. trennen
+                if self._acl < 1:
+                    self._devcon.send(b'\x18')
+                    break
 
                 position = int.from_bytes(netcmd[3:5], byteorder="little")
                 length = int.from_bytes(netcmd[5:7], byteorder="little")
@@ -271,22 +276,31 @@ class RevPiSlaveDev(Thread):
                 if 0 < timeoutms < 65535:
                     self._deadtime = timeoutms / 1000
                     self._devcon.settimeout(self._deadtime)
+                    proginit.logger.debug(
+                        "set socket timeout to {0}".format(self._deadtime)
+                    )
 
                     # Record seperator character
                     self._devcon.send(b'\x1e')
                 else:
                     proginit.logger.error("timeout value must be 0 to 65535")
+                    self._devcon.send(b'\xff')
                     break
 
             elif cmd == b'EY':
                 # Bytes bei Verbindungsabbruch schreiben
                 # bCMiiiix0000000b = 16
 
+                # Berechtigung prüfen und ggf. trennen
+                if self._acl < 1:
+                    self._devcon.send(b'\x18')
+                    break
+
                 position = int.from_bytes(netcmd[3:5], byteorder="little")
                 length = int.from_bytes(netcmd[5:7], byteorder="little")
                 control = netcmd[7:8]
 
-                if control == b'\xFF':
+                if control == b'\xff':
                     # Alle Dirtybytes löschen
                     self.ey_dict = {}
 
@@ -294,7 +308,7 @@ class RevPiSlaveDev(Thread):
                     self._devcon.send(b'\x1e')
                     proginit.logger.info("cleared all dirty bytes")
 
-                elif control == b'\xFE':
+                elif control == b'\xfe':
                     # Bestimmte Dirtybytes löschen
 
                     if position in self.ey_dict:
