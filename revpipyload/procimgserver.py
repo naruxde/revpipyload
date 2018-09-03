@@ -45,7 +45,10 @@ class ProcimgServer():
             "ps_setvalue": self.setvalue,
         }
 
-        self.loadrevpimodio()
+        # RevPiModIO laden oder mit Exception aussteigen
+        ex = self.loadrevpimodio()
+        if ex is not None:
+            raise ex
 
         proginit.logger.debug("leave ProcimgServer.__init__()")
 
@@ -84,25 +87,28 @@ class ProcimgServer():
 
     def loadrevpimodio(self):
         """Instantiiert das RevPiModIO Modul.
-        @return True, wenn erfolgreich, sonst False"""
+        @return None or Exception"""
         # RevPiModIO-Modul Instantiieren
         if self.rpi is not None:
             self.rpi.cleanup()
 
-        proginit.logger.debug("create revpimodio2 object")
+        proginit.logger.debug("create revpimodio2 object for ProcimgServer")
         try:
             self.rpi = revpimodio2.RevPiModIO(
                 configrsc=proginit.pargs.configrsc,
                 procimg=proginit.pargs.procimg
             )
-        except Exception:
+        except Exception as e:
             self.rpi = None
-            proginit.logger.error("piCtory configuration not loadable")
-            return False
+            proginit.logger.error(
+                "piCtory configuration not loadable for ProcimgServer"
+            )
+            return e
 
+        # NOTE: Warum das?
         self.rpi.syncoutputs(device=0)
+
         proginit.logger.debug("created revpimodio2 object")
-        return True
 
     def setvalue(self, device, io, value):
         """Setzt einen Wert auf dem RevPi.

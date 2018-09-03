@@ -31,7 +31,7 @@ setup(
 
     scripts=["data/revpipyload"],
 
-    install_requires=["revpimodio2 >= 2.1.6"],
+    install_requires=["revpimodio2 >= 2.2.3"],
     python_requires=">=3.2",
 
     data_files=[

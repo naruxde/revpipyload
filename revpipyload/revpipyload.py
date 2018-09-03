@@ -188,23 +188,27 @@ class RevPiPyLoad():
         self.mqtt = 0
         if "MQTT" in self.globalconfig:
             self.mqtt = \
-                int(self.globalconfig["MQTT"].get("mqtt", 0))
+                self.globalconfig["MQTT"].getboolean("mqtt", False)
             self.mqttbasetopic = \
                 self.globalconfig["MQTT"].get("basetopic", "")
             self.mqttsendinterval = \
-                int(self.globalconfig["MQTT"].get("sendinterval", 15))
+                self.globalconfig["MQTT"].getint("sendinterval", 15)
             self.mqtthost = \
                 self.globalconfig["MQTT"].get("host", "")
             self.mqttport = \
-                int(self.globalconfig["MQTT"].get("port", 1883))
+                self.globalconfig["MQTT"].getint("port", 1883)
             self.mqtttls_set = \
-                int(self.globalconfig["MQTT"].get("tls_set", 0))
+                self.globalconfig["MQTT"].getboolean("tls_set", False)
             self.mqttusername = \
                 self.globalconfig["MQTT"].get("username", "")
             self.mqttpassword = \
                 self.globalconfig["MQTT"].get("password", "")
             self.mqttclient_id = \
                 self.globalconfig["MQTT"].get("client_id", "")
+            self.mqttsend_events = \
+                self.globalconfig["MQTT"].getboolean("send_on_event", False)
+            self.mqttwrite_outputs = \
+                self.globalconfig["MQTT"].getboolean("write_outputs", False)
 
         # Konfiguration verarbeiten [PLCSLAVE]
         self.plcslave = False
@@ -348,7 +352,7 @@ class RevPiPyLoad():
                 self.xml_ps = None
                 proginit.logger.warning(
                     "can not load revpimodio2 module. maybe its not installed "
-                    "or an old version (required at least 2.1.6). if you "
+                    "or an old version (required at least 2.2.3). if you "
                     "like to use the process monitor feature, update/install "
                     "revpimodio2: 'apt-get install python3-revpimodio2'"
                 )
@@ -419,11 +423,17 @@ class RevPiPyLoad():
                     self.mqtttls_set,
                     self.mqttusername,
                     self.mqttpassword,
-                    self.mqttclient_id
+                    self.mqttclient_id,
+                    self.mqttsend_events,
+                    self.mqttwrite_outputs,
                 )
-            except:
-                # TODO: Fehlermeldung ausgeben bezüglich paho.mqtt
-                pass
+            except Exception:
+                proginit.logger.warning(
+                    "can not load revpimodio2 module. maybe its not installed "
+                    "or an old version (required at least 2.2.3). if you "
+                    "like to use the mqtt feature, update/install "
+                    "revpimodio2: 'apt-get install python3-revpimodio2'"
+                )
 
         proginit.logger.debug("leave RevPiPyLoad._plcmqtt()")
         return th_plc
@@ -701,6 +711,8 @@ class RevPiPyLoad():
         dc["username"] = self.mqttusername
         dc["password"] = self.mqttpassword
         dc["client_id"] = self.mqttclient_id
+        dc["send_events"] = self.mqttsend_events
+        dc["write_outputs"] = self.mqttwrite_outputs
 
         # PLCSLAVE Sektion
         dc["plcslave"] = self.plcslave
@@ -934,6 +946,8 @@ class RevPiPyLoad():
                 "mqttusername": ".*",
                 "mqttpassword": ".*",
                 "mqttclient_id": ".+",
+                "mqttsend_events": "[01]",
+                "mqttwrite_outputs": "[01]",
             },
             "PLCSLAVE": {
                 "plcslave": "[01]",
