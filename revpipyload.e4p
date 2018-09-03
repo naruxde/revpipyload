@@ -9,7 +9,7 @@
   <ProgLanguage mixed="0">Python3</ProgLanguage>
   <ProjectType>Console</ProjectType>
   <Description>Dieser Loader wird über das Init-System geladen und führt das angegebene Pythonprogramm aus. Es ist für den RevolutionPi gedacht um automatisch das SPS-Programm zu starten.</Description>
-  <Version>0.6.8</Version>
+  <Version>0.7.0</Version>
   <Author>Sven Sager</Author>
   <Email>akira@narux.de</Email>
   <Eol index="1"/>
@@ -22,7 +22,7 @@
     <Source>revpipyload/proginit.py</Source>
     <Source>revpipyload/revpipyload.py</Source>
     <Source>revpipyload/shared/__init__.py</Source>
-    <Source>revpipyload/shared/ipaclmanager.py</Source>
+    <Source>revpipyload/mqttserver.py</Source>
     <Source>revpipyload/xrpcserver.py</Source>
     <Source>setup.py</Source>
   </Sources>

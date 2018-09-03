@@ -78,6 +78,7 @@ class RevPiPyLoad():
         self.xmlrpcacl = IpAclManager(minlevel=0, maxlevel=4)
 
         # Threads/Prozesse
+        self.th_mqtt = None
         self.th_plcslave = None
         self.plc = None
 
@@ -144,6 +145,7 @@ class RevPiPyLoad():
         proginit.logger.debug("enter RevPiPyLoad._loadconfig()")
 
         # Subsysteme herunterfahren
+        self.stop_plcmqtt()
         self.stop_xmlrpcserver()
 
         # Konfigurationsdatei laden
@@ -181,6 +183,28 @@ class RevPiPyLoad():
             self.globalconfig["DEFAULT"].getboolean("zeroonerror", True)
         self.zeroonexit = \
             self.globalconfig["DEFAULT"].getboolean("zeroonexit", True)
+
+        # Konfiguration verarbeiten [MQTT]
+        self.mqtt = 0
+        if "MQTT" in self.globalconfig:
+            self.mqtt = \
+                int(self.globalconfig["MQTT"].get("mqtt", 0))
+            self.mqttbasetopic = \
+                self.globalconfig["MQTT"].get("basetopic", "")
+            self.mqttsendinterval = \
+                int(self.globalconfig["MQTT"].get("sendinterval", 15))
+            self.mqtthost = \
+                self.globalconfig["MQTT"].get("host", "")
+            self.mqttport = \
+                int(self.globalconfig["MQTT"].get("port", 1883))
+            self.mqtttls_set = \
+                int(self.globalconfig["MQTT"].get("tls_set", 0))
+            self.mqttusername = \
+                self.globalconfig["MQTT"].get("username", "")
+            self.mqttpassword = \
+                self.globalconfig["MQTT"].get("password", "")
+            self.mqttclient_id = \
+                self.globalconfig["MQTT"].get("client_id", "")
 
         # Konfiguration verarbeiten [PLCSLAVE]
         self.plcslave = False
@@ -237,6 +261,12 @@ class RevPiPyLoad():
                 "can not access plcworkdir '{0}'".format(self.plcworkdir)
             )
         os.chdir(self.plcworkdir)
+
+        # MQTT konfigurieren
+        self.th_mqtt = self._plcmqtt()
+        if self.th_mqtt is not None and not self._exit:
+            proginit.logger.info("start mqtt publisher")
+            self.th_mqtt.start()
 
         # PLC Programm konfigurieren
         if restart_plcprogram:
@@ -304,6 +334,8 @@ class RevPiPyLoad():
             self.xsrv.register_function(
                 0, self.xml_reload, "reload")
             self.xsrv.register_function(
+                0, self.xml_mqttrunning, "mqttrunning")
+            self.xsrv.register_function(
                 0, self.xml_plcslaverunning, "plcslaverunning")
 
             # Erweiterte Funktionen anmelden
@@ -344,6 +376,10 @@ class RevPiPyLoad():
                 "resetpicontrol"
             )
             self.xsrv.register_function(
+                3, self.xml_mqttstart, "mqttstart")
+            self.xsrv.register_function(
+                3, self.xml_mqttstop, "mqttstop")
+            self.xsrv.register_function(
                 3, self.xml_plcslavestart, "plcslavestart")
             self.xsrv.register_function(
                 3, self.xml_plcslavestop, "plcslavestop")
@@ -365,6 +401,32 @@ class RevPiPyLoad():
         self.evt_loadconfig.clear()
 
         proginit.logger.debug("leave RevPiPyLoad._loadconfig()")
+
+    def _plcmqtt(self):
+        """Konfiguriert den MQTT-Thread fuer die Ausfuehrung.
+        @return MQTT-Thread Object or None"""
+        proginit.logger.debug("enter RevPiPyLoad._plcmqtt()")
+
+        th_plc = None
+        if self.mqtt:
+            try:
+                from mqttserver import MqttServer
+                th_plc = MqttServer(
+                    self.mqttbasetopic,
+                    self.mqttsendinterval,
+                    self.mqtthost,
+                    self.mqttport,
+                    self.mqtttls_set,
+                    self.mqttusername,
+                    self.mqttpassword,
+                    self.mqttclient_id
+                )
+            except:
+                # TODO: Fehlermeldung ausgeben bezüglich paho.mqtt
+                pass
+
+        proginit.logger.debug("leave RevPiPyLoad._plcmqtt()")
+        return th_plc
 
     def _plcthread(self):
         """Konfiguriert den PLC-Thread fuer die Ausfuehrung.
@@ -501,8 +563,12 @@ class RevPiPyLoad():
             proginit.logger.info("start xmlrpc-server")
             self.xsrv.start()
 
-        if self.plcslave:
-            # Slaveausfuehrung übergeben
+        # MQTT Uebertragung starten
+        if self.th_mqtt is not None:
+            self.th_mqtt.start()
+
+        # Slaveausfuehrung übergeben
+        if self.th_plcslave is not None:
             self.th_plcslave.start()
 
         # PLC Programm automatisch starten
@@ -516,6 +582,8 @@ class RevPiPyLoad():
             if self.evt_loadconfig.is_set():
                 proginit.logger.info("got reqeust to reload config")
                 self._loadconfig()
+
+            # TODO: MQTT prüfen und neu starten
 
             # PLC Server Thread prüfen
             if self.plcslave and self.th_plcslave is not None \
@@ -541,8 +609,9 @@ class RevPiPyLoad():
         proginit.logger.info("stopping revpipyload")
 
         # Alle Sub-Systeme beenden
-        self.stop_plcslave()
         self.stop_plcprogram()
+        self.stop_plcmqtt()
+        self.stop_plcslave()
         self.stop_xmlrpcserver()
 
         # Logreader schließen
@@ -555,6 +624,18 @@ class RevPiPyLoad():
         proginit.logger.debug("enter RevPiPyLoad.stop()")
         self._exit = True
         proginit.logger.debug("leave RevPiPyLoad.stop()")
+
+    def stop_plcmqtt(self):
+        """Beendet MQTT Sender."""
+        proginit.logger.debug("enter RevPiPyLoad.stop_plcmqtt()")
+
+        if self.th_mqtt is not None and self.th_mqtt.is_alive():
+            proginit.logger.info("stopping mqtt thread")
+            self.th_mqtt.stop()
+            self.th_mqtt.join()
+            proginit.logger.debug("mqtt thread successfully closed")
+
+        proginit.logger.debug("leave RevPiPyLoad.stop_plcmqtt()")
 
     def stop_plcprogram(self):
         """Beendet PLC Programm."""
@@ -610,6 +691,17 @@ class RevPiPyLoad():
         dc["zeroonerror"] = self.zeroonerror
         dc["zeroonexit"] = self.zeroonexit
 
+        # MQTT Sektion
+        dc["mqtt"] = self.mqtt
+        dc["basetopic"] = self.mqttbasetopic
+        dc["sendinterval"] = self.mqttsendinterval
+        dc["host"] = self.mqtthost
+        dc["port"] = self.mqttport
+        dc["tls_set"] = self.mqtttls_set
+        dc["username"] = self.mqttusername
+        dc["password"] = self.mqttpassword
+        dc["client_id"] = self.mqttclient_id
+
         # PLCSLAVE Sektion
         dc["plcslave"] = self.plcslave
         dc["plcslaveacl"] = self.plcslaveacl.acl
@@ -649,6 +741,42 @@ class RevPiPyLoad():
         with open(proginit.pargs.procimg, "rb") as fh:
             buff = fh.read()
         return Binary(buff)
+
+    def xml_mqttrunning(self):
+        """Prueft ob MQTT Uebertragung noch lauft.
+        @return True, wenn MQTT Uebertragung noch lauft"""
+        proginit.logger.debug("xmlrpc call mqttrunning")
+        return False if self.th_mqtt is None \
+            else self.th_mqtt.is_alive()
+
+    def xml_mqttstart(self):
+        """Startet die MQTT Uebertragung.
+
+        @return Statuscode:
+            0: erfolgreich gestartet
+            -1: Nicht aktiv in Konfiguration
+            -2: Laeuft bereits
+
+        """
+        if self.th_mqtt is not None and self.th_mqtt.is_alive():
+            return -2
+        else:
+            self.th_mqtt = self._plcmqtt()
+            if self.th_mqtt is None:
+                return -1
+            else:
+                self.th_mqtt.start()
+                return 0
+
+    def xml_mqttstop(self):
+        """Stoppt  die MQTT Uebertragung.
+        @return True, wenn stop erfolgreich"""
+        if self.th_mqtt is not None:
+            self.stop_plcmqtt()
+            self.th_mqtt = None
+            return True
+        else:
+            return False
 
     def xml_plcdownload(self, mode="tar", pictory=False):
         """Uebertraegt ein Archiv vom plcworkdir.
@@ -795,6 +923,17 @@ class RevPiPyLoad():
                 "rtlevel": "[0-1]",
                 "zeroonerror": "[01]",
                 "zeroonexit": "[01]",
+            },
+            "MQTT": {
+                "mqtt": "[01]",
+                "mqttbasetopic": ".*",
+                "mqttsendinterval": "[0-9]+",
+                "mqtthost": ".+",
+                "mqttport": "[0-9]+",
+                "mqtttls_set": "[01]",
+                "mqttusername": ".*",
+                "mqttpassword": ".*",
+                "mqttclient_id": ".+",
             },
             "PLCSLAVE": {
                 "plcslave": "[01]",

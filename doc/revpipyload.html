@@ -9,8 +9,6 @@ revpipyload</h1>
 <p>
 Revolution Pi Python PLC Loader.
 </p><p>
-Webpage: https://revpimodio.org/revpipyplc/
-</p><p>
 Stellt das RevPiPyLoad Programm bereit. Dieses Programm lauft als Daemon auf
 dem Revolution Pi. Es stellt Funktionen bereit, die es ermoeglichen ein Python
 Programm zu starten und fuehrt dessen Ausgaben in eine Logdatei. Die Logdaten
@@ -34,7 +32,7 @@ begrenzt werden!
 <h3 style="background-color:#FFFFFF;color:#FF0000">
 Global Attributes</h3>
 <table>
-<tr><td>__author__</td></tr><tr><td>__copyright__</td></tr><tr><td>__license__</td></tr><tr><td>__version__</td></tr>
+<tr><td>pyloadversion</td></tr>
 </table>
 <h3 style="background-color:#FFFFFF;color:#FF0000">
 Classes</h3>
@@ -89,6 +87,9 @@ Methods</h3>
 <td><a style="color:#0000FF" href="#RevPiPyLoad._loadconfig">_loadconfig</a></td>
 <td>Load configuration file and setup modul.</td>
 </tr><tr>
+<td><a style="color:#0000FF" href="#RevPiPyLoad._plcmqtt">_plcmqtt</a></td>
+<td>Konfiguriert den MQTT-Thread fuer die Ausfuehrung.</td>
+</tr><tr>
 <td><a style="color:#0000FF" href="#RevPiPyLoad._plcslave">_plcslave</a></td>
 <td>Erstellt den PlcSlave-Server Thread.</td>
 </tr><tr>
@@ -113,6 +114,9 @@ Methods</h3>
 <td><a style="color:#0000FF" href="#RevPiPyLoad.stop">stop</a></td>
 <td>Stop revpipyload.</td>
 </tr><tr>
+<td><a style="color:#0000FF" href="#RevPiPyLoad.stop_plcmqtt">stop_plcmqtt</a></td>
+<td>Beendet MQTT Sender.</td>
+</tr><tr>
 <td><a style="color:#0000FF" href="#RevPiPyLoad.stop_plcprogram">stop_plcprogram</a></td>
 <td>Beendet PLC Programm.</td>
 </tr><tr>
@@ -133,6 +137,15 @@ Methods</h3>
 </tr><tr>
 <td><a style="color:#0000FF" href="#RevPiPyLoad.xml_getprocimg">xml_getprocimg</a></td>
 <td>Gibt die Rohdaten aus piControl0 zurueck.</td>
+</tr><tr>
+<td><a style="color:#0000FF" href="#RevPiPyLoad.xml_mqttrunning">xml_mqttrunning</a></td>
+<td>Prueft ob MQTT Uebertragung noch lauft.</td>
+</tr><tr>
+<td><a style="color:#0000FF" href="#RevPiPyLoad.xml_mqttstart">xml_mqttstart</a></td>
+<td>Startet die MQTT Uebertragung.</td>
+</tr><tr>
+<td><a style="color:#0000FF" href="#RevPiPyLoad.xml_mqttstop">xml_mqttstop</a></td>
+<td>Stoppt  die MQTT Uebertragung.</td>
 </tr><tr>
 <td><a style="color:#0000FF" href="#RevPiPyLoad.xml_plcdownload">xml_plcdownload</a></td>
 <td>Uebertraegt ein Archiv vom plcworkdir.</td>
@@ -219,7 +232,18 @@ RevPiPyLoad._loadconfig</h3>
 <b>_loadconfig</b>(<i></i>)
 <p>
 Load configuration file and setup modul.
-</p><a NAME="RevPiPyLoad._plcslave" ID="RevPiPyLoad._plcslave"></a>
+</p><a NAME="RevPiPyLoad._plcmqtt" ID="RevPiPyLoad._plcmqtt"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+RevPiPyLoad._plcmqtt</h3>
+<b>_plcmqtt</b>(<i></i>)
+<p>
+Konfiguriert den MQTT-Thread fuer die Ausfuehrung.
+</p><dl>
+<dt>Returns:</dt>
+<dd>
+MQTT-Thread Object or None
+</dd>
+</dl><a NAME="RevPiPyLoad._plcslave" ID="RevPiPyLoad._plcslave"></a>
 <h3 style="background-color:#FFFFFF;color:#FF0000">
 RevPiPyLoad._plcslave</h3>
 <b>_plcslave</b>(<i></i>)
@@ -290,6 +314,12 @@ RevPiPyLoad.stop</h3>
 <b>stop</b>(<i></i>)
 <p>
 Stop revpipyload.
+</p><a NAME="RevPiPyLoad.stop_plcmqtt" ID="RevPiPyLoad.stop_plcmqtt"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+RevPiPyLoad.stop_plcmqtt</h3>
+<b>stop_plcmqtt</b>(<i></i>)
+<p>
+Beendet MQTT Sender.
 </p><a NAME="RevPiPyLoad.stop_plcprogram" ID="RevPiPyLoad.stop_plcprogram"></a>
 <h3 style="background-color:#FFFFFF;color:#FF0000">
 RevPiPyLoad.stop_plcprogram</h3>
@@ -351,6 +381,42 @@ Gibt die Rohdaten aus piControl0 zurueck.
 <dt>Returns:</dt>
 <dd>
 xmlrpc.client.Binary()
+</dd>
+</dl><a NAME="RevPiPyLoad.xml_mqttrunning" ID="RevPiPyLoad.xml_mqttrunning"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+RevPiPyLoad.xml_mqttrunning</h3>
+<b>xml_mqttrunning</b>(<i></i>)
+<p>
+Prueft ob MQTT Uebertragung noch lauft.
+</p><dl>
+<dt>Returns:</dt>
+<dd>
+True, wenn MQTT Uebertragung noch lauft
+</dd>
+</dl><a NAME="RevPiPyLoad.xml_mqttstart" ID="RevPiPyLoad.xml_mqttstart"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+RevPiPyLoad.xml_mqttstart</h3>
+<b>xml_mqttstart</b>(<i></i>)
+<p>
+Startet die MQTT Uebertragung.
+</p><dl>
+<dt>Returns:</dt>
+<dd>
+Statuscode:
+            0: erfolgreich gestartet
+            -1: Nicht aktiv in Konfiguration
+            -2: Laeuft bereits
+</dd>
+</dl><a NAME="RevPiPyLoad.xml_mqttstop" ID="RevPiPyLoad.xml_mqttstop"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+RevPiPyLoad.xml_mqttstop</h3>
+<b>xml_mqttstop</b>(<i></i>)
+<p>
+Stoppt  die MQTT Uebertragung.
+</p><dl>
+<dt>Returns:</dt>
+<dd>
+True, wenn stop erfolgreich
 </dd>
 </dl><a NAME="RevPiPyLoad.xml_plcdownload" ID="RevPiPyLoad.xml_plcdownload"></a>
 <h3 style="background-color:#FFFFFF;color:#FF0000">
