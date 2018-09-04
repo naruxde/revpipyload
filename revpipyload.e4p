@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE Project SYSTEM "Project-5.1.dtd">
 <!-- eric project file for project revpipyload -->
-<!-- Saved: 2018-08-23, 10:37:20 -->
+<!-- Saved: 2018-09-03, 13:58:07 -->
 <!-- Copyright (C) 2018 Sven Sager, akira@narux.de -->
 <Project version="5.1">
   <Language>en_US</Language>
@@ -16,13 +16,13 @@
   <Sources>
     <Source>revpipyload/helper.py</Source>
     <Source>revpipyload/logsystem.py</Source>
+    <Source>revpipyload/mqttserver.py</Source>
     <Source>revpipyload/picontrolserver.py</Source>
     <Source>revpipyload/plcsystem.py</Source>
     <Source>revpipyload/procimgserver.py</Source>
     <Source>revpipyload/proginit.py</Source>
     <Source>revpipyload/revpipyload.py</Source>
     <Source>revpipyload/shared/__init__.py</Source>
-    <Source>revpipyload/mqttserver.py</Source>
     <Source>revpipyload/xrpcserver.py</Source>
     <Source>setup.py</Source>
   </Sources>
@@ -163,6 +163,7 @@
             <value>
               <list>
                 <string>demo</string>
+                <string>paho</string>
               </list>
             </value>
             <key>
@@ -215,6 +216,7 @@
                 <string>deb</string>
                 <string>dist</string>
                 <string>demo</string>
+                <string>paho</string>
               </list>
             </value>
             <key>

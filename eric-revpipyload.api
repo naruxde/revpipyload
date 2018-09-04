@@ -81,6 +81,7 @@ proginit.pargs?7
 proginit.picontrolreset?7
 proginit.rapcatalog?7
 proginit.startdir?7
+revpipyload.RevPiPyLoad._check_mustrestart_mqtt?5()
 revpipyload.RevPiPyLoad._check_mustrestart_plcprogram?5()
 revpipyload.RevPiPyLoad._check_mustrestart_plcslave?5()
 revpipyload.RevPiPyLoad._loadconfig?5()

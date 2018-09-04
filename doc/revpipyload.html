@@ -80,6 +80,9 @@ Methods</h3>
 <td><a style="color:#0000FF" href="#RevPiPyLoad.__init__">RevPiPyLoad</a></td>
 <td>Instantiiert RevPiPyLoad-Klasse.</td>
 </tr><tr>
+<td><a style="color:#0000FF" href="#RevPiPyLoad._check_mustrestart_mqtt">_check_mustrestart_mqtt</a></td>
+<td>Prueft ob sich kritische Werte veraendert haben.</td>
+</tr><tr>
 <td><a style="color:#0000FF" href="#RevPiPyLoad._check_mustrestart_plcprogram">_check_mustrestart_plcprogram</a></td>
 <td>Prueft ob sich kritische Werte veraendert haben.</td>
 </tr><tr>
@@ -206,7 +209,18 @@ RevPiPyLoad (Constructor)</h3>
 <b>RevPiPyLoad</b>(<i></i>)
 <p>
 Instantiiert RevPiPyLoad-Klasse.
-</p><a NAME="RevPiPyLoad._check_mustrestart_plcprogram" ID="RevPiPyLoad._check_mustrestart_plcprogram"></a>
+</p><a NAME="RevPiPyLoad._check_mustrestart_mqtt" ID="RevPiPyLoad._check_mustrestart_mqtt"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+RevPiPyLoad._check_mustrestart_mqtt</h3>
+<b>_check_mustrestart_mqtt</b>(<i></i>)
+<p>
+Prueft ob sich kritische Werte veraendert haben.
+</p><dl>
+<dt>Returns:</dt>
+<dd>
+True, wenn Subsystemneustart noetig ist
+</dd>
+</dl><a NAME="RevPiPyLoad._check_mustrestart_plcprogram" ID="RevPiPyLoad._check_mustrestart_plcprogram"></a>
 <h3 style="background-color:#FFFFFF;color:#FF0000">
 RevPiPyLoad._check_mustrestart_plcprogram</h3>
 <b>_check_mustrestart_plcprogram</b>(<i></i>)

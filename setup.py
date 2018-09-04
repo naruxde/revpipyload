@@ -45,6 +45,8 @@ setup(
         ]),
         ("share/revpipyload", glob("revpipyload/*.*")),
         ("share/revpipyload/shared", glob("revpipyload/shared/*.*")),
+        ("share/revpipyload/paho", ["revpipyload/paho/__init__.py"]),
+        ("share/revpipyload/paho/mqtt", glob("revpipyload/paho/mqtt/*.*")),
         ("/var/lib/revpipyload", [
             "data/var/lib/revpipyload/.placeholder",
         ])

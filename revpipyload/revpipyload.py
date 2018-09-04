@@ -28,7 +28,7 @@ begrenzt werden!
 __author__ = "Sven Sager"
 __copyright__ = "Copyright (C) 2018 Sven Sager"
 __license__ = "GPLv3"
-__version__ = "0.6.8"
+__version__ = "0.7.0"
 import gzip
 import logsystem
 import picontrolserver
@@ -69,7 +69,6 @@ class RevPiPyLoad():
         self.evt_loadconfig = Event()
         self.globalconfig = ConfigParser()
         self.logr = logsystem.LogReader()
-        self.tfile = {}
         self.xsrv = None
         self.xml_ps = None
 
@@ -78,7 +77,7 @@ class RevPiPyLoad():
         self.xmlrpcacl = IpAclManager(minlevel=0, maxlevel=4)
 
         # Threads/Prozesse
-        self.th_mqtt = None
+        self.th_plcmqtt = None
         self.th_plcslave = None
         self.plc = None
 
@@ -92,6 +91,39 @@ class RevPiPyLoad():
         signal.signal(signal.SIGUSR1, self._signewlogfile)
 
         proginit.logger.debug("leave RevPiPyLoad.__init__()")
+
+    def _check_mustrestart_mqtt(self):
+        """Prueft ob sich kritische Werte veraendert haben.
+        @return True, wenn Subsystemneustart noetig ist"""
+        if self.th_plcmqtt is None:
+            return True
+        elif "MQTT" not in self.globalconfig:
+            return True
+        else:
+            return (
+                self.mqtt !=
+                self.globalconfig["MQTT"].getboolean("mqtt", False) or
+                self.mqttbasetopic !=
+                self.globalconfig["MQTT"].get("basetopic", "") or
+                self.mqttsendinterval !=
+                self.globalconfig["MQTT"].getint("sendinterval", 30) or
+                self.mqtthost !=
+                self.globalconfig["MQTT"].get("host", "") or
+                self.mqttport !=
+                self.globalconfig["MQTT"].getint("port", 1883) or
+                self.mqtttls_set !=
+                self.globalconfig["MQTT"].getboolean("tls_set", False) or
+                self.mqttusername !=
+                self.globalconfig["MQTT"].get("username", "") or
+                self.mqttpassword !=
+                self.globalconfig["MQTT"].get("password", "") or
+                self.mqttclient_id !=
+                self.globalconfig["MQTT"].get("client_id", "") or
+                self.mqttsend_events !=
+                self.globalconfig["MQTT"].getboolean("send_on_event", False) or
+                self.mqttwrite_outputs !=
+                self.globalconfig["MQTT"].getboolean("write_outputs", False)
+            )
 
     def _check_mustrestart_plcslave(self):
         """Prueft ob sich kritische Werte veraendert haben.
@@ -145,7 +177,6 @@ class RevPiPyLoad():
         proginit.logger.debug("enter RevPiPyLoad._loadconfig()")
 
         # Subsysteme herunterfahren
-        self.stop_plcmqtt()
         self.stop_xmlrpcserver()
 
         # Konfigurationsdatei laden
@@ -155,6 +186,7 @@ class RevPiPyLoad():
         self.globalconfig.read(proginit.globalconffile)
 
         # Merker für Subsystem-Neustart nach laden, vor setzen
+        restart_plcmqtt = self._check_mustrestart_mqtt()
         restart_plcslave = self._check_mustrestart_plcslave()
         restart_plcprogram = self._check_mustrestart_plcprogram()
 
@@ -192,7 +224,7 @@ class RevPiPyLoad():
             self.mqttbasetopic = \
                 self.globalconfig["MQTT"].get("basetopic", "")
             self.mqttsendinterval = \
-                self.globalconfig["MQTT"].getint("sendinterval", 15)
+                self.globalconfig["MQTT"].getint("sendinterval", 30)
             self.mqtthost = \
                 self.globalconfig["MQTT"].get("host", "")
             self.mqttport = \
@@ -267,10 +299,13 @@ class RevPiPyLoad():
         os.chdir(self.plcworkdir)
 
         # MQTT konfigurieren
-        self.th_mqtt = self._plcmqtt()
-        if self.th_mqtt is not None and not self._exit:
-            proginit.logger.info("start mqtt publisher")
-            self.th_mqtt.start()
+        if restart_plcmqtt:
+            self.stop_plcmqtt()
+            self.th_plcmqtt = self._plcmqtt()
+
+            if not self._exit and self.th_plcmqtt is not None:
+                proginit.logger.info("restart mqtt publisher after reload")
+                self.th_plcmqtt.start()
 
         # PLC Programm konfigurieren
         if restart_plcprogram:
@@ -574,8 +609,8 @@ class RevPiPyLoad():
             self.xsrv.start()
 
         # MQTT Uebertragung starten
-        if self.th_mqtt is not None:
-            self.th_mqtt.start()
+        if self.th_plcmqtt is not None:
+            self.th_plcmqtt.start()
 
         # Slaveausfuehrung übergeben
         if self.th_plcslave is not None:
@@ -593,7 +628,15 @@ class RevPiPyLoad():
                 proginit.logger.info("got reqeust to reload config")
                 self._loadconfig()
 
-            # TODO: MQTT prüfen und neu starten
+            # MQTT Publisher Thread prüfen
+            if self.mqtt and self.th_plcmqtt is not None \
+                    and not self.th_plcmqtt.is_alive():
+                proginit.logger.warning(
+                    "restart mqtt publisher after thread was not running"
+                )
+                self.th_plcmqtt = self._plcmqtt()
+                if self.th_plcmqtt is not None:
+                    self.th_plcmqtt.start()
 
             # PLC Server Thread prüfen
             if self.plcslave and self.th_plcslave is not None \
@@ -610,6 +653,11 @@ class RevPiPyLoad():
                 proginit.logger.warning("piCtory configuration was changed")
                 self.pictorymtime = os.path.getmtime(proginit.pargs.configrsc)
 
+                # MQTT Publisher neu laden
+                if self.mqtt and self.th_plcmqtt is not None:
+                    self.th_plcmqtt.reload_revpimodio()
+
+                # XML Prozessabbildserver neu laden
                 if self.xml_ps is not None:
                     self.xml_psstop()
                     self.xml_ps.loadrevpimodio()
@@ -639,10 +687,10 @@ class RevPiPyLoad():
         """Beendet MQTT Sender."""
         proginit.logger.debug("enter RevPiPyLoad.stop_plcmqtt()")
 
-        if self.th_mqtt is not None and self.th_mqtt.is_alive():
+        if self.th_plcmqtt is not None and self.th_plcmqtt.is_alive():
             proginit.logger.info("stopping mqtt thread")
-            self.th_mqtt.stop()
-            self.th_mqtt.join()
+            self.th_plcmqtt.stop()
+            self.th_plcmqtt.join()
             proginit.logger.debug("mqtt thread successfully closed")
 
         proginit.logger.debug("leave RevPiPyLoad.stop_plcmqtt()")
@@ -703,16 +751,16 @@ class RevPiPyLoad():
 
         # MQTT Sektion
         dc["mqtt"] = self.mqtt
-        dc["basetopic"] = self.mqttbasetopic
-        dc["sendinterval"] = self.mqttsendinterval
-        dc["host"] = self.mqtthost
-        dc["port"] = self.mqttport
-        dc["tls_set"] = self.mqtttls_set
-        dc["username"] = self.mqttusername
-        dc["password"] = self.mqttpassword
-        dc["client_id"] = self.mqttclient_id
-        dc["send_events"] = self.mqttsend_events
-        dc["write_outputs"] = self.mqttwrite_outputs
+        dc["mqttbasetopic"] = self.mqttbasetopic
+        dc["mqttsendinterval"] = self.mqttsendinterval
+        dc["mqtthost"] = self.mqtthost
+        dc["mqttport"] = self.mqttport
+        dc["mqtttls_set"] = self.mqtttls_set
+        dc["mqttusername"] = self.mqttusername
+        dc["mqttpassword"] = self.mqttpassword
+        dc["mqttclient_id"] = self.mqttclient_id
+        dc["mqttsend_events"] = self.mqttsend_events
+        dc["mqttwrite_outputs"] = self.mqttwrite_outputs
 
         # PLCSLAVE Sektion
         dc["plcslave"] = self.plcslave
@@ -758,8 +806,8 @@ class RevPiPyLoad():
         """Prueft ob MQTT Uebertragung noch lauft.
         @return True, wenn MQTT Uebertragung noch lauft"""
         proginit.logger.debug("xmlrpc call mqttrunning")
-        return False if self.th_mqtt is None \
-            else self.th_mqtt.is_alive()
+        return False if self.th_plcmqtt is None \
+            else self.th_plcmqtt.is_alive()
 
     def xml_mqttstart(self):
         """Startet die MQTT Uebertragung.
@@ -770,22 +818,22 @@ class RevPiPyLoad():
             -2: Laeuft bereits
 
         """
-        if self.th_mqtt is not None and self.th_mqtt.is_alive():
+        if self.th_plcmqtt is not None and self.th_plcmqtt.is_alive():
             return -2
         else:
-            self.th_mqtt = self._plcmqtt()
-            if self.th_mqtt is None:
+            self.th_plcmqtt = self._plcmqtt()
+            if self.th_plcmqtt is None:
                 return -1
             else:
-                self.th_mqtt.start()
+                self.th_plcmqtt.start()
                 return 0
 
     def xml_mqttstop(self):
         """Stoppt  die MQTT Uebertragung.
         @return True, wenn stop erfolgreich"""
-        if self.th_mqtt is not None:
+        if self.th_plcmqtt is not None:
             self.stop_plcmqtt()
-            self.th_mqtt = None
+            self.th_plcmqtt = None
             return True
         else:
             return False
@@ -945,7 +993,7 @@ class RevPiPyLoad():
                 "mqtttls_set": "[01]",
                 "mqttusername": ".*",
                 "mqttpassword": ".*",
-                "mqttclient_id": ".+",
+                "mqttclient_id": ".*",
                 "mqttsend_events": "[01]",
                 "mqttwrite_outputs": "[01]",
             },
