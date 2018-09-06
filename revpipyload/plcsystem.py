@@ -77,12 +77,16 @@ class RevPiPlc(Thread):
 
     def _setuppopen(self):
         """Setzt UID und GID fuer das PLC Programm."""
+        proginit.logger.debug("enter RevPiPlc._setuppopen()")
+
         proginit.logger.info(
             "set uid {0} and gid {1} for plc program".format(
                 self.uid, self.gid)
             )
         os.setgid(self.gid)
         os.setuid(self.uid)
+
+        proginit.logger.debug("leave RevPiPlc._setuppopen()")
 
     def _spopen(self, lst_proc):
         """Startet das PLC Programm.
@@ -94,7 +98,7 @@ class RevPiPlc(Thread):
             lst_proc,
             preexec_fn=self._setuppopen,
             cwd=os.path.dirname(self._program),
-            bufsize=1,
+            bufsize=0,
             stdout=sysstdout if self._plw is None else self._plw.fdw,
             stderr=subprocess.STDOUT
         )

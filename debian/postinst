@@ -1,0 +1,27 @@
+#!/bin/bash
+
+set -e
+
+PATH=/bin:/sbin:/usr/bin:/usr/sbin
+
+case "$1" in
+    configure)
+          cat <<-END
+
+		======= Important RevPiPyLoad post-installation note =======
+
+		If you upgrade from pre 0.6.5 Version,you have to migrate to the
+		new config file format!!!
+		                            /etc/revpipyload/revpipyload.conf
+
+		READ:
+		      DE: https://revpimodio.org/revpipyplc-auf-065/
+		      EN: https://revpimodio.org/en/revpipyplc-to-064/
+
+	END
+     ;;
+esac
+
+#DEBHELPER#
+
+exit 0
