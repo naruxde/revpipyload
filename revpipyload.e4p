@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE Project SYSTEM "Project-5.1.dtd">
 <!-- eric project file for project revpipyload -->
-<!-- Saved: 2018-09-03, 13:58:07 -->
+<!-- Saved: 2018-09-06, 12:14:06 -->
 <!-- Copyright (C) 2018 Sven Sager, akira@narux.de -->
 <Project version="5.1">
   <Language>en_US</Language>
@@ -23,6 +23,7 @@
     <Source>revpipyload/proginit.py</Source>
     <Source>revpipyload/revpipyload.py</Source>
     <Source>revpipyload/shared/__init__.py</Source>
+    <Source>revpipyload/shared/ipaclmanager.py</Source>
     <Source>revpipyload/xrpcserver.py</Source>
     <Source>setup.py</Source>
   </Sources>

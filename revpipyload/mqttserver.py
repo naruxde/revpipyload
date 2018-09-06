@@ -6,7 +6,7 @@ __license__ = "GPLv3"
 import proginit
 import revpimodio2
 from os.path import join
-from paho.mqtt.client import Client
+from paho.mqtt.client import Client, connack_string
 from ssl import CERT_NONE
 from threading import Thread, Event
 
@@ -16,14 +16,14 @@ class MqttServer(Thread):
     """Server fuer die Uebertragung des Prozessabbilds per MQTT."""
 
     def __init__(
-            self, basetopic, sendinterval, host, port=1883,
+            self, basetopic, sendinterval, broker_address, port=1883,
             tls_set=False, username="", password=None, client_id="",
             send_events=False, write_outputs=False):
         """Init MqttServer class.
 
         @param basetopic Basis-Topic fuer Datenaustausch
         @param sendinterval Prozessabbild alle n Sekunden senden
-        @param host Adresse <class 'str'> des MQTT-Servers
+        @param broker_address Adresse <class 'str'> des MQTT-Servers
         @param port Portnummer <class 'int'> des MQTT-Servers
         @param tls_set TLS fuer Verbindung zum MQTT-Server verwenden
         @param username Optional Benutzername fuer MQTT-Server
@@ -37,10 +37,12 @@ class MqttServer(Thread):
             raise ValueError("parameter topic must be <class 'str'>")
         if not (isinstance(sendinterval, int) and sendinterval > 0):
             raise ValueError(
-                "parameter sendinterval must be <class 'int'> and gt 0"
+                "parameter sendinterval must be <class 'int'> and > 0"
             )
-        if not isinstance(host, str):
-            raise ValueError("parameter host must be <class 'str'>")
+        if not (isinstance(broker_address, str) and broker_address != ""):
+            raise ValueError(
+                "parameter broker_address must be <class 'str'> and not empty"
+            )
         if not (isinstance(port, int) and 0 < port < 65535):
             raise ValueError(
                 "parameter sendinterval must be <class 'int'> and 1 - 65535"
@@ -64,7 +66,7 @@ class MqttServer(Thread):
         self.__exit = False
         self._evt_data = Event()
         self._exported_ios = []
-        self._host = host
+        self._broker_address = broker_address
         self._port = port
         self._reloadmodio = False
         self._rpi = None
@@ -155,8 +157,8 @@ class MqttServer(Thread):
         """Verbindung zu MQTT Broker."""
         if rc > 0:
             proginit.logger.warning(
-                "can not connect to mqtt broker - error {0} - will retry"
-                "".format(rc)
+                "can not connect to mqtt broker '{0}' - error '{1}' - "
+                "will retry".format(self._broker_address, connack_string(rc))
             )
         else:
             # Subscribe piCtory Anforderung
@@ -184,6 +186,7 @@ class MqttServer(Thread):
 
             try:
                 io = self._rpi_write.io[ioname]
+                io_needbytes = type(io.value) == bytes
             except Exception:
                 proginit.logger.error(
                     "can not find io '{0}' for MQTT".format(ioname)
@@ -207,9 +210,21 @@ class MqttServer(Thread):
 
                 if value.isdecimal():
                     value = int(value)
-                elif value == "false":
+
+                    # Muss eine Byteumwandlung vorgenommen werden?
+                    if io_needbytes:
+                        try:
+                            value = value.to_bytes(io.length, io.byteorder)
+                        except OverflowError:
+                            proginit.logger.error(
+                                "can not convert value '{0}' to fitting bytes"
+                                "".format(value)
+                            )
+                            return
+
+                elif value == "false" and not io_needbytes:
                     value = 0
-                elif value == "true":
+                elif value == "true" and not io_needbytes:
                     value = 1
                 else:
                     proginit.logger.error(
@@ -220,8 +235,15 @@ class MqttServer(Thread):
 
                 # Write Value to RevPi
                 io._parentdevice.syncoutputs()
-                io.value = value
-                io._parentdevice.writeprocimg()
+                try:
+                    io.value = value
+                except Exception:
+                    proginit.logger.error(
+                        "could not write '{0}' to Output '{1}'"
+                        "".format(value, ioname)
+                    )
+                else:
+                    io._parentdevice.writeprocimg()
 
     def _send_pictory_conf(self):
         """Sendet piCtory Konfiguration per MQTT."""
@@ -248,7 +270,13 @@ class MqttServer(Thread):
         proginit.logger.debug("enter MqttServer.run()")
 
         # MQTT verbinden
-        self._mq.connect_async(self._host, self._port, keepalive=60)
+        try:
+            self._mq.connect(self._broker_address, self._port, keepalive=60)
+        except Exception:
+            self._on_connect(self._mq, None, None, 3)
+            self._mq.connect_async(
+                self._broker_address, self._port, keepalive=60
+            )
         self._mq.loop_start()
 
         # mainloop

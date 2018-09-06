@@ -107,8 +107,8 @@ class RevPiPyLoad():
                 self.globalconfig["MQTT"].get("basetopic", "") or
                 self.mqttsendinterval !=
                 self.globalconfig["MQTT"].getint("sendinterval", 30) or
-                self.mqtthost !=
-                self.globalconfig["MQTT"].get("host", "") or
+                self.mqttbroker_address !=
+                self.globalconfig["MQTT"].get("broker_address", "localhost") or
                 self.mqttport !=
                 self.globalconfig["MQTT"].getint("port", 1883) or
                 self.mqtttls_set !=
@@ -225,8 +225,8 @@ class RevPiPyLoad():
                 self.globalconfig["MQTT"].get("basetopic", "")
             self.mqttsendinterval = \
                 self.globalconfig["MQTT"].getint("sendinterval", 30)
-            self.mqtthost = \
-                self.globalconfig["MQTT"].get("host", "")
+            self.mqttbroker_address = \
+                self.globalconfig["MQTT"].get("broker_address", "localhost")
             self.mqttport = \
                 self.globalconfig["MQTT"].getint("port", 1883)
             self.mqtttls_set = \
@@ -450,18 +450,6 @@ class RevPiPyLoad():
         if self.mqtt:
             try:
                 from mqttserver import MqttServer
-                th_plc = MqttServer(
-                    self.mqttbasetopic,
-                    self.mqttsendinterval,
-                    self.mqtthost,
-                    self.mqttport,
-                    self.mqtttls_set,
-                    self.mqttusername,
-                    self.mqttpassword,
-                    self.mqttclient_id,
-                    self.mqttsend_events,
-                    self.mqttwrite_outputs,
-                )
             except Exception:
                 proginit.logger.warning(
                     "can not load revpimodio2 module. maybe its not installed "
@@ -469,6 +457,22 @@ class RevPiPyLoad():
                     "like to use the mqtt feature, update/install "
                     "revpimodio2: 'apt-get install python3-revpimodio2'"
                 )
+            else:
+                try:
+                    th_plc = MqttServer(
+                        self.mqttbasetopic,
+                        self.mqttsendinterval,
+                        self.mqttbroker_address,
+                        self.mqttport,
+                        self.mqtttls_set,
+                        self.mqttusername,
+                        self.mqttpassword,
+                        self.mqttclient_id,
+                        self.mqttsend_events,
+                        self.mqttwrite_outputs,
+                    )
+                except Exception as e:
+                    proginit.logger.error(e)
 
         proginit.logger.debug("leave RevPiPyLoad._plcmqtt()")
         return th_plc
@@ -753,7 +757,7 @@ class RevPiPyLoad():
         dc["mqtt"] = self.mqtt
         dc["mqttbasetopic"] = self.mqttbasetopic
         dc["mqttsendinterval"] = self.mqttsendinterval
-        dc["mqtthost"] = self.mqtthost
+        dc["mqttbroker_address"] = self.mqttbroker_address
         dc["mqttport"] = self.mqttport
         dc["mqtttls_set"] = self.mqtttls_set
         dc["mqttusername"] = self.mqttusername
@@ -988,7 +992,7 @@ class RevPiPyLoad():
                 "mqtt": "[01]",
                 "mqttbasetopic": ".*",
                 "mqttsendinterval": "[0-9]+",
-                "mqtthost": ".+",
+                "mqttbroker_address": ".+",
                 "mqttport": "[0-9]+",
                 "mqtttls_set": "[01]",
                 "mqttusername": ".*",
