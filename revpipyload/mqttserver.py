@@ -147,10 +147,6 @@ class MqttServer(Thread):
                 io.reg_event(self._evt_io)
                 self._exported_ios.append(io)
 
-        # Eventüberwachung starten
-        if self._send_events:
-            self._rpi.mainloop(blocking=False)
-
         proginit.logger.debug("created revpimodio2 object")
 
     def _on_connect(self, client, userdata, flags, rc):
@@ -279,6 +275,10 @@ class MqttServer(Thread):
             )
         self._mq.loop_start()
 
+        # Eventüberwachung starten
+        if self._send_events:
+            self._rpi.mainloop(blocking=False)
+
         # mainloop
         while not self.__exit:
             self._evt_data.clear()
@@ -286,6 +286,10 @@ class MqttServer(Thread):
             # RevPiModIO neu laden
             if self._reloadmodio:
                 self._loadrevpimodio()
+
+                # Eventüberwachung erneut starten
+                if self._send_events:
+                    self._rpi.mainloop(blocking=False)
 
             # Werte laden, wenn nicht autorefresh
             if not self._send_events:
