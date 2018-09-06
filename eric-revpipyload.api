@@ -28,7 +28,7 @@ mqttserver.MqttServer.newlogfile?4()
 mqttserver.MqttServer.reload_revpimodio?4()
 mqttserver.MqttServer.run?4()
 mqttserver.MqttServer.stop?4()
-mqttserver.MqttServer?1(basetopic, sendinterval, host, port=1883, tls_set=False, username="", password=None, client_id="", send_events=False, write_outputs=False)
+mqttserver.MqttServer?1(basetopic, sendinterval, broker_address, port=1883, tls_set=False, username="", password=None, client_id="", send_events=False, write_outputs=False)
 mqttserver.__author__?9
 mqttserver.__copyright__?9
 mqttserver.__license__?9

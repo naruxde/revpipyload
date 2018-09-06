@@ -740,40 +740,40 @@ class RevPiPyLoad():
         dc = {}
 
         # DEFAULT Sektion
-        dc["autoreload"] = self.autoreload
+        dc["autoreload"] = int(self.autoreload)
         dc["autoreloaddelay"] = self.autoreloaddelay
-        dc["autostart"] = self.autostart
+        dc["autostart"] = int(self.autostart)
         dc["plcworkdir"] = self.plcworkdir
         dc["plcprogram"] = self.plcprogram
         dc["plcarguments"] = self.plcarguments
-        # dc["plcuid"] = self.plcuid
-        # dc["plcgid"] = self.plcgid
+        dc["plcuid"] = self.plcuid
+        dc["plcgid"] = self.plcgid
         dc["pythonversion"] = self.pythonversion
-        dc["rtlevel"] = self.rtlevel
-        dc["zeroonerror"] = self.zeroonerror
-        dc["zeroonexit"] = self.zeroonexit
+        dc["rtlevel"] = int(self.rtlevel)
+        dc["zeroonerror"] = int(self.zeroonerror)
+        dc["zeroonexit"] = int(self.zeroonexit)
 
         # MQTT Sektion
-        dc["mqtt"] = self.mqtt
+        dc["mqtt"] = int(self.mqtt)
         dc["mqttbasetopic"] = self.mqttbasetopic
         dc["mqttsendinterval"] = self.mqttsendinterval
         dc["mqttbroker_address"] = self.mqttbroker_address
         dc["mqttport"] = self.mqttport
-        dc["mqtttls_set"] = self.mqtttls_set
+        dc["mqtttls_set"] = int(self.mqtttls_set)
         dc["mqttusername"] = self.mqttusername
         dc["mqttpassword"] = self.mqttpassword
         dc["mqttclient_id"] = self.mqttclient_id
-        dc["mqttsend_events"] = self.mqttsend_events
-        dc["mqttwrite_outputs"] = self.mqttwrite_outputs
+        dc["mqttsend_events"] = int(self.mqttsend_events)
+        dc["mqttwrite_outputs"] = int(self.mqttwrite_outputs)
 
         # PLCSLAVE Sektion
-        dc["plcslave"] = self.plcslave
+        dc["plcslave"] = int(self.plcslave)
         dc["plcslaveacl"] = self.plcslaveacl.acl
         dc["plcslavebindip"] = self.plcslavebindip
         dc["plcslaveport"] = self.plcslaveport
 
         # XMLRPC Sektion
-        dc["xmlrpc"] = self.xmlrpc
+        dc["xmlrpc"] = int(self.xmlrpc)
         dc["xmlrpcacl"] = self.xmlrpcacl.acl
         dc["xmlrpcbindip"] = self.xmlrpcbindip
 
@@ -1015,7 +1015,7 @@ class RevPiPyLoad():
             }
         }
 
-        # Werte übernehmen
+        # Werte übernehmen, die eine Definition in key haben (andere nicht)
         for sektion in keys:
             suffix = sektion.lower()
             for key in keys[sektion]:

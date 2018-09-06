@@ -92,7 +92,7 @@ Static Methods</h3>
 <a NAME="MqttServer.__init__" ID="MqttServer.__init__"></a>
 <h3 style="background-color:#FFFFFF;color:#FF0000">
 MqttServer (Constructor)</h3>
-<b>MqttServer</b>(<i>basetopic, sendinterval, host, port=1883, tls_set=False, username="", password=None, client_id="", send_events=False, write_outputs=False</i>)
+<b>MqttServer</b>(<i>basetopic, sendinterval, broker_address, port=1883, tls_set=False, username="", password=None, client_id="", send_events=False, write_outputs=False</i>)
 <p>
 Init MqttServer class.
 </p><dl>
@@ -102,7 +102,7 @@ Basis-Topic fuer Datenaustausch
 </dd><dt><i>sendinterval</i></dt>
 <dd>
 Prozessabbild alle n Sekunden senden
-</dd><dt><i>host</i></dt>
+</dd><dt><i>broker_address</i></dt>
 <dd>
 Adresse <class 'str'> des MQTT-Servers
 </dd><dt><i>port</i></dt>
