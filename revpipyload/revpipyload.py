@@ -387,7 +387,7 @@ class RevPiPyLoad():
                 self.xml_ps = None
                 proginit.logger.warning(
                     "can not load revpimodio2 module. maybe its not installed "
-                    "or an old version (required at least 2.2.3). if you "
+                    "or an old version (required at least 2.2.4). if you "
                     "like to use the process monitor feature, update/install "
                     "revpimodio2: 'apt-get install python3-revpimodio2'"
                 )
@@ -453,7 +453,7 @@ class RevPiPyLoad():
             except Exception:
                 proginit.logger.warning(
                     "can not load revpimodio2 module. maybe its not installed "
-                    "or an old version (required at least 2.2.3). if you "
+                    "or an old version (required at least 2.2.4). if you "
                     "like to use the mqtt feature, update/install "
                     "revpimodio2: 'apt-get install python3-revpimodio2'"
                 )

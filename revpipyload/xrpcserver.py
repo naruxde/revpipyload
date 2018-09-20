@@ -62,7 +62,7 @@ class SaveXMLRPCServer(SimpleXMLRPCServer):
 
         return super()._dispatch(method, params)
 
-    def isAlive(self):
+    def is_alive(self):
         """Prueft ob der XML RPC Server laeuft.
         @return True, wenn Server noch laeuft"""
         return False if self.fut is None else self.fut.running()

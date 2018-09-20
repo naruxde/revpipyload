@@ -101,7 +101,7 @@ Init MqttServer class.
 Basis-Topic fuer Datenaustausch
 </dd><dt><i>sendinterval</i></dt>
 <dd>
-Prozessabbild alle n Sekunden senden
+Prozessabbild alle n Sekunden senden / 0 = aus
 </dd><dt><i>broker_address</i></dt>
 <dd>
 Adresse <class 'str'> des MQTT-Servers
@@ -130,7 +130,7 @@ Per MQTT auch Outputs schreiben
 </dl><a NAME="MqttServer._evt_io" ID="MqttServer._evt_io"></a>
 <h3 style="background-color:#FFFFFF;color:#FF0000">
 MqttServer._evt_io</h3>
-<b>_evt_io</b>(<i>name, value</i>)
+<b>_evt_io</b>(<i>name, value, requested=False</i>)
 <p>
 Sendet Daten aus Events.
 </p><dl>
@@ -140,6 +140,9 @@ IO-Name
 </dd><dt><i>value</i></dt>
 <dd>
 IO-Value
+</dd><dt><i>requested</i></dt>
+<dd>
+Wenn True, wird 'got' Topic verwendet
 </dd>
 </dl><a NAME="MqttServer._loadrevpimodio" ID="MqttServer._loadrevpimodio"></a>
 <h3 style="background-color:#FFFFFF;color:#FF0000">
