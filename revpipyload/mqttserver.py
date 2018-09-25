@@ -183,6 +183,8 @@ class MqttServer(Thread):
 
     def _on_connect(self, client, userdata, flags, rc):
         """Verbindung zu MQTT Broker."""
+        proginit.logger.debug("enter MqttServer._on_connect()")
+
         if rc > 0:
             proginit.logger.warning(
                 "can not connect to mqtt broker '{0}' - error '{1}' - "
@@ -196,13 +198,19 @@ class MqttServer(Thread):
             if self._write_outputs:
                 client.subscribe(self._mqtt_ioset)
 
+        proginit.logger.debug("leave MqttServer._on_connect()")
+
     def _on_disconnect(self, client, userdata, rc):
         """Wertet Verbindungsabbruch aus."""
+        proginit.logger.debug("enter MqttServer._on_disconnect()")
+
         if rc != 0:
             proginit.logger.warning(
                 "unexpected disconnection from mqtt broker - "
                 "will try to reconnect"
             )
+
+        proginit.logger.debug("leave MqttServer._on_disconnect()")
 
     def _on_message(self, client, userdata, msg):
         """Sendet piCtory Konfiguration."""
@@ -331,14 +339,21 @@ class MqttServer(Thread):
 
     def reload_revpimodio(self):
         """Fuehrt im naechsten Zyklus zum Reload."""
+        proginit.logger.debug("enter MqttServer.reload_revpimodio()")
+
         self._reloadmodio = True
         self._evt_data.set()
+
+        proginit.logger.debug("leave MqttServer.reload_revpimodio()")
 
     def run(self):
         """Startet die Uebertragung per MQTT."""
         proginit.logger.debug("enter MqttServer.run()")
 
         # MQTT verbinden
+        proginit.logger.info(
+            "connecting to mqtt broker {0}".format(self._broker_address)
+        )
         try:
             self._mq.connect(self._broker_address, self._port, keepalive=60)
         except Exception:
@@ -350,6 +365,7 @@ class MqttServer(Thread):
 
         # Eventüberwachung starten
         if self._send_events:
+            proginit.logger.debug("start non blocking mainloop of revpimodio")
             self._rpi.mainloop(blocking=False)
 
         # mainloop
@@ -359,10 +375,14 @@ class MqttServer(Thread):
 
             # RevPiModIO neu laden
             if self._reloadmodio:
+                proginit.logger.info("reload revpimodio for mqtt")
                 self._loadrevpimodio()
 
                 # Eventüberwachung erneut starten
                 if self._send_events:
+                    proginit.logger.debug(
+                        "start non blocking mainloop of revpimodio"
+                    )
                     self._rpi.mainloop(blocking=False)
 
             if send_cycledata:
@@ -382,7 +402,10 @@ class MqttServer(Thread):
             )
 
         # MQTT trennen
-        self._mq.loop_stop()
+        proginit.logger.info(
+            "disconnecting from mqtt broker {0}".format(self._broker_address)
+        )
+        # NOTE: dies gab dead-locks: self._mq.loop_stop()
         self._mq.disconnect()
 
         # RevPiModIO aufräumen
