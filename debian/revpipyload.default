@@ -7,8 +7,5 @@
 #
 
 # Additional options that are passed to the Daemon.
-# For verbose logging add a -v or -vv
-DAEMON_ARGS="-d"
-
-# Codepage for Python (do not change)
-export LANG=C.UTF-8
+# For verbose logging add -v or -vv
+DAEMON_ARGS=""
