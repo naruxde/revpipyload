@@ -28,7 +28,7 @@ begrenzt werden!
 __author__ = "Sven Sager"
 __copyright__ = "Copyright (C) 2018 Sven Sager"
 __license__ = "GPLv3"
-__version__ = "0.7.1"
+__version__ = "0.7.2"
 import gzip
 import logsystem
 import picontrolserver
@@ -119,7 +119,7 @@ class RevPiPyLoad():
                 self.globalconfig["MQTT"].get("password", "") or
                 self.mqttclient_id !=
                 self.globalconfig["MQTT"].get("client_id", "") or
-                self.mqttsend_events !=
+                self.mqttsend_on_event !=
                 self.globalconfig["MQTT"].getboolean("send_on_event", False) or
                 self.mqttwrite_outputs !=
                 self.globalconfig["MQTT"].getboolean("write_outputs", False)
@@ -237,7 +237,7 @@ class RevPiPyLoad():
                 self.globalconfig["MQTT"].get("password", "")
             self.mqttclient_id = \
                 self.globalconfig["MQTT"].get("client_id", "")
-            self.mqttsend_events = \
+            self.mqttsend_on_event = \
                 self.globalconfig["MQTT"].getboolean("send_on_event", False)
             self.mqttwrite_outputs = \
                 self.globalconfig["MQTT"].getboolean("write_outputs", False)
@@ -468,7 +468,7 @@ class RevPiPyLoad():
                         self.mqttusername,
                         self.mqttpassword,
                         self.mqttclient_id,
-                        self.mqttsend_events,
+                        self.mqttsend_on_event,
                         self.mqttwrite_outputs,
                     )
                 except Exception as e:
@@ -763,7 +763,7 @@ class RevPiPyLoad():
         dc["mqttusername"] = self.mqttusername
         dc["mqttpassword"] = self.mqttpassword
         dc["mqttclient_id"] = self.mqttclient_id
-        dc["mqttsend_events"] = int(self.mqttsend_events)
+        dc["mqttsend_on_event"] = int(self.mqttsend_on_event)
         dc["mqttwrite_outputs"] = int(self.mqttwrite_outputs)
 
         # PLCSLAVE Sektion
@@ -998,7 +998,7 @@ class RevPiPyLoad():
                 "mqttusername": ".*",
                 "mqttpassword": ".*",
                 "mqttclient_id": ".*",
-                "mqttsend_events": "[01]",
+                "mqttsend_on_event": "[01]",
                 "mqttwrite_outputs": "[01]",
             },
             "PLCSLAVE": {
