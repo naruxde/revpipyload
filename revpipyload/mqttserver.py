@@ -159,25 +159,34 @@ class MqttServer(Thread):
                 io.reg_event(self._evt_io)
                 self._exported_ios.append(io)
 
-        # RevPiLED Ausgang zerlegen und exportieren
-        if self._rpi.core._ioled.export:
-            lst_coreio = [
-                self._rpi.core.a1green, self._rpi.core.a1red,
-                self._rpi.core.a2green, self._rpi.core.a2red,
-            ]
+        # CoreIOs prüfen und zu export hinzufügen
+        lst_coreio = []
+        if self._rpi.core.a1green.export:
+            lst_coreio.append(self._rpi.core.a1green)
+        if self._rpi.core.a1red.export:
+            lst_coreio.append(self._rpi.core.a1red)
+        if self._rpi.core.a2green.export:
+            lst_coreio.append(self._rpi.core.a2green)
+        if self._rpi.core.a2red.export:
+            lst_coreio.append(self._rpi.core.a2red)
 
-            # Connect-IOs anhängen
-            if type(self._rpi.core) == revpimodio2.device.Connect:
-                lst_coreio += [
-                    self._rpi.core.a3green, self._rpi.core.a3red,
-                    self._rpi.core.wd,
-                    self._rpi.core.x2in, self._rpi.core.x2out,
-                ]
+        # Connect-IOs anhängen
+        if type(self._rpi.core) == revpimodio2.device.Connect:
+            if self._rpi.core.a3green.export:
+                lst_coreio.append(self._rpi.core.a3green)
+            if self._rpi.core.a3red.export:
+                lst_coreio.append(self._rpi.core.a3red)
+            if self._rpi.core.wd.export:
+                lst_coreio.append(self._rpi.core.wd)
+            if self._rpi.core.x2in.export:
+                lst_coreio.append(self._rpi.core.x2in)
+            if self._rpi.core.x2out.export:
+                lst_coreio.append(self._rpi.core.x2out)
 
-            # Events registrieren
-            for io in lst_coreio:
-                io.reg_event(self._evt_io)
-                self._exported_ios.append(io)
+        # IOs exportieren und Events anmelden
+        for io in lst_coreio:
+            io.reg_event(self._evt_io)
+            self._exported_ios.append(io)
 
         proginit.logger.debug("created revpimodio2 object")
 

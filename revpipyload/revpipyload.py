@@ -28,7 +28,7 @@ begrenzt werden!
 __author__ = "Sven Sager"
 __copyright__ = "Copyright (C) 2018 Sven Sager"
 __license__ = "GPLv3"
-__version__ = "0.7.2"
+__version__ = "0.7.3"
 import gzip
 import logsystem
 import picontrolserver
@@ -153,6 +153,7 @@ class RevPiPyLoad():
         if self.plc is None:
             return True
         elif "XMLRPC" not in self.globalconfig:
+            # NOTE: Warum ist das hier?
             return True
         else:
             return (
@@ -169,7 +170,10 @@ class RevPiPyLoad():
                 self.pythonversion !=
                 self.globalconfig["DEFAULT"].getint("pythonversion", 3) or
                 self.rtlevel !=
-                self.globalconfig["DEFAULT"].getint("rtlevel", 0)
+                self.globalconfig["DEFAULT"].getint("rtlevel", 0) or (
+                    not self.plc.is_alive() and not self.autostart and
+                    self.globalconfig["DEFAULT"].getboolean("autostart", False)
+                )
             )
 
     def _loadconfig(self):
@@ -387,7 +391,7 @@ class RevPiPyLoad():
                 self.xml_ps = None
                 proginit.logger.warning(
                     "can not load revpimodio2 module. maybe its not installed "
-                    "or an old version (required at least 2.2.4). if you "
+                    "or an old version (required at least 2.2.5). if you "
                     "like to use the process monitor feature, update/install "
                     "revpimodio2: 'apt-get install python3-revpimodio2'"
                 )
@@ -453,7 +457,7 @@ class RevPiPyLoad():
             except Exception:
                 proginit.logger.warning(
                     "can not load revpimodio2 module. maybe its not installed "
-                    "or an old version (required at least 2.2.4). if you "
+                    "or an old version (required at least 2.2.5). if you "
                     "like to use the mqtt feature, update/install "
                     "revpimodio2: 'apt-get install python3-revpimodio2'"
                 )
@@ -498,9 +502,9 @@ class RevPiPyLoad():
         )
         th_plc.autoreload = self.autoreload
         th_plc.autoreloaddelay = self.autoreloaddelay
-        th_plc.gid = int(self.plcgid)
-        th_plc.uid = int(self.plcuid)
-        th_plc.rtlevel = int(self.rtlevel)
+        th_plc.gid = self.plcgid
+        th_plc.uid = self.plcuid
+        th_plc.rtlevel = self.rtlevel
         th_plc.zeroonerror = self.zeroonerror
         th_plc.zeroonexit = self.zeroonexit
 
@@ -749,7 +753,7 @@ class RevPiPyLoad():
         dc["plcuid"] = self.plcuid
         dc["plcgid"] = self.plcgid
         dc["pythonversion"] = self.pythonversion
-        dc["rtlevel"] = int(self.rtlevel)
+        dc["rtlevel"] = self.rtlevel
         dc["zeroonerror"] = int(self.zeroonerror)
         dc["zeroonexit"] = int(self.zeroonexit)
 
