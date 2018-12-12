@@ -65,7 +65,11 @@ def configure():
     )
     parser.add_argument(
         "-v", "--verbose", action="count", dest="verbose",
-        help="Switch on verbose logging"
+        help="Switch on verbose logging: info -v debug -vv"
+    )
+    parser.add_argument(
+        "--developermode", action="store_true", dest="developermode",
+        default=False
     )
     global pargs
     pargs = parser.parse_args()

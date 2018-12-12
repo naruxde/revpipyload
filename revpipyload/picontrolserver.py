@@ -5,6 +5,7 @@ __copyright__ = "Copyright (C) 2018 Sven Sager"
 __license__ = "GPLv3"
 import proginit
 import socket
+from fcntl import ioctl
 from shared.ipaclmanager import IpAclManager
 from threading import Event, Thread
 from timeit import default_timer
@@ -16,23 +17,32 @@ class RevPiSlave(Thread):
     """RevPi PLC-Server.
 
     Diese Klasste stellt den RevPi PLC-Server zur verfuegung und akzeptiert
-    neue Verbindungen. Dieser werden dann als RevPiSlaveDev abgebildet.
+    neue Verbindungen. Diese werden dann als RevPiSlaveDev abgebildet.
 
     Ueber die angegebenen ACLs koennen Zugriffsbeschraenkungen vergeben werden.
 
     """
 
-    def __init__(self, ipacl, port=55234):
+    def __init__(self, ipacl, port=55234, bindip=""):
         """Instantiiert RevPiSlave-Klasse.
+
         @param ipacl AclManager <class 'IpAclManager'>
-        @param port Listen Port fuer plc Slaveserver"""
-        if not type(ipacl) == IpAclManager:
+        @param port Listen Port fuer plc Slaveserver
+        @param bindip IP-Adresse an die der Dienst gebunden wird (leer=alle)
+
+        """
+        if not isinstance(ipacl, IpAclManager):
             raise ValueError("parameter ipacl must be <class 'IpAclManager'>")
-        if not type(port) == int:
-            raise ValueError("parameter port must be <class 'int'>")
+        if not (isinstance(port, int) and 0 < port <= 65535):
+            raise ValueError(
+                "parameter port must be <class 'int'> and in range 1 - 65535"
+            )
+        if not isinstance(bindip, str):
+            raise ValueError("parameter bindip must be <class 'str'>")
 
         super().__init__()
         self.__ipacl = ipacl
+        self._bindip = bindip
         self._evt_exit = Event()
         self.exitcode = None
         self._port = port
@@ -68,17 +78,19 @@ class RevPiSlave(Thread):
         """Startet Serverkomponente fuer die Annahme neuer Verbindungen."""
         proginit.logger.debug("enter RevPiSlave.run()")
 
-        # Socket öffnen und konfigurieren
+        # Socket öffnen und konfigurieren bis Erfolg oder Ende
         self.so = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         while not self._evt_exit.is_set():
             try:
-                self.so.bind(("", self._port))
-            except Exception:
-                proginit.logger.warning("can not bind socket - retry")
+                self.so.bind((self._bindip, self._port))
+            except Exception as e:
+                proginit.logger.warning(
+                    "can not bind socket: {0} - retry".format(e)
+                )
                 self._evt_exit.wait(1)
             else:
+                self.so.listen(15)
                 break
-        self.so.listen(15)
 
         # Mit Socket arbeiten
         while not self._evt_exit.is_set():
@@ -156,6 +168,7 @@ class RevPiSlaveDev(Thread):
 
         """
         super().__init__()
+        self.__doerror = False
         self._acl = acl
         self.daemon = True
         self._deadtime = None
@@ -273,7 +286,7 @@ class RevPiSlaveDev(Thread):
                     proginit.logger.error("can not convert timeout value")
                     break
 
-                if 0 < timeoutms < 65535:
+                if 0 < timeoutms <= 65535:
                     self._deadtime = timeoutms / 1000
                     self._devcon.settimeout(self._deadtime)
                     proginit.logger.debug(
@@ -300,12 +313,14 @@ class RevPiSlaveDev(Thread):
                 length = int.from_bytes(netcmd[5:7], byteorder="little")
                 control = netcmd[7:8]
 
+                ok_byte = b'\xff' if self.__doerror else b'\x1e'
+
                 if control == b'\xff':
                     # Alle Dirtybytes löschen
                     self.ey_dict = {}
 
                     # Record seperator character
-                    self._devcon.send(b'\x1e')
+                    self._devcon.send(ok_byte)
                     proginit.logger.info("cleared all dirty bytes")
 
                 elif control == b'\xfe':
@@ -315,7 +330,7 @@ class RevPiSlaveDev(Thread):
                         del self.ey_dict[position]
 
                     # Record seperator character
-                    self._devcon.send(b'\x1e')
+                    self._devcon.send(ok_byte)
                     proginit.logger.info(
                         "cleared dirty bytes on position {0}"
                         "".format(position)
@@ -344,7 +359,7 @@ class RevPiSlaveDev(Thread):
                         break
 
                     # Record seperator character
-                    self._devcon.send(b'\x1e')
+                    self._devcon.send(ok_byte)
                     proginit.logger.info(
                         "got dirty bytes to write on error on position {0}"
                         "".format(position)
@@ -356,19 +371,20 @@ class RevPiSlaveDev(Thread):
                     "transfair pictory configuration: {0}"
                     "".format(proginit.pargs.configrsc)
                 )
-                fh_pic = open(proginit.pargs.configrsc, "rb")
-                while True:
-                    data = fh_pic.read(1024)
-                    if data:
-                        # FIXME: Fehler fangen
-                        self._devcon.send(data)
-                    else:
-                        fh_pic.close()
-                        break
-
-                # End-of-Transmission character
-                self._devcon.send(b'\x04')
-                continue
+                try:
+                    with open(proginit.pargs.configrsc, "rb") as fh_pic:
+                        # Komplette piCtory Datei senden
+                        self._devcon.sendall(fh_pic.read())
+                except Exception as e:
+                    proginit.logger.error(
+                        "error on pictory transfair: {0}".format(e)
+                    )
+                    break
+                else:
+                    continue
+                finally:
+                    # End-of-Transmission character immer senden
+                    self._devcon.send(b'\x04')
 
             elif cmd == b'EX':
                 # Sauber Verbindung verlassen
@@ -376,8 +392,68 @@ class RevPiSlaveDev(Thread):
                 self._evt_exit.set()
                 continue
 
+            elif cmd == b'IC':
+                # Net-IOCTL ausführen
+                # bCMiiiiii000000b = 16
+
+                request = int.from_bytes(netcmd[3:7], byteorder="little")
+                length = int.from_bytes(netcmd[7:9], byteorder="little")
+
+                arg = self._devcon.recv(length)
+
+                # Berechtigung prüfen und ggf. trennen
+                if self._acl < 1:
+                    self._devcon.send(b'\x18')
+                    break
+
+                try:
+                    if proginit.pargs.procimg == "/dev/piControl0":
+                        # Läuft auf RevPi
+                        ioctl(fh_proc, request, arg)
+                        proginit.logger.debug(
+                            "ioctl {0} with {1} successful"
+                            "".format(request, arg)
+                        )
+                    else:
+                        # Simulation
+                        proginit.logger.warning(
+                            "ioctl {0} with {1} simulated".format(request, arg)
+                        )
+                except Exception as ex:
+                    proginit.logger.error(ex)
+                    self._devcon.send(b'\xff')
+                else:
+                    self._devcon.send(b'\x1e')
+
+            elif proginit.pargs.developermode and cmd == b'DV':
+                # Development options
+                # bCMc00000000000b = 16
+                if self._acl < 9:
+                    # Spezieller ACL-Wert für Entwicklung
+                    self._devcon.send(b'\x18')
+                    break
+
+                c = netcmd[3:4]
+                if c == b'a':
+                    # CMD a = Switch ACL to 0
+                    self._acl = 0
+                    proginit.logger.warning("DV: set acl to 0")
+                    self._devcon.send(b'\x1e')
+                elif c == b'b':
+                    # CMD b = Aktiviert/Deaktiviert den Fehlermodus
+                    if netcmd[4:5] == b'\x01':
+                        self.__doerror = True
+                        proginit.logger.warning("DV: set do_error")
+                    else:
+                        self.__doerror = False
+                        proginit.logger.warning("DV: reset do_error")
+                    self._devcon.send(b'\x1e')
+
             else:
                 # Kein gültiges CMD gefunden, abbruch!
+                proginit.logger.error(
+                    "found unknown net cmd: {0}".format(cmd)
+                )
                 break
 
             # Verarbeitungszeit prüfen

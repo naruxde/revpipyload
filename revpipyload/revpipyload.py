@@ -73,8 +73,12 @@ class RevPiPyLoad():
         self.xml_ps = None
 
         # Berechtigungsmanger
-        self.plcslaveacl = IpAclManager(minlevel=0, maxlevel=1)
-        self.xmlrpcacl = IpAclManager(minlevel=0, maxlevel=4)
+        if proginit.pargs.developermode:
+            self.plcslaveacl = IpAclManager(minlevel=0, maxlevel=9)
+            self.xmlrpcacl = IpAclManager(minlevel=0, maxlevel=9)
+        else:
+            self.plcslaveacl = IpAclManager(minlevel=0, maxlevel=1)
+            self.xmlrpcacl = IpAclManager(minlevel=0, maxlevel=4)
 
         # Threads/Prozesse
         self.th_plcmqtt = None
@@ -519,7 +523,7 @@ class RevPiPyLoad():
 
         if self.plcslave:
             th_plc = picontrolserver.RevPiSlave(
-                self.plcslaveacl, self.plcslaveport
+                self.plcslaveacl, self.plcslaveport, self.plcslavebindip
             )
 
         proginit.logger.debug("leave RevPiPyLoad._plcslave()")
