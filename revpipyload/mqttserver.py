@@ -84,6 +84,7 @@ class MqttServer(Thread):
         self._mqtt_io = join(basetopic, "io/{0}")
         self._mqtt_ioget = join(basetopic, "get/#")
         self._mqtt_ioset = join(basetopic, "set/#")
+        self._mqtt_ioreset = join(basetopic, "reset/#")
         self._mqtt_pictory = join(basetopic, "pictory")
         self._mqtt_senddata = join(basetopic, "get")
         self._mqtt_sendpictory = join(basetopic, "needpictory")
@@ -206,6 +207,7 @@ class MqttServer(Thread):
             client.subscribe(self._mqtt_sendpictory)
             if self._write_outputs:
                 client.subscribe(self._mqtt_ioset)
+                client.subscribe(self._mqtt_ioreset)
 
         proginit.logger.debug("leave MqttServer._on_connect()")
 
@@ -242,6 +244,7 @@ class MqttServer(Thread):
             # Aktion und IO auswerten
             ioget = lst_topic[-2].lower() == "get"
             ioset = lst_topic[-2].lower() == "set"
+            ioreset = lst_topic[-2].lower() == "reset"
             ioname = lst_topic[-1]
             coreio = ioname.find(".") != -1
 
@@ -282,8 +285,8 @@ class MqttServer(Thread):
                 proginit.logger.error(
                     "can not write to inputs with MQTT"
                 )
-            elif ioset:
 
+            elif ioset:
                 # Convert MQTT Payload to valid Output-Value
                 value = msg.payload.decode("utf8")
 
@@ -323,6 +326,13 @@ class MqttServer(Thread):
                     )
                 else:
                     io._parentdevice.writeprocimg()
+
+            elif ioreset:
+                # Counter zurücksetzen
+                if not isinstance(io, revpimodio2.io.IntIOCounter):
+                    proginit.logger.warning("this io has no counter")
+                else:
+                    io.reset()
 
             else:
                 # Aktion nicht erkennbar

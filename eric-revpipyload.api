@@ -36,7 +36,7 @@ picontrolserver.RevPiSlave.check_connectedacl?4()
 picontrolserver.RevPiSlave.newlogfile?4()
 picontrolserver.RevPiSlave.run?4()
 picontrolserver.RevPiSlave.stop?4()
-picontrolserver.RevPiSlave?1(ipacl, port=55234)
+picontrolserver.RevPiSlave?1(ipacl, port=55234, bindip="")
 picontrolserver.RevPiSlaveDev.run?4()
 picontrolserver.RevPiSlaveDev.stop?4()
 picontrolserver.RevPiSlaveDev?1(devcon, acl)
@@ -126,6 +126,7 @@ revpipyload.__author__?9
 revpipyload.__copyright__?9
 revpipyload.__license__?9
 revpipyload.__version__?9
+revpipyload.min_revpimodio?7
 revpipyload.shared.__author__?9
 revpipyload.shared.__copyright__?9
 revpipyload.shared.__license__?9

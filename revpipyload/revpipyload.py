@@ -28,7 +28,7 @@ begrenzt werden!
 __author__ = "Sven Sager"
 __copyright__ = "Copyright (C) 2018 Sven Sager"
 __license__ = "GPLv3"
-__version__ = "0.7.3"
+__version__ = "0.7.5"
 import gzip
 import logsystem
 import picontrolserver
@@ -48,6 +48,8 @@ from threading import Event
 from time import asctime
 from xmlrpc.client import Binary
 from xrpcserver import SaveXMLRPCServer
+
+min_revpimodio = "2.5.0"
 
 
 class RevPiPyLoad():
@@ -395,9 +397,10 @@ class RevPiPyLoad():
                 self.xml_ps = None
                 proginit.logger.warning(
                     "can not load revpimodio2 module. maybe its not installed "
-                    "or an old version (required at least 2.2.5). if you "
-                    "like to use the process monitor feature, update/install "
+                    "or an old version (required at least {0}). if you "
+                    "like to use revpinetio network feature, update/install "
                     "revpimodio2: 'apt-get install python3-revpimodio2'"
+                    "".format(min_revpimodio)
                 )
 
             # XML Modus 2 Einstellungen lesen und Programm herunterladen
@@ -461,9 +464,10 @@ class RevPiPyLoad():
             except Exception:
                 proginit.logger.warning(
                     "can not load revpimodio2 module. maybe its not installed "
-                    "or an old version (required at least 2.2.5). if you "
+                    "or an old version (required at least {0}). if you "
                     "like to use the mqtt feature, update/install "
                     "revpimodio2: 'apt-get install python3-revpimodio2'"
+                    "".format(min_revpimodio)
                 )
             else:
                 try:

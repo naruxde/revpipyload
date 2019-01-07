@@ -37,7 +37,7 @@ Functions</h3>
 RevPi PLC-Server.
 </p><p>
     Diese Klasste stellt den RevPi PLC-Server zur verfuegung und akzeptiert
-    neue Verbindungen. Dieser werden dann als RevPiSlaveDev abgebildet.
+    neue Verbindungen. Diese werden dann als RevPiSlaveDev abgebildet.
 </p><p>
     Ueber die angegebenen ACLs koennen Zugriffsbeschraenkungen vergeben werden.
 </p><p>
@@ -84,7 +84,7 @@ Static Methods</h3>
 <a NAME="RevPiSlave.__init__" ID="RevPiSlave.__init__"></a>
 <h3 style="background-color:#FFFFFF;color:#FF0000">
 RevPiSlave (Constructor)</h3>
-<b>RevPiSlave</b>(<i>ipacl, port=55234</i>)
+<b>RevPiSlave</b>(<i>ipacl, port=55234, bindip=""</i>)
 <p>
 Instantiiert RevPiSlave-Klasse.
 </p><dl>
@@ -94,6 +94,9 @@ AclManager <class 'IpAclManager'>
 </dd><dt><i>port</i></dt>
 <dd>
 Listen Port fuer plc Slaveserver
+</dd><dt><i>bindip</i></dt>
+<dd>
+IP-Adresse an die der Dienst gebunden wird (leer=alle)
 </dd>
 </dl><a NAME="RevPiSlave.check_connectedacl" ID="RevPiSlave.check_connectedacl"></a>
 <h3 style="background-color:#FFFFFF;color:#FF0000">
