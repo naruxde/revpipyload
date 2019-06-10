@@ -18,7 +18,7 @@ class MqttServer(Thread):
     def __init__(
             self, basetopic, sendinterval, broker_address, port=1883,
             tls_set=False, username="", password=None, client_id="",
-            send_events=False, write_outputs=False):
+            send_events=False, write_outputs=False, replace_ios=None):
         """Init MqttServer class.
 
         @param basetopic Basis-Topic fuer Datenaustausch
@@ -31,6 +31,7 @@ class MqttServer(Thread):
         @param client_id MQTT ClientID, wenn leer automatisch random erzeugung
         @param send_events Sendet Werte bei IO Wertaenderung
         @param write_outputs Per MQTT auch Outputs schreiben
+        @param replace_ios Replace IOs of RevPiModIO
 
         """
         if not isinstance(basetopic, str):
@@ -59,6 +60,8 @@ class MqttServer(Thread):
             raise ValueError("parameter send_events must be <class 'bool'>")
         if not isinstance(write_outputs, bool):
             raise ValueError("parameter write_outputs must be <class 'bool'>")
+        if not (replace_ios is None or isinstance(replace_ios, str)):
+            raise ValueError("parameter replace_ios must be <class 'str'>")
 
         super().__init__()
 
@@ -69,6 +72,7 @@ class MqttServer(Thread):
         self._broker_address = broker_address
         self._port = port
         self._reloadmodio = False
+        self._replace_ios = replace_ios
         self._rpi = None
         self._rpi_write = None
         self._send_events = send_events
@@ -153,6 +157,18 @@ class MqttServer(Thread):
                 "piCtory configuration not loadable for MQTT"
             )
             raise e
+
+        # Replace IOs of RevPiModIO
+        if self._replace_ios:
+            try:
+                self._rpi.import_replaced_ios(self._replace_ios)
+                if self._write_outputs:
+                    self._rpi_write.import_replaced_ios(self._replace_ios)
+            except Exception as e:
+                proginit.logger.error(
+                    "could not load replaced ios into RevPiModIO - using "
+                    "defaults | {0}".format(e)
+                )
 
         # Exportierte IOs laden
         for dev in self._rpi.device:

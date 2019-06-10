@@ -25,13 +25,15 @@ class ProcimgServer():
 
     """
 
-    def __init__(self, xmlserver):
+    def __init__(self, xmlserver, replace_ios=None):
         """Instantiiert RevPiCheckServer()-Klasse.
-        @param xmlserver XML-RPC Server"""
+        @param xmlserver XML-RPC Server
+        @param replace_ios Replace IOs of RevPiModIO"""
         # Logger übernehmen
         proginit.logger.debug("enter ProcimgServer.__init__()")
 
         self.rpi = None
+        self.replace_ios = replace_ios
 
         # XML-Server übernehmen
         self.xmlsrv = xmlserver
@@ -104,6 +106,16 @@ class ProcimgServer():
                 "piCtory configuration not loadable for ProcimgServer"
             )
             return e
+
+        # Replace IOs of RevPiModIO
+        if self.replace_ios:
+            try:
+                self.rpi.import_replaced_ios(self.replace_ios)
+            except Exception as e:
+                proginit.logger.error(
+                    "could not load replaced ios into RevPiModIO - using "
+                    "defaults | {0}".format(e)
+                )
 
         # NOTE: Warum das?
         self.rpi.syncoutputs(device=0)

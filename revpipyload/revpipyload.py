@@ -49,7 +49,7 @@ from time import asctime
 from xmlrpc.client import Binary
 from xrpcserver import SaveXMLRPCServer
 
-min_revpimodio = "2.5.0"
+min_revpimodio = "2.3.3"
 
 
 class RevPiPyLoad():
@@ -107,6 +107,8 @@ class RevPiPyLoad():
             return True
         else:
             return (
+                self.replace_ios_config !=
+                self.globalconfig["DEFAULT"].get("replace_ios", "") or
                 self.mqtt !=
                 self.globalconfig["MQTT"].getboolean("mqtt", False) or
                 self.mqttbasetopic !=
@@ -219,6 +221,8 @@ class RevPiPyLoad():
             self.globalconfig["DEFAULT"].getint("plcgid", 65534)
         self.pythonversion = \
             self.globalconfig["DEFAULT"].getint("pythonversion", 3)
+        self.replace_ios_config = \
+            self.globalconfig["DEFAULT"].get("replace_ios", "")
         self.rtlevel = \
             self.globalconfig["DEFAULT"].getint("rtlevel", 0)
         self.zeroonerror = \
@@ -390,7 +394,9 @@ class RevPiPyLoad():
             # Erweiterte Funktionen anmelden
             try:
                 import procimgserver
-                self.xml_ps = procimgserver.ProcimgServer(self.xsrv)
+                self.xml_ps = procimgserver.ProcimgServer(
+                    self.xsrv, self.replace_ios_config
+                )
                 self.xsrv.register_function(1, self.xml_psstart, "psstart")
                 self.xsrv.register_function(1, self.xml_psstop, "psstop")
             except Exception:
@@ -482,6 +488,7 @@ class RevPiPyLoad():
                         self.mqttclient_id,
                         self.mqttsend_on_event,
                         self.mqttwrite_outputs,
+                        self.replace_ios_config,
                     )
                 except Exception as e:
                     proginit.logger.error(e)
@@ -761,6 +768,7 @@ class RevPiPyLoad():
         dc["plcuid"] = self.plcuid
         dc["plcgid"] = self.plcgid
         dc["pythonversion"] = self.pythonversion
+        dc["replace_ios"] = self.replace_ios_config
         dc["rtlevel"] = self.rtlevel
         dc["zeroonerror"] = int(self.zeroonerror)
         dc["zeroonexit"] = int(self.zeroonexit)
@@ -996,6 +1004,7 @@ class RevPiPyLoad():
                 # "plcuid": "[0-9]{,5}",
                 # "plcgid": "[0-9]{,5}",
                 "pythonversion": "[23]",
+                "replace_ios": ".*",
                 "rtlevel": "[0-1]",
                 "zeroonerror": "[01]",
                 "zeroonexit": "[01]",
