@@ -394,11 +394,6 @@ class RevPiPyLoad():
             # Erweiterte Funktionen anmelden
             try:
                 import procimgserver
-                self.xml_ps = procimgserver.ProcimgServer(
-                    self.xsrv, self.replace_ios_config
-                )
-                self.xsrv.register_function(1, self.xml_psstart, "psstart")
-                self.xsrv.register_function(1, self.xml_psstop, "psstop")
             except Exception:
                 self.xml_ps = None
                 proginit.logger.warning(
@@ -408,6 +403,15 @@ class RevPiPyLoad():
                     "revpimodio2: 'apt-get install python3-revpimodio2'"
                     "".format(min_revpimodio)
                 )
+            try:
+                self.xml_ps = procimgserver.ProcimgServer(
+                    self.xsrv, self.replace_ios_config
+                )
+                self.xsrv.register_function(1, self.xml_psstart, "psstart")
+                self.xsrv.register_function(1, self.xml_psstop, "psstop")
+            except Exception as e:
+                self.xml_ps = None
+                proginit.logger.error(e)
 
             # XML Modus 2 Einstellungen lesen und Programm herunterladen
             self.xsrv.register_function(
@@ -1214,8 +1218,13 @@ if __name__ == "__main__":
     # Programmeinstellungen konfigurieren
     proginit.configure()
 
+    if proginit.pargs.test:
+        from testsystem import TestSystem
+        root = TestSystem()
+    else:
+        root = RevPiPyLoad()
+
     # Programm starten
-    root = RevPiPyLoad()
     root.start()
 
     # Aufräumen

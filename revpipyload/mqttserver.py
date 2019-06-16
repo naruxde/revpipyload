@@ -140,14 +140,16 @@ class MqttServer(Thread):
                 autorefresh=self._send_events,
                 monitoring=True,
                 configrsc=proginit.pargs.configrsc,
-                procimg=proginit.pargs.procimg
+                procimg=proginit.pargs.procimg,
+                replace_io_file=self._replace_ios
             )
 
             # Schreibenen Zugriff
             if self._write_outputs:
                 self._rpi_write = revpimodio2.RevPiModIO(
                     configrsc=proginit.pargs.configrsc,
-                    procimg=proginit.pargs.procimg
+                    procimg=proginit.pargs.procimg,
+                    replace_io_file=self._replace_ios
                 )
 
         except Exception as e:
@@ -157,18 +159,6 @@ class MqttServer(Thread):
                 "piCtory configuration not loadable for MQTT"
             )
             raise e
-
-        # Replace IOs of RevPiModIO
-        if self._replace_ios:
-            try:
-                self._rpi.import_replaced_ios(self._replace_ios)
-                if self._write_outputs:
-                    self._rpi_write.import_replaced_ios(self._replace_ios)
-            except Exception as e:
-                proginit.logger.error(
-                    "could not load replaced ios into RevPiModIO - using "
-                    "defaults | {0}".format(e)
-                )
 
         # Exportierte IOs laden
         for dev in self._rpi.device:

@@ -93,7 +93,6 @@ revpipyload.RevPiPyLoad._sigexit?5(signum, frame)
 revpipyload.RevPiPyLoad._sigloadconfig?5(signum, frame)
 revpipyload.RevPiPyLoad._signewlogfile?5(signum, frame)
 revpipyload.RevPiPyLoad.packapp?4(mode="tar", pictory=False)
-revpipyload.RevPiPyLoad.root?7
 revpipyload.RevPiPyLoad.start?4()
 revpipyload.RevPiPyLoad.stop?4()
 revpipyload.RevPiPyLoad.stop_plcmqtt?4()
@@ -149,6 +148,14 @@ revpipyload.shared.ipaclmanager.__copyright__?9
 revpipyload.shared.ipaclmanager.__license__?9
 revpipyload.shared.ipaclmanager.__version__?9
 revpipyload.shared.ipaclmanager.refullmatch?4(regex, string)
+testsystem.TestSystem.start?4()
+testsystem.TestSystem.test_replace_io?4()
+testsystem.TestSystem.test_sections?4()
+testsystem.TestSystem?1()
+testsystem.__author__?9
+testsystem.__copyright__?9
+testsystem.__license__?9
+testsystem.newline?7
 xrpcserver.SaveXMLRPCRequestHandler.parse_request?4()
 xrpcserver.SaveXMLRPCServer._dispatch?5(method, params)
 xrpcserver.SaveXMLRPCServer.is_alive?4()

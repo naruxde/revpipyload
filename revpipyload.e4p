@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE Project SYSTEM "Project-5.1.dtd">
 <!-- eric project file for project revpipyload -->
-<!-- Saved: 2019-06-11, 09:23:01 -->
+<!-- Saved: 2019-06-16, 15:47:42 -->
 <!-- Copyright (C) 2019 Sven Sager, akira@narux.de -->
 <Project version="5.1">
   <Language>en_US</Language>
@@ -24,6 +24,7 @@
     <Source>revpipyload/revpipyload.py</Source>
     <Source>revpipyload/shared/__init__.py</Source>
     <Source>revpipyload/shared/ipaclmanager.py</Source>
+    <Source>revpipyload/testsystem.py</Source>
     <Source>revpipyload/xrpcserver.py</Source>
     <Source>setup.py</Source>
   </Sources>
