@@ -11,6 +11,7 @@ __license__ = "GPLv3"
 import pickle
 import proginit
 import revpimodio2
+from .helper import revpimodio_replaceio
 from xmlrpc.client import Binary
 
 
@@ -108,14 +109,12 @@ class ProcimgServer():
             return e
 
         # Replace IOs of RevPiModIO
-        if self.replace_ios:
-            try:
-                self.rpi.import_replaced_ios(self.replace_ios)
-            except Exception as e:
-                proginit.logger.error(
-                    "could not load replaced ios into RevPiModIO - using "
-                    "defaults | {0}".format(e)
-                )
+        if self.replace_ios and \
+                not revpimodio_replaceio(self.rpi, self.replace_ios):
+            proginit.logger.error(
+                "could not load all or some replaced ios into RevPiModIO - "
+                "see log file"
+            )
 
         # NOTE: Warum das?
         self.rpi.syncoutputs(device=0)

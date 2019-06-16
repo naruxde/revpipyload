@@ -92,7 +92,7 @@ Static Methods</h3>
 <a NAME="MqttServer.__init__" ID="MqttServer.__init__"></a>
 <h3 style="background-color:#FFFFFF;color:#FF0000">
 MqttServer (Constructor)</h3>
-<b>MqttServer</b>(<i>basetopic, sendinterval, broker_address, port=1883, tls_set=False, username="", password=None, client_id="", send_events=False, write_outputs=False</i>)
+<b>MqttServer</b>(<i>basetopic, sendinterval, broker_address, port=1883, tls_set=False, username="", password=None, client_id="", send_events=False, write_outputs=False, replace_ios=None</i>)
 <p>
 Init MqttServer class.
 </p><dl>
@@ -126,6 +126,9 @@ Sendet Werte bei IO Wertaenderung
 </dd><dt><i>write_outputs</i></dt>
 <dd>
 Per MQTT auch Outputs schreiben
+</dd><dt><i>replace_ios</i></dt>
+<dd>
+Replace IOs of RevPiModIO
 </dd>
 </dl><a NAME="MqttServer._evt_io" ID="MqttServer._evt_io"></a>
 <h3 style="background-color:#FFFFFF;color:#FF0000">
