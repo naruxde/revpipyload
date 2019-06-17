@@ -68,6 +68,7 @@ class RevPiPyLoad():
         # Klassenattribute
         self._exit = True
         self.pictorymtime = os.path.getmtime(proginit.pargs.configrsc)
+        self.replaceiosmtime = 0
         self.evt_loadconfig = Event()
         self.globalconfig = ConfigParser()
         self.logr = logsystem.LogReader()
@@ -229,6 +230,24 @@ class RevPiPyLoad():
             self.globalconfig["DEFAULT"].getboolean("zeroonerror", True)
         self.zeroonexit = \
             self.globalconfig["DEFAULT"].getboolean("zeroonexit", True)
+
+        # MTime für replace io übernehmen
+        mtime = 0
+        if self.replace_ios_config:
+            if os.access(self.replace_ios_config, os.R_OK | os.W_OK):
+                mtime = os.path.getmtime(self.replace_ios_config)
+            else:
+                proginit.logger.error(
+                    "can not access (r/w) the replace_ios file '{0}' "
+                    "using defaults".format(self.replace_ios_config)
+                )
+                self.replace_ios_config = ""
+
+        if self.replaceiosmtime != mtime:
+            # MQTT reload erforderlich
+            restart_plcmqtt = True
+
+        self.replaceiosmtime = mtime
 
         # Konfiguration verarbeiten [MQTT]
         self.mqtt = 0
@@ -405,7 +424,9 @@ class RevPiPyLoad():
                 )
             try:
                 self.xml_ps = procimgserver.ProcimgServer(
-                    self.xsrv, self.replace_ios_config
+                    self.xsrv,
+                    None if not self.replace_ios_config
+                    else self.replace_ios_config,
                 )
                 self.xsrv.register_function(1, self.xml_psstart, "psstart")
                 self.xsrv.register_function(1, self.xml_psstop, "psstop")
@@ -492,7 +513,8 @@ class RevPiPyLoad():
                         self.mqttclient_id,
                         self.mqttsend_on_event,
                         self.mqttwrite_outputs,
-                        self.replace_ios_config,
+                        None if not self.replace_ios_config
+                        else self.replace_ios_config,
                     )
                 except Exception as e:
                     proginit.logger.error(e)

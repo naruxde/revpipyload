@@ -101,12 +101,26 @@ class ProcimgServer():
                 procimg=proginit.pargs.procimg,
                 replace_io_file=self.replace_ios
             )
+
+            if self.replace_ios:
+                proginit.logger.info("loaded replace_ios to ProcimgServer")
+
         except Exception as e:
-            self.rpi = None
-            proginit.logger.error(
-                "piCtory configuration not loadable for ProcimgServer"
-            )
-            return e
+            try:
+                self.rpi = revpimodio2.RevPiModIO(
+                    configrsc=proginit.pargs.configrsc,
+                    procimg=proginit.pargs.procimg,
+                )
+                proginit.logger.warning(
+                    "replace_ios_file not loadable for ProcimgServer - using "
+                    "defaults now | {0}".format(e)
+                )
+            except Exception:
+                self.rpi = None
+                proginit.logger.error(
+                    "piCtory configuration not loadable for ProcimgServer"
+                )
+                return e
 
         # NOTE: Warum das?
         self.rpi.syncoutputs(device=0)

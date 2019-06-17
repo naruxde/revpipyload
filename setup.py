@@ -41,6 +41,7 @@ setup(
         ("/etc/revpipyload", [
             "data/etc/revpipyload/aclplcslave.conf",
             "data/etc/revpipyload/aclxmlrpc.conf",
+            "data/etc/revpipyload/replace_ios.conf",
             "data/etc/revpipyload/revpipyload.conf",
         ]),
         ("share/revpipyload", glob("revpipyload/*.*")),
