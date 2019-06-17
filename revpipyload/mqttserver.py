@@ -18,7 +18,7 @@ class MqttServer(Thread):
     def __init__(
             self, basetopic, sendinterval, broker_address, port=1883,
             tls_set=False, username="", password=None, client_id="",
-            send_events=False, write_outputs=False):
+            send_events=False, write_outputs=False, replace_ios=None):
         """Init MqttServer class.
 
         @param basetopic Basis-Topic fuer Datenaustausch
@@ -31,6 +31,7 @@ class MqttServer(Thread):
         @param client_id MQTT ClientID, wenn leer automatisch random erzeugung
         @param send_events Sendet Werte bei IO Wertaenderung
         @param write_outputs Per MQTT auch Outputs schreiben
+        @param replace_ios Replace IOs of RevPiModIO
 
         """
         if not isinstance(basetopic, str):
@@ -59,6 +60,8 @@ class MqttServer(Thread):
             raise ValueError("parameter send_events must be <class 'bool'>")
         if not isinstance(write_outputs, bool):
             raise ValueError("parameter write_outputs must be <class 'bool'>")
+        if not (replace_ios is None or isinstance(replace_ios, str)):
+            raise ValueError("parameter replace_ios must be <class 'str'>")
 
         super().__init__()
 
@@ -69,6 +72,7 @@ class MqttServer(Thread):
         self._broker_address = broker_address
         self._port = port
         self._reloadmodio = False
+        self._replace_ios = replace_ios
         self._rpi = None
         self._rpi_write = None
         self._send_events = send_events
@@ -136,23 +140,47 @@ class MqttServer(Thread):
                 autorefresh=self._send_events,
                 monitoring=True,
                 configrsc=proginit.pargs.configrsc,
-                procimg=proginit.pargs.procimg
+                procimg=proginit.pargs.procimg,
+                replace_io_file=self._replace_ios
             )
-
             # Schreibenen Zugriff
             if self._write_outputs:
                 self._rpi_write = revpimodio2.RevPiModIO(
                     configrsc=proginit.pargs.configrsc,
-                    procimg=proginit.pargs.procimg
+                    procimg=proginit.pargs.procimg,
+                    replace_io_file=self._replace_ios
                 )
 
+            if self._replace_ios:
+                proginit.logger.info("loaded replace_ios to MQTT")
+
         except Exception as e:
-            self._rpi = None
-            self._rpi_write = None
-            proginit.logger.error(
-                "piCtory configuration not loadable for MQTT"
-            )
-            raise e
+            try:
+                # Lesend und Eventüberwachung
+                self._rpi = revpimodio2.RevPiModIO(
+                    autorefresh=self._send_events,
+                    monitoring=True,
+                    configrsc=proginit.pargs.configrsc,
+                    procimg=proginit.pargs.procimg
+                )
+                # Schreibenen Zugriff
+                if self._write_outputs:
+                    self._rpi_write = revpimodio2.RevPiModIO(
+                        configrsc=proginit.pargs.configrsc,
+                        procimg=proginit.pargs.procimg
+                    )
+                proginit.logger.warning(
+                    "replace_ios_file not loadable for MQTT - using "
+                    "defaults now | {0}".format(e)
+                )
+
+            except Exception:
+                self._rpi = None
+                self._rpi_write = None
+                proginit.logger.error(
+                    "piCtory configuration not loadable for MQTT"
+                )
+                raise e
 
         # Exportierte IOs laden
         for dev in self._rpi.device:

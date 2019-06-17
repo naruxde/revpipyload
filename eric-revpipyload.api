@@ -4,6 +4,7 @@ helper.__license__?9
 helper._setuprt?5(pid, evt_exit)
 helper._zeroprocimg?5()
 helper.refullmatch?4(regex, string)
+helper.revpimodio_replaceio?4(revpi, filename)
 logsystem.LogReader.closeall?4()
 logsystem.LogReader.load_applog?4(start, count)
 logsystem.LogReader.load_plclog?4(start, count)
@@ -28,7 +29,7 @@ mqttserver.MqttServer.newlogfile?4()
 mqttserver.MqttServer.reload_revpimodio?4()
 mqttserver.MqttServer.run?4()
 mqttserver.MqttServer.stop?4()
-mqttserver.MqttServer?1(basetopic, sendinterval, broker_address, port=1883, tls_set=False, username="", password=None, client_id="", send_events=False, write_outputs=False)
+mqttserver.MqttServer?1(basetopic, sendinterval, broker_address, port=1883, tls_set=False, username="", password=None, client_id="", send_events=False, write_outputs=False, replace_ios=None)
 mqttserver.__author__?9
 mqttserver.__copyright__?9
 mqttserver.__license__?9
@@ -63,7 +64,7 @@ procimgserver.ProcimgServer.setvalue?4(device, io, value)
 procimgserver.ProcimgServer.start?4()
 procimgserver.ProcimgServer.stop?4()
 procimgserver.ProcimgServer.values?4()
-procimgserver.ProcimgServer?1(xmlserver)
+procimgserver.ProcimgServer?1(xmlserver, replace_ios=None)
 procimgserver.__author__?9
 procimgserver.__copyright__?9
 procimgserver.__license__?9
@@ -92,7 +93,6 @@ revpipyload.RevPiPyLoad._sigexit?5(signum, frame)
 revpipyload.RevPiPyLoad._sigloadconfig?5(signum, frame)
 revpipyload.RevPiPyLoad._signewlogfile?5(signum, frame)
 revpipyload.RevPiPyLoad.packapp?4(mode="tar", pictory=False)
-revpipyload.RevPiPyLoad.root?7
 revpipyload.RevPiPyLoad.start?4()
 revpipyload.RevPiPyLoad.stop?4()
 revpipyload.RevPiPyLoad.stop_plcmqtt?4()
@@ -148,6 +148,14 @@ revpipyload.shared.ipaclmanager.__copyright__?9
 revpipyload.shared.ipaclmanager.__license__?9
 revpipyload.shared.ipaclmanager.__version__?9
 revpipyload.shared.ipaclmanager.refullmatch?4(regex, string)
+testsystem.TestSystem.start?4()
+testsystem.TestSystem.test_replace_io?4()
+testsystem.TestSystem.test_sections?4()
+testsystem.TestSystem?1()
+testsystem.__author__?9
+testsystem.__copyright__?9
+testsystem.__license__?9
+testsystem.newline?7
 xrpcserver.SaveXMLRPCRequestHandler.parse_request?4()
 xrpcserver.SaveXMLRPCServer._dispatch?5(method, params)
 xrpcserver.SaveXMLRPCServer.is_alive?4()

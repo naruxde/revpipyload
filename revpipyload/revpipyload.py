@@ -28,7 +28,7 @@ begrenzt werden!
 __author__ = "Sven Sager"
 __copyright__ = "Copyright (C) 2018 Sven Sager"
 __license__ = "GPLv3"
-__version__ = "0.7.5"
+__version__ = "0.7.6"
 import gzip
 import logsystem
 import picontrolserver
@@ -49,7 +49,7 @@ from time import asctime
 from xmlrpc.client import Binary
 from xrpcserver import SaveXMLRPCServer
 
-min_revpimodio = "2.5.0"
+min_revpimodio = "2.3.3"
 
 
 class RevPiPyLoad():
@@ -68,6 +68,7 @@ class RevPiPyLoad():
         # Klassenattribute
         self._exit = True
         self.pictorymtime = os.path.getmtime(proginit.pargs.configrsc)
+        self.replaceiosmtime = 0
         self.evt_loadconfig = Event()
         self.globalconfig = ConfigParser()
         self.logr = logsystem.LogReader()
@@ -107,6 +108,8 @@ class RevPiPyLoad():
             return True
         else:
             return (
+                self.replace_ios_config !=
+                self.globalconfig["DEFAULT"].get("replace_ios", "") or
                 self.mqtt !=
                 self.globalconfig["MQTT"].getboolean("mqtt", False) or
                 self.mqttbasetopic !=
@@ -219,12 +222,32 @@ class RevPiPyLoad():
             self.globalconfig["DEFAULT"].getint("plcgid", 65534)
         self.pythonversion = \
             self.globalconfig["DEFAULT"].getint("pythonversion", 3)
+        self.replace_ios_config = \
+            self.globalconfig["DEFAULT"].get("replace_ios", "")
         self.rtlevel = \
             self.globalconfig["DEFAULT"].getint("rtlevel", 0)
         self.zeroonerror = \
             self.globalconfig["DEFAULT"].getboolean("zeroonerror", True)
         self.zeroonexit = \
             self.globalconfig["DEFAULT"].getboolean("zeroonexit", True)
+
+        # MTime für replace io übernehmen
+        mtime = 0
+        if self.replace_ios_config:
+            if os.access(self.replace_ios_config, os.R_OK | os.W_OK):
+                mtime = os.path.getmtime(self.replace_ios_config)
+            else:
+                proginit.logger.error(
+                    "can not access (r/w) the replace_ios file '{0}' "
+                    "using defaults".format(self.replace_ios_config)
+                )
+                self.replace_ios_config = ""
+
+        if self.replaceiosmtime != mtime:
+            # MQTT reload erforderlich
+            restart_plcmqtt = True
+
+        self.replaceiosmtime = mtime
 
         # Konfiguration verarbeiten [MQTT]
         self.mqtt = 0
@@ -390,9 +413,6 @@ class RevPiPyLoad():
             # Erweiterte Funktionen anmelden
             try:
                 import procimgserver
-                self.xml_ps = procimgserver.ProcimgServer(self.xsrv)
-                self.xsrv.register_function(1, self.xml_psstart, "psstart")
-                self.xsrv.register_function(1, self.xml_psstop, "psstop")
             except Exception:
                 self.xml_ps = None
                 proginit.logger.warning(
@@ -402,6 +422,17 @@ class RevPiPyLoad():
                     "revpimodio2: 'apt-get install python3-revpimodio2'"
                     "".format(min_revpimodio)
                 )
+            try:
+                self.xml_ps = procimgserver.ProcimgServer(
+                    self.xsrv,
+                    None if not self.replace_ios_config
+                    else self.replace_ios_config,
+                )
+                self.xsrv.register_function(1, self.xml_psstart, "psstart")
+                self.xsrv.register_function(1, self.xml_psstop, "psstop")
+            except Exception as e:
+                self.xml_ps = None
+                proginit.logger.error(e)
 
             # XML Modus 2 Einstellungen lesen und Programm herunterladen
             self.xsrv.register_function(
@@ -482,6 +513,8 @@ class RevPiPyLoad():
                         self.mqttclient_id,
                         self.mqttsend_on_event,
                         self.mqttwrite_outputs,
+                        None if not self.replace_ios_config
+                        else self.replace_ios_config,
                     )
                 except Exception as e:
                     proginit.logger.error(e)
@@ -761,6 +794,7 @@ class RevPiPyLoad():
         dc["plcuid"] = self.plcuid
         dc["plcgid"] = self.plcgid
         dc["pythonversion"] = self.pythonversion
+        dc["replace_ios"] = self.replace_ios_config
         dc["rtlevel"] = self.rtlevel
         dc["zeroonerror"] = int(self.zeroonerror)
         dc["zeroonexit"] = int(self.zeroonexit)
@@ -996,6 +1030,7 @@ class RevPiPyLoad():
                 # "plcuid": "[0-9]{,5}",
                 # "plcgid": "[0-9]{,5}",
                 "pythonversion": "[23]",
+                "replace_ios": ".*",
                 "rtlevel": "[0-1]",
                 "zeroonerror": "[01]",
                 "zeroonexit": "[01]",
@@ -1205,8 +1240,13 @@ if __name__ == "__main__":
     # Programmeinstellungen konfigurieren
     proginit.configure()
 
+    if proginit.pargs.test:
+        from testsystem import TestSystem
+        root = TestSystem()
+    else:
+        root = RevPiPyLoad()
+
     # Programm starten
-    root = RevPiPyLoad()
     root.start()
 
     # Aufräumen

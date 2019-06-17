@@ -64,6 +64,10 @@ def configure():
         help="piCtory file to use"
     )
     parser.add_argument(
+        "--test", action="store_true", dest="test",
+        help="Test parameters of config files and print results"
+    )
+    parser.add_argument(
         "-v", "--verbose", action="count", dest="verbose",
         help="Switch on verbose logging: info -v debug -vv"
     )

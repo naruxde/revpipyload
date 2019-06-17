@@ -27,11 +27,11 @@ setup(
 
     license="LGPLv3",
     name="revpipyload",
-    version="0.7.5",
+    version="0.7.6",
 
     scripts=["data/revpipyload"],
 
-    install_requires=["revpimodio2 >= 2.3.1"],
+    install_requires=["revpimodio2 >= 2.3.3"],
     python_requires=">=3.2",
 
     data_files=[
@@ -41,6 +41,7 @@ setup(
         ("/etc/revpipyload", [
             "data/etc/revpipyload/aclplcslave.conf",
             "data/etc/revpipyload/aclxmlrpc.conf",
+            "data/etc/revpipyload/replace_ios.conf",
             "data/etc/revpipyload/revpipyload.conf",
         ]),
         ("share/revpipyload", glob("revpipyload/*.*")),
