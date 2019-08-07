@@ -11,7 +11,6 @@ from threading import Event, Thread
 from timeit import default_timer
 
 
-# NOTE: Sollte dies als Process ausgeführt werden?
 class RevPiSlave(Thread):
 
     """RevPi PLC-Server.
@@ -386,6 +385,29 @@ class RevPiSlaveDev(Thread):
                     # End-of-Transmission character immer senden
                     self._devcon.send(b'\x04')
 
+            elif cmd == b'RP':
+                # piCtory Konfiguration senden
+                proginit.logger.debug(
+                    "transfair replace_io configuration: {0}"
+                    "".format(proginit.pargs.configrsc)
+                )
+                replace_ios = proginit.conf["DEFAULT"].get("replace_ios", None)
+                try:
+                    if replace_ios:
+                        with open(replace_ios, "rb") as fh:
+                            # Komplette piCtory Datei senden
+                            self._devcon.sendall(fh.read())
+                except Exception as e:
+                    proginit.logger.error(
+                        "error on replace_io transfair: {0}".format(e)
+                    )
+                    break
+                else:
+                    continue
+                finally:
+                    # End-of-Transmission character immer senden
+                    self._devcon.send(b'\x04')
+
             elif cmd == b'EX':
                 # Sauber Verbindung verlassen
                 dirty = False
@@ -407,6 +429,7 @@ class RevPiSlaveDev(Thread):
                     break
 
                 try:
+                    # FIXME: IOCTL für Dateien implementieren
                     if proginit.pargs.procimg == "/dev/piControl0":
                         # Läuft auf RevPi
                         ioctl(fh_proc, request, arg)

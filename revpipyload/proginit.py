@@ -7,7 +7,9 @@ import logging
 import os
 import sys
 from argparse import ArgumentParser
+from configparser import ConfigParser
 
+conf = ConfigParser()
 forked = False
 globalconffile = None
 logapp = "revpipyloadapp.log"

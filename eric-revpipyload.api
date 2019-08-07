@@ -72,6 +72,7 @@ proginit.__author__?9
 proginit.__copyright__?9
 proginit.__license__?9
 proginit.cleanup?4()
+proginit.conf?7
 proginit.configure?4()
 proginit.forked?7
 proginit.globalconffile?7

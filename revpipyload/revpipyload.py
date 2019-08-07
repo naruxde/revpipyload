@@ -71,6 +71,7 @@ class RevPiPyLoad():
         self.replaceiosmtime = 0
         self.evt_loadconfig = Event()
         self.globalconfig = ConfigParser()
+        proginit.conf = self.globalconfig
         self.logr = logsystem.LogReader()
         self.xsrv = None
         self.xml_ps = None
@@ -197,6 +198,7 @@ class RevPiPyLoad():
             "loading config file: {0}".format(proginit.globalconffile)
         )
         self.globalconfig.read(proginit.globalconffile)
+        proginit.conf = self.globalconfig
 
         # Merker für Subsystem-Neustart nach laden, vor setzen
         restart_plcmqtt = self._check_mustrestart_mqtt()
@@ -706,6 +708,8 @@ class RevPiPyLoad():
                 if self.mqtt and self.th_plcmqtt is not None:
                     self.th_plcmqtt.reload_revpimodio()
 
+                # FIXME: ProcImgServer muss alle Verbindungen vernichten
+
                 # XML Prozessabbildserver neu laden
                 if self.xml_ps is not None:
                     self.xml_psstop()
@@ -1085,6 +1089,7 @@ class RevPiPyLoad():
         # conf-Datei schreiben
         with open(proginit.globalconffile, "w") as fh:
             self.globalconfig.write(fh)
+        proginit.conf = self.globalconfig
         proginit.logger.info(
             "got new config and wrote it to {0}"
             "".format(proginit.globalconffile)
