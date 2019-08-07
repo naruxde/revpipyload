@@ -74,7 +74,6 @@ class MqttServer(Thread):
         self._reloadmodio = False
         self._replace_ios = replace_ios
         self._rpi = None
-        self._rpi_write = None
         self._send_events = send_events
         self._sendinterval = sendinterval
         self._write_outputs = write_outputs
@@ -130,26 +129,18 @@ class MqttServer(Thread):
         # RevPiModIO-Modul Instantiieren
         if self._rpi is not None:
             self._rpi.cleanup()
-        if self._rpi_write is not None:
-            self._rpi_write.cleanup()
 
         proginit.logger.debug("create revpimodio2 object for MQTT")
         try:
-            # Lesend und Eventüberwachung
+            # Vollzugriff und Eventüberwachung
             self._rpi = revpimodio2.RevPiModIO(
                 autorefresh=self._send_events,
-                monitoring=True,
+                monitoring=not self._write_outputs,
                 configrsc=proginit.pargs.configrsc,
                 procimg=proginit.pargs.procimg,
-                replace_io_file=self._replace_ios
+                replace_io_file=self._replace_ios,
+                direct_output=True,
             )
-            # Schreibenen Zugriff
-            if self._write_outputs:
-                self._rpi_write = revpimodio2.RevPiModIO(
-                    configrsc=proginit.pargs.configrsc,
-                    procimg=proginit.pargs.procimg,
-                    replace_io_file=self._replace_ios
-                )
 
             if self._replace_ios:
                 proginit.logger.info("loaded replace_ios to MQTT")
@@ -159,16 +150,11 @@ class MqttServer(Thread):
                 # Lesend und Eventüberwachung
                 self._rpi = revpimodio2.RevPiModIO(
                     autorefresh=self._send_events,
-                    monitoring=True,
+                    monitoring=not self._write_outputs,
                     configrsc=proginit.pargs.configrsc,
-                    procimg=proginit.pargs.procimg
+                    procimg=proginit.pargs.procimg,
+                    direct_output=True,
                 )
-                # Schreibenen Zugriff
-                if self._write_outputs:
-                    self._rpi_write = revpimodio2.RevPiModIO(
-                        configrsc=proginit.pargs.configrsc,
-                        procimg=proginit.pargs.procimg
-                    )
                 proginit.logger.warning(
                     "replace_ios_file not loadable for MQTT - using "
                     "defaults now | {0}".format(e)
@@ -176,7 +162,6 @@ class MqttServer(Thread):
 
             except Exception:
                 self._rpi = None
-                self._rpi_write = None
                 proginit.logger.error(
                     "piCtory configuration not loadable for MQTT"
                 )
@@ -280,11 +265,11 @@ class MqttServer(Thread):
                 # IO holen
                 if coreio:
                     coreio = ioname.split(".")[-1]
-                    io = getattr(self._rpi_write.core, coreio)
+                    io = getattr(self._rpi.core, coreio)
                     if not isinstance(io, revpimodio2.io.IOBase):
                         raise RuntimeError()
                 else:
-                    io = self._rpi_write.io[ioname]
+                    io = self._rpi.io[ioname]
                 io_needbytes = type(io.value) == bytes
             except Exception:
                 proginit.logger.error(
@@ -300,10 +285,8 @@ class MqttServer(Thread):
                 )
 
             elif ioget:
-                # Daten je nach IO Type aus Prozessabbild laden
-                if io.type == revpimodio2.OUT:
-                    io._parentdevice.syncoutputs()
-                else:
+                # Werte laden, wenn nicht autorefresh
+                if not self._send_events:
                     io._parentdevice.readprocimg()
 
                 # Publish Wert von IO
@@ -344,7 +327,6 @@ class MqttServer(Thread):
                     return
 
                 # Write Value to RevPi
-                io._parentdevice.syncoutputs()
                 try:
                     io.value = value
                 except Exception:
@@ -352,8 +334,6 @@ class MqttServer(Thread):
                         "could not write '{0}' to Output '{1}'"
                         "".format(value, ioname)
                     )
-                else:
-                    io._parentdevice.writeprocimg()
 
             elif ioreset:
                 # Counter zurücksetzen

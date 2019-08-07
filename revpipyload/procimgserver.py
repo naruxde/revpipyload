@@ -99,7 +99,8 @@ class ProcimgServer():
             self.rpi = revpimodio2.RevPiModIO(
                 configrsc=proginit.pargs.configrsc,
                 procimg=proginit.pargs.procimg,
-                replace_io_file=self.replace_ios
+                replace_io_file=self.replace_ios,
+                direct_output=True,
             )
 
             if self.replace_ios:
@@ -110,6 +111,7 @@ class ProcimgServer():
                 self.rpi = revpimodio2.RevPiModIO(
                     configrsc=proginit.pargs.configrsc,
                     procimg=proginit.pargs.procimg,
+                    direct_output=True,
                 )
                 proginit.logger.warning(
                     "replace_ios_file not loadable for ProcimgServer - using "
@@ -121,9 +123,6 @@ class ProcimgServer():
                     "piCtory configuration not loadable for ProcimgServer"
                 )
                 return e
-
-        # NOTE: Warum das?
-        self.rpi.syncoutputs(device=0)
 
         proginit.logger.debug("created revpimodio2 object")
 
@@ -140,8 +139,6 @@ class ProcimgServer():
         if type(value) == Binary:
             value = value.data
 
-        self.rpi.syncoutputs(device=device)
-
         try:
             # Neuen Wert übernehmen
             if type(value) == bytes or type(value) == bool:
@@ -156,13 +153,12 @@ class ProcimgServer():
         except Exception as e:
             return [device, io, False, str(e)]
 
-        self.rpi.writeprocimg(device=device)
         return [device, io, True, ""]
 
     def values(self):
         """Liefert Prozessabbild an Client.
         @return Binary() bytes or None"""
-        if self.rpi.readprocimg() and self.rpi.syncoutputs():
+        if self.rpi.readprocimg():
             bytebuff = bytearray()
             for dev in self.rpi.device:
                 bytebuff += bytes(dev)

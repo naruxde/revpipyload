@@ -49,7 +49,7 @@ from time import asctime
 from xmlrpc.client import Binary
 from xrpcserver import SaveXMLRPCServer
 
-min_revpimodio = "2.3.3"
+min_revpimodio = "2.4.0"
 
 
 class RevPiPyLoad():
