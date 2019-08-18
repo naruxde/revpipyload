@@ -605,7 +605,7 @@ class RevPiPyLoad():
         self.pictorymtime = mtime
 
         with open(proginit.pargs.configrsc, "rb") as fh:
-            file_hash = md5(fh.read())
+            file_hash = md5(fh.read()).hexdigest()
         if self.pictoryhash == file_hash:
             return False
         self.pictoryhash = file_hash
@@ -639,7 +639,7 @@ class RevPiPyLoad():
             self.replaceiosmtime = mtime
 
             with open(self.replace_ios_config, "rb") as fh:
-                file_hash = md5(fh.read())
+                file_hash = md5(fh.read()).hexdigest()
             if self.replaceiohash == file_hash:
                 return False
             self.replaceiohash = file_hash
@@ -721,13 +721,36 @@ class RevPiPyLoad():
             self.plc.start()
 
         # mainloop
-        file_changed = False
         while not self._exit:
+            file_changed = False
 
             # Neue Konfiguration laden
             if self.evt_loadconfig.is_set():
                 proginit.logger.info("got reqeust to reload config")
                 self._loadconfig()
+
+            # Dateiveränderungen prüfen mit beiden Funktionen!
+            if self.check_pictory_changed():
+                file_changed = True
+                proginit.logger.warning("piCtory configuration was changed")
+            if self.check_replace_ios_changed():
+                file_changed = True
+                proginit.logger.warning("replace ios file was changed")
+            if file_changed:
+                # Auf Dateiveränderung reagieren
+
+                # MQTT Publisher neu laden
+                if self.mqtt and self.th_plcmqtt is not None:
+                    self.th_plcmqtt.reload_revpimodio()
+
+                # ProcImgServer anhalten zum neu laden
+                self.stop_plcslave()
+
+                # XML Prozessabbildserver neu laden
+                if self.xml_ps is not None:
+                    self.xml_psstop()
+                    self.xml_ps.loadrevpimodio()
+                    # Kein psstart um Reload im Client zu erzeugen
 
             # MQTT Publisher Thread prüfen
             if self.mqtt and self.th_plcmqtt is not None \
@@ -742,37 +765,13 @@ class RevPiPyLoad():
             # PLC Server Thread prüfen
             if self.plcslave and self.th_plcslave is not None \
                     and not self.th_plcslave.is_alive():
-                proginit.logger.warning(
-                    "restart plc slave after thread was not running"
-                )
+                if not file_changed:
+                    proginit.logger.warning(
+                        "restart plc slave after thread was not running"
+                    )
                 self.th_plcslave = self._plcslave()
                 if self.th_plcslave is not None:
                     self.th_plcslave.start()
-
-            # Dateiveränderungen prüfen mit beiden Funktionen!
-            if self.check_pictory_changed():
-                file_changed = True
-                proginit.logger.warning("piCtory configuration was changed")
-            if self.check_replace_ios_changed():
-                file_changed = True
-                proginit.logger.warning("replace ios file was changed")
-            if file_changed:
-                file_changed = False
-
-                # Auf Dateiveränderung reagieren
-
-                # MQTT Publisher neu laden
-                if self.mqtt and self.th_plcmqtt is not None:
-                    self.th_plcmqtt.reload_revpimodio()
-
-                # FIXME: ProcImgServer muss alle Verbindungen vernichten
-                # NOTE: RevPiNetIO müsste bei Neuverbindung Hashs abfragen
-
-                # XML Prozessabbildserver neu laden
-                if self.xml_ps is not None:
-                    self.xml_psstop()
-                    self.xml_ps.loadrevpimodio()
-                    # Kein psstart um Reload im Client zu erzeugen
 
             self.evt_loadconfig.wait(1)
 
