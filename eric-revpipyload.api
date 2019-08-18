@@ -56,6 +56,7 @@ plcsystem.RevPiPlc?1(program, arguments, pversion)
 plcsystem.__author__?9
 plcsystem.__copyright__?9
 plcsystem.__license__?9
+procimgserver.ProcimgServer.__del__?6()
 procimgserver.ProcimgServer.devices?4()
 procimgserver.ProcimgServer.ios?4(iotype)
 procimgserver.ProcimgServer.loadrevpimodio?4()

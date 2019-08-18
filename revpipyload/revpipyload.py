@@ -80,6 +80,7 @@ class RevPiPyLoad():
         self.pictoryhash = b''
         self.replaceiosmtime = 0
         self.replaceiohash = b''
+        self.replaceiofail = False
 
         # Berechtigungsmanger
         if proginit.pargs.developermode:
@@ -618,14 +619,18 @@ class RevPiPyLoad():
 
         # Zugriffsrechte prüfen (pre-check für unten)
         if self.replace_ios_config \
-                and not os.access(self.replace_ios_config, os.R_OK | os.W_OK):
-            proginit.logger.error(
-                "can not access (r/w) the replace_ios file '{0}' "
-                "using defaults".format(self.replace_ios_config)
-            )
-            self.replace_ios_config = ""
+                and not os.access(self.replace_ios_config, os.R_OK):
 
-        if not self.replace_ios_config:
+            if not self.replaceiofail:
+                proginit.logger.error(
+                    "can not access (r/w) the replace_ios file '{0}' "
+                    "using defaults".format(self.replace_ios_config)
+                )
+            self.replaceiofail = True
+        else:
+            self.replaceiofail = False
+
+        if not self.replace_ios_config or self.replaceiofail:
             # Dateipfad leer, prüfen ob es vorher einen gab
             if self.replaceiosmtime > 0 or self.replaceiohash:
                 self.replaceiosmtime = 0
@@ -644,7 +649,9 @@ class RevPiPyLoad():
                 return False
             self.replaceiohash = file_hash
 
-        return True
+            return True
+
+        return False
 
     def packapp(self, mode="tar", pictory=False):
         """Erzeugt aus dem PLC-Programm ein TAR/Zip-File.

@@ -54,6 +54,11 @@ class ProcimgServer():
 
         proginit.logger.debug("leave ProcimgServer.__init__()")
 
+    def __del__(self):
+        """Clean up RevPiModIO."""
+        if self.rpi is not None:
+            self.rpi.cleanup()
+
     def devices(self):
         """Generiert Deviceliste mit Position und Namen.
         @return list() mit Tuple (pos, name)"""
