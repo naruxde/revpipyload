@@ -6,6 +6,7 @@ __license__ = "GPLv3"
 import proginit
 import socket
 from fcntl import ioctl
+from hashlib import md5
 from shared.ipaclmanager import IpAclManager
 from threading import Event, Thread
 from timeit import default_timer
@@ -385,6 +386,25 @@ class RevPiSlaveDev(Thread):
                     # End-of-Transmission character immer senden
                     self._devcon.send(b'\x04')
 
+            elif cmd == b'PH':
+                # piCtory md5 Hashwert senden (32 Byte)
+                try:
+                    with open(proginit.pargs.configrsc, "rb") as fh_pic:
+                        # Hashwert erzeugen und senden
+                        file_hash = md5(fh_pic.read())
+                        proginit.logger.debug(
+                            "send pictory hashvalue: {0}"
+                            "".format(file_hash)
+                        )
+                        self._devcon.sendall(file_hash)
+                except Exception as e:
+                    proginit.logger.error(
+                        "error on pictory hash value transfair: {0}".format(e)
+                    )
+                    break
+                else:
+                    continue
+
             elif cmd == b'RP':
                 # piCtory Konfiguration senden
                 proginit.logger.debug(
@@ -408,6 +428,27 @@ class RevPiSlaveDev(Thread):
                     # End-of-Transmission character immer senden
                     self._devcon.send(b'\x04')
 
+            elif cmd == b'RH':
+                # Replace_IOs md5 Hashwert senden (32 Byte)
+                replace_ios = proginit.conf["DEFAULT"].get("replace_ios", None)
+                try:
+                    with open(replace_ios, "rb") as fh:
+                        # Hashwert erzeugen und senden
+                        file_hash = md5(fh.read())
+                        proginit.logger.debug(
+                            "send replace_ios hashvalue: {0}"
+                            "".format(file_hash)
+                        )
+                        self._devcon.sendall(file_hash)
+                except Exception as e:
+                    proginit.logger.error(
+                        "error on replace_ios hash value transfair: {0}"
+                        "".format(e)
+                    )
+                    break
+                else:
+                    continue
+
             elif cmd == b'EX':
                 # Sauber Verbindung verlassen
                 dirty = False
@@ -429,7 +470,6 @@ class RevPiSlaveDev(Thread):
                     break
 
                 try:
-                    # FIXME: IOCTL für Dateien implementieren
                     if proginit.pargs.procimg == "/dev/piControl0":
                         # Läuft auf RevPi
                         ioctl(fh_proc, request, arg)
@@ -439,6 +479,7 @@ class RevPiSlaveDev(Thread):
                         )
                     else:
                         # Simulation
+                        # TODO: IOCTL für Dateien implementieren
                         proginit.logger.warning(
                             "ioctl {0} with {1} simulated".format(request, arg)
                         )

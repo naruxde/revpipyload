@@ -39,6 +39,7 @@ import signal
 import tarfile
 import zipfile
 from configparser import ConfigParser
+from hashlib import md5
 from helper import refullmatch
 from json import loads as jloads
 from shared.ipaclmanager import IpAclManager
@@ -49,7 +50,7 @@ from time import asctime
 from xmlrpc.client import Binary
 from xrpcserver import SaveXMLRPCServer
 
-min_revpimodio = "2.3.3"
+min_revpimodio = "2.4.1"
 
 
 class RevPiPyLoad():
@@ -67,14 +68,18 @@ class RevPiPyLoad():
 
         # Klassenattribute
         self._exit = True
-        self.pictorymtime = os.path.getmtime(proginit.pargs.configrsc)
-        self.replaceiosmtime = 0
         self.evt_loadconfig = Event()
         self.globalconfig = ConfigParser()
         proginit.conf = self.globalconfig
         self.logr = logsystem.LogReader()
         self.xsrv = None
         self.xml_ps = None
+
+        # Dateimerker
+        self.pictorymtime = 0
+        self.pictoryhash = b''
+        self.replaceiosmtime = 0
+        self.replaceiohash = b''
 
         # Berechtigungsmanger
         if proginit.pargs.developermode:
@@ -233,23 +238,17 @@ class RevPiPyLoad():
         self.zeroonexit = \
             self.globalconfig["DEFAULT"].getboolean("zeroonexit", True)
 
-        # MTime für replace io übernehmen
-        mtime = 0
-        if self.replace_ios_config:
-            if os.access(self.replace_ios_config, os.R_OK | os.W_OK):
-                mtime = os.path.getmtime(self.replace_ios_config)
-            else:
-                proginit.logger.error(
-                    "can not access (r/w) the replace_ios file '{0}' "
-                    "using defaults".format(self.replace_ios_config)
-                )
-                self.replace_ios_config = ""
-
-        if self.replaceiosmtime != mtime:
-            # MQTT reload erforderlich
+        # Dateiveränderungen prüfen
+        file_changed = False
+        # Beide Funktionen müssen einmal aufgerufen werden
+        if self.check_pictory_changed():
+            file_changed = True
+        if self.check_replace_ios_changed():
+            file_changed = True
+        if file_changed:
             restart_plcmqtt = True
-
-        self.replaceiosmtime = mtime
+            restart_plcslave = True
+            restart_plcprogram = True
 
         # Konfiguration verarbeiten [MQTT]
         self.mqtt = 0
@@ -597,6 +596,56 @@ class RevPiPyLoad():
 
         proginit.logger.debug("leave RevPiPyLoad._signewlogfile()")
 
+    def check_pictory_changed(self):
+        """Prueft ob sich die piCtory Datei veraendert hat.
+        @return True, wenn veraendert wurde"""
+        mtime = os.path.getmtime(proginit.pargs.configrsc)
+        if self.pictorymtime == mtime:
+            return False
+        self.pictorymtime = mtime
+
+        with open(proginit.pargs.configrsc, "rb") as fh:
+            file_hash = md5(fh.read())
+        if self.pictoryhash == file_hash:
+            return False
+        self.pictoryhash = file_hash
+
+        return True
+
+    def check_replace_ios_changed(self):
+        """Prueft ob sich die replace_ios.conf Datei veraendert hat (oder del).
+        @return True, wenn veraendert wurde"""
+
+        # Zugriffsrechte prüfen (pre-check für unten)
+        if self.replace_ios_config \
+                and not os.access(self.replace_ios_config, os.R_OK | os.W_OK):
+            proginit.logger.error(
+                "can not access (r/w) the replace_ios file '{0}' "
+                "using defaults".format(self.replace_ios_config)
+            )
+            self.replace_ios_config = ""
+
+        if not self.replace_ios_config:
+            # Dateipfad leer, prüfen ob es vorher einen gab
+            if self.replaceiosmtime > 0 or self.replaceiohash:
+                self.replaceiosmtime = 0
+                self.replaceiohash = b''
+                return True
+
+        else:
+            mtime = os.path.getmtime(self.replace_ios_config)
+            if self.replaceiosmtime == mtime:
+                return False
+            self.replaceiosmtime = mtime
+
+            with open(self.replace_ios_config, "rb") as fh:
+                file_hash = md5(fh.read())
+            if self.replaceiohash == file_hash:
+                return False
+            self.replaceiohash = file_hash
+
+        return True
+
     def packapp(self, mode="tar", pictory=False):
         """Erzeugt aus dem PLC-Programm ein TAR/Zip-File.
 
@@ -672,6 +721,7 @@ class RevPiPyLoad():
             self.plc.start()
 
         # mainloop
+        file_changed = False
         while not self._exit:
 
             # Neue Konfiguration laden
@@ -699,21 +749,30 @@ class RevPiPyLoad():
                 if self.th_plcslave is not None:
                     self.th_plcslave.start()
 
-            # piCtory auf Veränderung prüfen
-            if self.pictorymtime != os.path.getmtime(proginit.pargs.configrsc):
+            # Dateiveränderungen prüfen mit beiden Funktionen!
+            if self.check_pictory_changed():
+                file_changed = True
                 proginit.logger.warning("piCtory configuration was changed")
-                self.pictorymtime = os.path.getmtime(proginit.pargs.configrsc)
+            if self.check_replace_ios_changed():
+                file_changed = True
+                proginit.logger.warning("replace ios file was changed")
+            if file_changed:
+                file_changed = False
+
+                # Auf Dateiveränderung reagieren
 
                 # MQTT Publisher neu laden
                 if self.mqtt and self.th_plcmqtt is not None:
                     self.th_plcmqtt.reload_revpimodio()
 
                 # FIXME: ProcImgServer muss alle Verbindungen vernichten
+                # NOTE: RevPiNetIO müsste bei Neuverbindung Hashs abfragen
 
                 # XML Prozessabbildserver neu laden
                 if self.xml_ps is not None:
                     self.xml_psstop()
                     self.xml_ps.loadrevpimodio()
+                    # Kein psstart um Reload im Client zu erzeugen
 
             self.evt_loadconfig.wait(1)
 
