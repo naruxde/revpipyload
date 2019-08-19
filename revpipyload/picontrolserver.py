@@ -387,11 +387,11 @@ class RevPiSlaveDev(Thread):
                     self._devcon.send(b'\x04')
 
             elif cmd == b'PH':
-                # piCtory md5 Hashwert senden (32 Byte)
+                # piCtory md5 Hashwert senden (16 Byte)
                 try:
                     with open(proginit.pargs.configrsc, "rb") as fh_pic:
                         # Hashwert erzeugen und senden
-                        file_hash = md5(fh_pic.read())
+                        file_hash = md5(fh_pic.read()).digest()
                         proginit.logger.debug(
                             "send pictory hashvalue: {0}"
                             "".format(file_hash)
@@ -429,17 +429,20 @@ class RevPiSlaveDev(Thread):
                     self._devcon.send(b'\x04')
 
             elif cmd == b'RH':
-                # Replace_IOs md5 Hashwert senden (32 Byte)
-                replace_ios = proginit.conf["DEFAULT"].get("replace_ios", None)
+                # Replace_IOs md5 Hashwert senden (16 Byte)
+                replace_ios = proginit.conf["DEFAULT"].get("replace_ios", "")
                 try:
-                    with open(replace_ios, "rb") as fh:
-                        # Hashwert erzeugen und senden
-                        file_hash = md5(fh.read())
-                        proginit.logger.debug(
-                            "send replace_ios hashvalue: {0}"
-                            "".format(file_hash)
-                        )
-                        self._devcon.sendall(file_hash)
+                    if replace_ios:
+                        with open(replace_ios, "rb") as fh:
+                            # Hashwert erzeugen und senden
+                            file_hash = md5(fh.read()).digest()
+                    else:
+                        file_hash = b'\x00' * 16
+                    proginit.logger.debug(
+                        "send replace_ios hashvalue: {0}"
+                        "".format(file_hash)
+                    )
+                    self._devcon.sendall(file_hash)
                 except Exception as e:
                     proginit.logger.error(
                         "error on replace_ios hash value transfair: {0}"
