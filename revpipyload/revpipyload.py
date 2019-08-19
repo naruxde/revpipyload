@@ -750,8 +750,8 @@ class RevPiPyLoad():
                 if self.mqtt and self.th_plcmqtt is not None:
                     self.th_plcmqtt.reload_revpimodio()
 
-                # ProcImgServer anhalten zum neu laden
-                self.stop_plcslave()
+                # Alle Verbindungen von ProcImgServer trennen
+                self.th_plcslave.disconnect_all()
 
                 # XML Prozessabbildserver neu laden
                 if self.xml_ps is not None:

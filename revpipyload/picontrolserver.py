@@ -70,6 +70,12 @@ class RevPiSlave(Thread):
                 )
                 dev._acl = level
 
+    def disconnect_all(self):
+        """Close all device connection."""
+        # Alle Threads beenden
+        for th in self._th_dev:
+            th.stop()
+
     def newlogfile(self):
         """Konfiguriert die FileHandler auf neue Logdatei."""
         pass
@@ -80,6 +86,7 @@ class RevPiSlave(Thread):
 
         # Socket öffnen und konfigurieren bis Erfolg oder Ende
         self.so = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.so.settimeout(2)
         while not self._evt_exit.is_set():
             try:
                 self.so.bind((self._bindip, self._port))
@@ -97,9 +104,11 @@ class RevPiSlave(Thread):
             self.exitcode = -1
 
             # Verbindung annehmen
-            proginit.logger.info("accept new connection for revpinetio")
             try:
                 tup_sock = self.so.accept()
+                proginit.logger.info("accepted new connection for revpinetio")
+            except socket.timeout:
+                continue
             except Exception:
                 if not self._evt_exit.is_set():
                     proginit.logger.exception("accept exception")
