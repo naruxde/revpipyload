@@ -34,6 +34,7 @@ mqttserver.__copyright__?9
 mqttserver.__license__?9
 picontrolserver.RevPiSlave.check_connectedacl?4()
 picontrolserver.RevPiSlave.disconnect_all?4()
+picontrolserver.RevPiSlave.disconnect_replace_ios?4()
 picontrolserver.RevPiSlave.newlogfile?4()
 picontrolserver.RevPiSlave.run?4()
 picontrolserver.RevPiSlave.stop?4()

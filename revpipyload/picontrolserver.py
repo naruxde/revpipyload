@@ -76,6 +76,13 @@ class RevPiSlave(Thread):
         for th in self._th_dev:
             th.stop()
 
+    def disconnect_replace_ios(self):
+        """Close all device with loaded replace_ios file."""
+        # Alle Threads beenden die Replace_IOs emfpangen haben
+        for th in self._th_dev:
+            if th.got_replace_ios:
+                th.stop()
+
     def newlogfile(self):
         """Konfiguriert die FileHandler auf neue Logdatei."""
         pass
@@ -183,6 +190,7 @@ class RevPiSlaveDev(Thread):
         self._deadtime = None
         self._devcon, self._addr = devcon
         self._evt_exit = Event()
+        self.got_replace_ios = False
         self._writeerror = False
 
         # Sicherheitsbytes
@@ -415,7 +423,7 @@ class RevPiSlaveDev(Thread):
                     continue
 
             elif cmd == b'RP':
-                # piCtory Konfiguration senden
+                # Replace_IOs Konfiguration senden
                 proginit.logger.debug(
                     "transfair replace_io configuration: {0}"
                     "".format(proginit.pargs.configrsc)
@@ -439,6 +447,8 @@ class RevPiSlaveDev(Thread):
 
             elif cmd == b'RH':
                 # Replace_IOs md5 Hashwert senden (16 Byte)
+                self.got_replace_ios = True
+
                 replace_ios = proginit.conf["DEFAULT"].get("replace_ios", "")
                 try:
                     if replace_ios:

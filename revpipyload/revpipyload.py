@@ -28,7 +28,7 @@ begrenzt werden!
 __author__ = "Sven Sager"
 __copyright__ = "Copyright (C) 2018 Sven Sager"
 __license__ = "GPLv3"
-__version__ = "0.7.6"
+__version__ = "0.8.0"
 import gzip
 import logsystem
 import picontrolserver
@@ -739,19 +739,26 @@ class RevPiPyLoad():
             # Dateiveränderungen prüfen mit beiden Funktionen!
             if self.check_pictory_changed():
                 file_changed = True
+
+                # Alle Verbindungen von ProcImgServer trennen
+                self.th_plcslave.disconnect_all()
+
                 proginit.logger.warning("piCtory configuration was changed")
+
             if self.check_replace_ios_changed():
+                if not file_changed:
+                    # Verbindungen von ProcImgServer trennen mit replace_ios
+                    self.th_plcslave.disconnect_replace_ios()
+
                 file_changed = True
                 proginit.logger.warning("replace ios file was changed")
+
             if file_changed:
                 # Auf Dateiveränderung reagieren
 
                 # MQTT Publisher neu laden
                 if self.mqtt and self.th_plcmqtt is not None:
                     self.th_plcmqtt.reload_revpimodio()
-
-                # Alle Verbindungen von ProcImgServer trennen
-                self.th_plcslave.disconnect_all()
 
                 # XML Prozessabbildserver neu laden
                 if self.xml_ps is not None:
