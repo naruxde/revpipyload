@@ -224,6 +224,8 @@ class RevPiPyLoad():
             self.globalconfig["DEFAULT"].get("plcprogram", "none.py")
         self.plcarguments = \
             self.globalconfig["DEFAULT"].get("plcarguments", "")
+        self.plcworkdir_set_uid = self.globalconfig["DEFAULT"].getboolean(
+            "plcworkdir_set_uid", False)
         self.plcuid = \
             self.globalconfig["DEFAULT"].getint("plcuid", 65534)
         self.plcgid = \
@@ -332,6 +334,10 @@ class RevPiPyLoad():
                 "can not access plcworkdir '{0}'".format(self.plcworkdir)
             )
         os.chdir(self.plcworkdir)
+
+        # Workdirectory owner setzen
+        if self.plcworkdir_set_uid:
+            os.chown(self.plcworkdir, self.plcuid,  -1)
 
         # MQTT konfigurieren
         if restart_plcmqtt:

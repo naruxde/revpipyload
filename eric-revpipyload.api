@@ -32,6 +32,8 @@ mqttserver.MqttServer?1(basetopic, sendinterval, broker_address, port=1883, tls_
 mqttserver.__author__?9
 mqttserver.__copyright__?9
 mqttserver.__license__?9
+picontrolserver.HASH_FAIL?7
+picontrolserver.HASH_NULL?7
 picontrolserver.RevPiSlave.check_connectedacl?4()
 picontrolserver.RevPiSlave.disconnect_all?4()
 picontrolserver.RevPiSlave.disconnect_replace_ios?4()

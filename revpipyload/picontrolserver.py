@@ -11,6 +11,10 @@ from shared.ipaclmanager import IpAclManager
 from threading import Event, Thread
 from timeit import default_timer
 
+# Hashvalues
+HASH_NULL = b'\x00' * 16
+HASH_FAIL = b'\xff' * 16
+
 
 class RevPiSlave(Thread):
 
@@ -438,7 +442,6 @@ class RevPiSlaveDev(Thread):
                     proginit.logger.error(
                         "error on replace_io transfair: {0}".format(e)
                     )
-                    break
                 else:
                     continue
                 finally:
@@ -456,7 +459,7 @@ class RevPiSlaveDev(Thread):
                             # Hashwert erzeugen und senden
                             file_hash = md5(fh.read()).digest()
                     else:
-                        file_hash = b'\x00' * 16
+                        file_hash = HASH_NULL
                     proginit.logger.debug(
                         "send replace_ios hashvalue: {0}"
                         "".format(file_hash)
@@ -467,7 +470,7 @@ class RevPiSlaveDev(Thread):
                         "error on replace_ios hash value transfair: {0}"
                         "".format(e)
                     )
-                    break
+                    self._devcon.sendall(HASH_FAIL)
                 else:
                     continue
 
