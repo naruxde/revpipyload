@@ -161,9 +161,6 @@ class RevPiPyLoad():
         @return True, wenn Subsystemneustart noetig ist"""
         if self.plc is None:
             return True
-        elif "XMLRPC" not in self.globalconfig:
-            # NOTE: Warum ist das hier?
-            return True
         else:
             return (
                 self.plcworkdir !=
