@@ -6,7 +6,6 @@ __license__ = "GPLv3"
 import proginit
 import socket
 from fcntl import ioctl
-from hashlib import md5
 from shared.ipaclmanager import IpAclManager
 from threading import Event, Thread
 from timeit import default_timer
@@ -14,6 +13,8 @@ from timeit import default_timer
 # Hashvalues
 HASH_NULL = b'\x00' * 16
 HASH_FAIL = b'\xff' * 16
+HASH_PICT = HASH_FAIL
+HASH_RPIO = HASH_NULL
 
 
 class RevPiSlave(Thread):
@@ -409,22 +410,10 @@ class RevPiSlaveDev(Thread):
 
             elif cmd == b'PH':
                 # piCtory md5 Hashwert senden (16 Byte)
-                try:
-                    with open(proginit.pargs.configrsc, "rb") as fh_pic:
-                        # Hashwert erzeugen und senden
-                        file_hash = md5(fh_pic.read()).digest()
-                        proginit.logger.debug(
-                            "send pictory hashvalue: {0}"
-                            "".format(file_hash)
-                        )
-                        self._devcon.sendall(file_hash)
-                except Exception as e:
-                    proginit.logger.error(
-                        "error on pictory hash value transfair: {0}".format(e)
-                    )
-                    break
-                else:
-                    continue
+                proginit.logger.debug(
+                    "send pictory hashvalue: {0}".format(HASH_PICT)
+                )
+                self._devcon.sendall(HASH_PICT)
 
             elif cmd == b'RP':
                 # Replace_IOs Konfiguration senden
@@ -452,27 +441,10 @@ class RevPiSlaveDev(Thread):
                 # Replace_IOs md5 Hashwert senden (16 Byte)
                 self.got_replace_ios = True
 
-                replace_ios = proginit.conf["DEFAULT"].get("replace_ios", "")
-                try:
-                    if replace_ios:
-                        with open(replace_ios, "rb") as fh:
-                            # Hashwert erzeugen und senden
-                            file_hash = md5(fh.read()).digest()
-                    else:
-                        file_hash = HASH_NULL
-                    proginit.logger.debug(
-                        "send replace_ios hashvalue: {0}"
-                        "".format(file_hash)
-                    )
-                    self._devcon.sendall(file_hash)
-                except Exception as e:
-                    proginit.logger.error(
-                        "error on replace_ios hash value transfair: {0}"
-                        "".format(e)
-                    )
-                    self._devcon.sendall(HASH_FAIL)
-                else:
-                    continue
+                proginit.logger.debug(
+                    "send replace_ios hashvalue: {0}".format(HASH_RPIO)
+                )
+                self._devcon.sendall(HASH_RPIO)
 
             elif cmd == b'EX':
                 # Sauber Verbindung verlassen

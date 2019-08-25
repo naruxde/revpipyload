@@ -77,9 +77,7 @@ class RevPiPyLoad():
 
         # Dateimerker
         self.pictorymtime = 0
-        self.pictoryhash = b''
         self.replaceiosmtime = 0
-        self.replaceiohash = b''
         self.replaceiofail = False
 
         # Berechtigungsmanger
@@ -611,11 +609,13 @@ class RevPiPyLoad():
             return False
         self.pictorymtime = mtime
 
+        # TODO: Nur "Devices" list vergleich
+
         with open(proginit.pargs.configrsc, "rb") as fh:
             file_hash = md5(fh.read()).hexdigest()
-        if self.pictoryhash == file_hash:
+        if picontrolserver.HASH_PICT == file_hash:
             return False
-        self.pictoryhash = file_hash
+        picontrolserver.HASH_PICT = file_hash
 
         return True
 
@@ -638,9 +638,10 @@ class RevPiPyLoad():
 
         if not self.replace_ios_config or self.replaceiofail:
             # Dateipfad leer, prüfen ob es vorher einen gab
-            if self.replaceiosmtime > 0 or self.replaceiohash:
+            if self.replaceiosmtime > 0 \
+                    or picontrolserver.HASH_RPIO != picontrolserver.HASH_NULL:
                 self.replaceiosmtime = 0
-                self.replaceiohash = b''
+                picontrolserver.HASH_RPIO = picontrolserver.HASH_NULL
                 return True
 
         else:
@@ -651,9 +652,11 @@ class RevPiPyLoad():
 
             with open(self.replace_ios_config, "rb") as fh:
                 file_hash = md5(fh.read()).hexdigest()
-            if self.replaceiohash == file_hash:
+            if picontrolserver.HASH_RPIO == file_hash:
                 return False
-            self.replaceiohash = file_hash
+            picontrolserver.HASH_RPIO = file_hash
+
+            # TODO: Instanz von ConfigParser vergleichen
 
             return True
 
