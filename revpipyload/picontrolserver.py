@@ -403,10 +403,9 @@ class RevPiSlaveDev(Thread):
                     )
                     break
                 else:
-                    continue
-                finally:
                     # End-of-Transmission character immer senden
                     self._devcon.send(b'\x04')
+                    continue
 
             elif cmd == b'PH':
                 # piCtory md5 Hashwert senden (16 Byte)
@@ -416,26 +415,26 @@ class RevPiSlaveDev(Thread):
                 self._devcon.sendall(HASH_PICT)
 
             elif cmd == b'RP':
-                # Replace_IOs Konfiguration senden
+                # Replace_IOs Konfiguration senden, wenn hash existiert
                 proginit.logger.debug(
                     "transfair replace_io configuration: {0}"
                     "".format(proginit.pargs.configrsc)
                 )
-                replace_ios = proginit.conf["DEFAULT"].get("replace_ios", None)
+                replace_ios = proginit.conf["DEFAULT"].get("replace_ios", "")
                 try:
-                    if replace_ios:
+                    if HASH_RPIO != HASH_NULL and replace_ios:
                         with open(replace_ios, "rb") as fh:
-                            # Komplette piCtory Datei senden
+                            # Komplette replace_io Datei senden
                             self._devcon.sendall(fh.read())
                 except Exception as e:
                     proginit.logger.error(
                         "error on replace_io transfair: {0}".format(e)
                     )
+                    break
                 else:
-                    continue
-                finally:
                     # End-of-Transmission character immer senden
                     self._devcon.send(b'\x04')
+                    continue
 
             elif cmd == b'RH':
                 # Replace_IOs md5 Hashwert senden (16 Byte)

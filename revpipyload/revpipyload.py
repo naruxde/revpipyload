@@ -428,17 +428,18 @@ class RevPiPyLoad():
                     "revpimodio2: 'apt-get install python3-revpimodio2'"
                     "".format(min_revpimodio)
                 )
-            try:
-                self.xml_ps = procimgserver.ProcimgServer(
-                    self.xsrv,
-                    None if not self.replace_ios_config
-                    else self.replace_ios_config,
-                )
-                self.xsrv.register_function(1, self.xml_psstart, "psstart")
-                self.xsrv.register_function(1, self.xml_psstop, "psstop")
-            except Exception as e:
-                self.xml_ps = None
-                proginit.logger.error(e)
+            else:
+                try:
+                    self.xml_ps = procimgserver.ProcimgServer(
+                        self.xsrv,
+                        None if not self.replace_ios_config
+                        else self.replace_ios_config,
+                    )
+                    self.xsrv.register_function(1, self.xml_psstart, "psstart")
+                    self.xsrv.register_function(1, self.xml_psstop, "psstop")
+                except Exception as e:
+                    self.xml_ps = None
+                    proginit.logger.error(e)
 
             # XML Modus 2 Einstellungen lesen und Programm herunterladen
             self.xsrv.register_function(
@@ -612,7 +613,7 @@ class RevPiPyLoad():
         # TODO: Nur "Devices" list vergleich
 
         with open(proginit.pargs.configrsc, "rb") as fh:
-            file_hash = md5(fh.read()).hexdigest()
+            file_hash = md5(fh.read()).digest()
         if picontrolserver.HASH_PICT == file_hash:
             return False
         picontrolserver.HASH_PICT = file_hash
@@ -650,13 +651,13 @@ class RevPiPyLoad():
                 return False
             self.replaceiosmtime = mtime
 
+            # TODO: Instanz von ConfigParser vergleichen
+
             with open(self.replace_ios_config, "rb") as fh:
-                file_hash = md5(fh.read()).hexdigest()
+                file_hash = md5(fh.read()).digest()
             if picontrolserver.HASH_RPIO == file_hash:
                 return False
             picontrolserver.HASH_RPIO = file_hash
-
-            # TODO: Instanz von ConfigParser vergleichen
 
             return True
 
