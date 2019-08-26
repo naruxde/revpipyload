@@ -28,7 +28,7 @@ begrenzt werden!
 __author__ = "Sven Sager"
 __copyright__ = "Copyright (C) 2018 Sven Sager"
 __license__ = "GPLv3"
-__version__ = "0.7.6"
+__version__ = "0.8.0"
 import gzip
 import logsystem
 import picontrolserver
@@ -39,6 +39,7 @@ import signal
 import tarfile
 import zipfile
 from configparser import ConfigParser
+from hashlib import md5
 from helper import refullmatch
 from json import loads as jloads
 from shared.ipaclmanager import IpAclManager
@@ -49,7 +50,7 @@ from time import asctime
 from xmlrpc.client import Binary
 from xrpcserver import SaveXMLRPCServer
 
-min_revpimodio = "2.3.3"
+min_revpimodio = "2.4.1"
 
 
 class RevPiPyLoad():
@@ -67,13 +68,17 @@ class RevPiPyLoad():
 
         # Klassenattribute
         self._exit = True
-        self.pictorymtime = os.path.getmtime(proginit.pargs.configrsc)
-        self.replaceiosmtime = 0
         self.evt_loadconfig = Event()
         self.globalconfig = ConfigParser()
+        proginit.conf = self.globalconfig
         self.logr = logsystem.LogReader()
         self.xsrv = None
         self.xml_ps = None
+
+        # Dateimerker
+        self.pictorymtime = 0
+        self.replaceiosmtime = 0
+        self.replaceiofail = False
 
         # Berechtigungsmanger
         if proginit.pargs.developermode:
@@ -194,6 +199,7 @@ class RevPiPyLoad():
             "loading config file: {0}".format(proginit.globalconffile)
         )
         self.globalconfig.read(proginit.globalconffile)
+        proginit.conf = self.globalconfig
 
         # Merker für Subsystem-Neustart nach laden, vor setzen
         restart_plcmqtt = self._check_mustrestart_mqtt()
@@ -213,6 +219,8 @@ class RevPiPyLoad():
             self.globalconfig["DEFAULT"].get("plcprogram", "none.py")
         self.plcarguments = \
             self.globalconfig["DEFAULT"].get("plcarguments", "")
+        self.plcworkdir_set_uid = self.globalconfig["DEFAULT"].getboolean(
+            "plcworkdir_set_uid", False)
         self.plcuid = \
             self.globalconfig["DEFAULT"].getint("plcuid", 65534)
         self.plcgid = \
@@ -228,23 +236,17 @@ class RevPiPyLoad():
         self.zeroonexit = \
             self.globalconfig["DEFAULT"].getboolean("zeroonexit", True)
 
-        # MTime für replace io übernehmen
-        mtime = 0
-        if self.replace_ios_config:
-            if os.access(self.replace_ios_config, os.R_OK | os.W_OK):
-                mtime = os.path.getmtime(self.replace_ios_config)
-            else:
-                proginit.logger.error(
-                    "can not access (r/w) the replace_ios file '{0}' "
-                    "using defaults".format(self.replace_ios_config)
-                )
-                self.replace_ios_config = ""
-
-        if self.replaceiosmtime != mtime:
-            # MQTT reload erforderlich
+        # Dateiveränderungen prüfen
+        file_changed = False
+        # Beide Funktionen müssen einmal aufgerufen werden
+        if self.check_pictory_changed():
+            file_changed = True
+        if self.check_replace_ios_changed():
+            file_changed = True
+        if file_changed:
             restart_plcmqtt = True
-
-        self.replaceiosmtime = mtime
+            restart_plcslave = True
+            restart_plcprogram = True
 
         # Konfiguration verarbeiten [MQTT]
         self.mqtt = 0
@@ -327,6 +329,10 @@ class RevPiPyLoad():
                 "can not access plcworkdir '{0}'".format(self.plcworkdir)
             )
         os.chdir(self.plcworkdir)
+
+        # Workdirectory owner setzen
+        if self.plcworkdir_set_uid:
+            os.chown(self.plcworkdir, self.plcuid,  -1)
 
         # MQTT konfigurieren
         if restart_plcmqtt:
@@ -419,17 +425,18 @@ class RevPiPyLoad():
                     "revpimodio2: 'apt-get install python3-revpimodio2'"
                     "".format(min_revpimodio)
                 )
-            try:
-                self.xml_ps = procimgserver.ProcimgServer(
-                    self.xsrv,
-                    None if not self.replace_ios_config
-                    else self.replace_ios_config,
-                )
-                self.xsrv.register_function(1, self.xml_psstart, "psstart")
-                self.xsrv.register_function(1, self.xml_psstop, "psstop")
-            except Exception as e:
-                self.xml_ps = None
-                proginit.logger.error(e)
+            else:
+                try:
+                    self.xml_ps = procimgserver.ProcimgServer(
+                        self.xsrv,
+                        None if not self.replace_ios_config
+                        else self.replace_ios_config,
+                    )
+                    self.xsrv.register_function(1, self.xml_psstart, "psstart")
+                    self.xsrv.register_function(1, self.xml_psstop, "psstop")
+                except Exception as e:
+                    self.xml_ps = None
+                    proginit.logger.error(e)
 
             # XML Modus 2 Einstellungen lesen und Programm herunterladen
             self.xsrv.register_function(
@@ -592,6 +599,67 @@ class RevPiPyLoad():
 
         proginit.logger.debug("leave RevPiPyLoad._signewlogfile()")
 
+    def check_pictory_changed(self):
+        """Prueft ob sich die piCtory Datei veraendert hat.
+        @return True, wenn veraendert wurde"""
+        mtime = os.path.getmtime(proginit.pargs.configrsc)
+        if self.pictorymtime == mtime:
+            return False
+        self.pictorymtime = mtime
+
+        # TODO: Nur "Devices" list vergleich
+
+        with open(proginit.pargs.configrsc, "rb") as fh:
+            file_hash = md5(fh.read()).digest()
+        if picontrolserver.HASH_PICT == file_hash:
+            return False
+        picontrolserver.HASH_PICT = file_hash
+
+        return True
+
+    def check_replace_ios_changed(self):
+        """Prueft ob sich die replace_ios.conf Datei veraendert hat (oder del).
+        @return True, wenn veraendert wurde"""
+
+        # Zugriffsrechte prüfen (pre-check für unten)
+        if self.replace_ios_config \
+                and not os.access(self.replace_ios_config, os.R_OK):
+
+            if not self.replaceiofail:
+                proginit.logger.error(
+                    "can not access (r/w) the replace_ios file '{0}' "
+                    "using defaults".format(self.replace_ios_config)
+                )
+            self.replaceiofail = True
+        else:
+            self.replaceiofail = False
+
+        if not self.replace_ios_config or self.replaceiofail:
+            # Dateipfad leer, prüfen ob es vorher einen gab
+            if self.replaceiosmtime > 0 \
+                    or picontrolserver.HASH_RPIO != picontrolserver.HASH_NULL:
+                self.replaceiosmtime = 0
+                picontrolserver.HASH_RPIO = picontrolserver.HASH_NULL
+                return True
+
+        else:
+            mtime = os.path.getmtime(self.replace_ios_config)
+            if self.replaceiosmtime == mtime:
+                return False
+            self.replaceiosmtime = mtime
+
+            # TODO: Instanz von ConfigParser vergleichen
+
+            with open(self.replace_ios_config, "rb") as fh:
+                file_hash = md5(fh.read()).digest()
+            if picontrolserver.HASH_RPIO == file_hash:
+                return False
+            picontrolserver.HASH_RPIO = file_hash
+
+            return True
+
+        return False
+
     def packapp(self, mode="tar", pictory=False):
         """Erzeugt aus dem PLC-Programm ein TAR/Zip-File.
 
@@ -668,11 +736,42 @@ class RevPiPyLoad():
 
         # mainloop
         while not self._exit:
+            file_changed = False
 
             # Neue Konfiguration laden
             if self.evt_loadconfig.is_set():
                 proginit.logger.info("got reqeust to reload config")
                 self._loadconfig()
+
+            # Dateiveränderungen prüfen mit beiden Funktionen!
+            if self.check_pictory_changed():
+                file_changed = True
+
+                # Alle Verbindungen von ProcImgServer trennen
+                self.th_plcslave.disconnect_all()
+
+                proginit.logger.warning("piCtory configuration was changed")
+
+            if self.check_replace_ios_changed():
+                if not file_changed:
+                    # Verbindungen von ProcImgServer trennen mit replace_ios
+                    self.th_plcslave.disconnect_replace_ios()
+
+                file_changed = True
+                proginit.logger.warning("replace ios file was changed")
+
+            if file_changed:
+                # Auf Dateiveränderung reagieren
+
+                # MQTT Publisher neu laden
+                if self.mqtt and self.th_plcmqtt is not None:
+                    self.th_plcmqtt.reload_revpimodio()
+
+                # XML Prozessabbildserver neu laden
+                if self.xml_ps is not None:
+                    self.xml_psstop()
+                    self.xml_ps.loadrevpimodio()
+                    # Kein psstart um Reload im Client zu erzeugen
 
             # MQTT Publisher Thread prüfen
             if self.mqtt and self.th_plcmqtt is not None \
@@ -687,26 +786,13 @@ class RevPiPyLoad():
             # PLC Server Thread prüfen
             if self.plcslave and self.th_plcslave is not None \
                     and not self.th_plcslave.is_alive():
-                proginit.logger.warning(
-                    "restart plc slave after thread was not running"
-                )
+                if not file_changed:
+                    proginit.logger.warning(
+                        "restart plc slave after thread was not running"
+                    )
                 self.th_plcslave = self._plcslave()
                 if self.th_plcslave is not None:
                     self.th_plcslave.start()
-
-            # piCtory auf Veränderung prüfen
-            if self.pictorymtime != os.path.getmtime(proginit.pargs.configrsc):
-                proginit.logger.warning("piCtory configuration was changed")
-                self.pictorymtime = os.path.getmtime(proginit.pargs.configrsc)
-
-                # MQTT Publisher neu laden
-                if self.mqtt and self.th_plcmqtt is not None:
-                    self.th_plcmqtt.reload_revpimodio()
-
-                # XML Prozessabbildserver neu laden
-                if self.xml_ps is not None:
-                    self.xml_psstop()
-                    self.xml_ps.loadrevpimodio()
 
             self.evt_loadconfig.wait(1)
 
@@ -1082,6 +1168,7 @@ class RevPiPyLoad():
         # conf-Datei schreiben
         with open(proginit.globalconffile, "w") as fh:
             self.globalconfig.write(fh)
+        proginit.conf = self.globalconfig
         proginit.logger.info(
             "got new config and wrote it to {0}"
             "".format(proginit.globalconffile)

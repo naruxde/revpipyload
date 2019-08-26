@@ -4,7 +4,6 @@ helper.__license__?9
 helper._setuprt?5(pid, evt_exit)
 helper._zeroprocimg?5()
 helper.refullmatch?4(regex, string)
-helper.revpimodio_replaceio?4(revpi, filename)
 logsystem.LogReader.closeall?4()
 logsystem.LogReader.load_applog?4(start, count)
 logsystem.LogReader.load_plclog?4(start, count)
@@ -33,7 +32,13 @@ mqttserver.MqttServer?1(basetopic, sendinterval, broker_address, port=1883, tls_
 mqttserver.__author__?9
 mqttserver.__copyright__?9
 mqttserver.__license__?9
+picontrolserver.HASH_FAIL?7
+picontrolserver.HASH_NULL?7
+picontrolserver.HASH_PICT?7
+picontrolserver.HASH_RPIO?7
 picontrolserver.RevPiSlave.check_connectedacl?4()
+picontrolserver.RevPiSlave.disconnect_all?4()
+picontrolserver.RevPiSlave.disconnect_replace_ios?4()
 picontrolserver.RevPiSlave.newlogfile?4()
 picontrolserver.RevPiSlave.run?4()
 picontrolserver.RevPiSlave.stop?4()
@@ -57,6 +62,7 @@ plcsystem.RevPiPlc?1(program, arguments, pversion)
 plcsystem.__author__?9
 plcsystem.__copyright__?9
 plcsystem.__license__?9
+procimgserver.ProcimgServer.__del__?6()
 procimgserver.ProcimgServer.devices?4()
 procimgserver.ProcimgServer.ios?4(iotype)
 procimgserver.ProcimgServer.loadrevpimodio?4()
@@ -72,6 +78,7 @@ proginit.__author__?9
 proginit.__copyright__?9
 proginit.__license__?9
 proginit.cleanup?4()
+proginit.conf?7
 proginit.configure?4()
 proginit.forked?7
 proginit.globalconffile?7
@@ -92,6 +99,8 @@ revpipyload.RevPiPyLoad._plcthread?5()
 revpipyload.RevPiPyLoad._sigexit?5(signum, frame)
 revpipyload.RevPiPyLoad._sigloadconfig?5(signum, frame)
 revpipyload.RevPiPyLoad._signewlogfile?5(signum, frame)
+revpipyload.RevPiPyLoad.check_pictory_changed?4()
+revpipyload.RevPiPyLoad.check_replace_ios_changed?4()
 revpipyload.RevPiPyLoad.packapp?4(mode="tar", pictory=False)
 revpipyload.RevPiPyLoad.start?4()
 revpipyload.RevPiPyLoad.stop?4()

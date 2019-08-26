@@ -12,7 +12,7 @@ Modul fuer die Verwaltung der PLC-Slave Funktionen.
 <h3 style="background-color:#FFFFFF;color:#FF0000">
 Global Attributes</h3>
 <table>
-<tr><td>__author__</td></tr><tr><td>__copyright__</td></tr><tr><td>__license__</td></tr>
+<tr><td>HASH_FAIL</td></tr><tr><td>HASH_NULL</td></tr><tr><td>HASH_PICT</td></tr><tr><td>HASH_RPIO</td></tr><tr><td>__author__</td></tr><tr><td>__copyright__</td></tr><tr><td>__license__</td></tr>
 </table>
 <h3 style="background-color:#FFFFFF;color:#FF0000">
 Classes</h3>
@@ -66,6 +66,12 @@ Methods</h3>
 <td><a style="color:#0000FF" href="#RevPiSlave.check_connectedacl">check_connectedacl</a></td>
 <td>Prueft bei neuen ACLs bestehende Verbindungen.</td>
 </tr><tr>
+<td><a style="color:#0000FF" href="#RevPiSlave.disconnect_all">disconnect_all</a></td>
+<td>Close all device connection.</td>
+</tr><tr>
+<td><a style="color:#0000FF" href="#RevPiSlave.disconnect_replace_ios">disconnect_replace_ios</a></td>
+<td>Close all device with loaded replace_ios file.</td>
+</tr><tr>
 <td><a style="color:#0000FF" href="#RevPiSlave.newlogfile">newlogfile</a></td>
 <td>Konfiguriert die FileHandler auf neue Logdatei.</td>
 </tr><tr>
@@ -104,6 +110,18 @@ RevPiSlave.check_connectedacl</h3>
 <b>check_connectedacl</b>(<i></i>)
 <p>
 Prueft bei neuen ACLs bestehende Verbindungen.
+</p><a NAME="RevPiSlave.disconnect_all" ID="RevPiSlave.disconnect_all"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+RevPiSlave.disconnect_all</h3>
+<b>disconnect_all</b>(<i></i>)
+<p>
+Close all device connection.
+</p><a NAME="RevPiSlave.disconnect_replace_ios" ID="RevPiSlave.disconnect_replace_ios"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+RevPiSlave.disconnect_replace_ios</h3>
+<b>disconnect_replace_ios</b>(<i></i>)
+<p>
+Close all device with loaded replace_ios file.
 </p><a NAME="RevPiSlave.newlogfile" ID="RevPiSlave.newlogfile"></a>
 <h3 style="background-color:#FFFFFF;color:#FF0000">
 RevPiSlave.newlogfile</h3>

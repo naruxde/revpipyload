@@ -110,6 +110,12 @@ Methods</h3>
 <td><a style="color:#0000FF" href="#RevPiPyLoad._signewlogfile">_signewlogfile</a></td>
 <td>Signal handler to start new logfile.</td>
 </tr><tr>
+<td><a style="color:#0000FF" href="#RevPiPyLoad.check_pictory_changed">check_pictory_changed</a></td>
+<td>Prueft ob sich die piCtory Datei veraendert hat.</td>
+</tr><tr>
+<td><a style="color:#0000FF" href="#RevPiPyLoad.check_replace_ios_changed">check_replace_ios_changed</a></td>
+<td>Prueft ob sich die replace_ios.conf Datei veraendert hat (oder del).</td>
+</tr><tr>
 <td><a style="color:#0000FF" href="#RevPiPyLoad.packapp">packapp</a></td>
 <td>Erzeugt aus dem PLC-Programm ein TAR/Zip-File.</td>
 </tr><tr>
@@ -299,7 +305,29 @@ RevPiPyLoad._signewlogfile</h3>
 <b>_signewlogfile</b>(<i>signum, frame</i>)
 <p>
 Signal handler to start new logfile.
-</p><a NAME="RevPiPyLoad.packapp" ID="RevPiPyLoad.packapp"></a>
+</p><a NAME="RevPiPyLoad.check_pictory_changed" ID="RevPiPyLoad.check_pictory_changed"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+RevPiPyLoad.check_pictory_changed</h3>
+<b>check_pictory_changed</b>(<i></i>)
+<p>
+Prueft ob sich die piCtory Datei veraendert hat.
+</p><dl>
+<dt>Returns:</dt>
+<dd>
+True, wenn veraendert wurde
+</dd>
+</dl><a NAME="RevPiPyLoad.check_replace_ios_changed" ID="RevPiPyLoad.check_replace_ios_changed"></a>
+<h3 style="background-color:#FFFFFF;color:#FF0000">
+RevPiPyLoad.check_replace_ios_changed</h3>
+<b>check_replace_ios_changed</b>(<i></i>)
+<p>
+Prueft ob sich die replace_ios.conf Datei veraendert hat (oder del).
+</p><dl>
+<dt>Returns:</dt>
+<dd>
+True, wenn veraendert wurde
+</dd>
+</dl><a NAME="RevPiPyLoad.packapp" ID="RevPiPyLoad.packapp"></a>
 <h3 style="background-color:#FFFFFF;color:#FF0000">
 RevPiPyLoad.packapp</h3>
 <b>packapp</b>(<i>mode="tar", pictory=False</i>)

@@ -41,7 +41,7 @@ class TestSystem:
             rpi = revpimodio2.RevPiModIO(
                 configrsc=proginit.pargs.configrsc,
                 procimg=proginit.pargs.procimg,
-                monitoring=False,
+                monitoring=True,
                 debug=True,
                 replace_io_file=file,
             )

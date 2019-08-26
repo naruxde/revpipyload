@@ -10,8 +10,13 @@ from shared.ipaclmanager import IpAclManager
 from threading import Event, Thread
 from timeit import default_timer
 
+# Hashvalues
+HASH_NULL = b'\x00' * 16
+HASH_FAIL = b'\xff' * 16
+HASH_PICT = HASH_FAIL
+HASH_RPIO = HASH_NULL
 
-# NOTE: Sollte dies als Process ausgeführt werden?
+
 class RevPiSlave(Thread):
 
     """RevPi PLC-Server.
@@ -70,6 +75,19 @@ class RevPiSlave(Thread):
                 )
                 dev._acl = level
 
+    def disconnect_all(self):
+        """Close all device connection."""
+        # Alle Threads beenden
+        for th in self._th_dev:
+            th.stop()
+
+    def disconnect_replace_ios(self):
+        """Close all device with loaded replace_ios file."""
+        # Alle Threads beenden die Replace_IOs emfpangen haben
+        for th in self._th_dev:
+            if th.got_replace_ios:
+                th.stop()
+
     def newlogfile(self):
         """Konfiguriert die FileHandler auf neue Logdatei."""
         pass
@@ -80,6 +98,7 @@ class RevPiSlave(Thread):
 
         # Socket öffnen und konfigurieren bis Erfolg oder Ende
         self.so = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.so.settimeout(2)
         while not self._evt_exit.is_set():
             try:
                 self.so.bind((self._bindip, self._port))
@@ -97,9 +116,11 @@ class RevPiSlave(Thread):
             self.exitcode = -1
 
             # Verbindung annehmen
-            proginit.logger.info("accept new connection for revpinetio")
             try:
                 tup_sock = self.so.accept()
+                proginit.logger.info("accepted new connection for revpinetio")
+            except socket.timeout:
+                continue
             except Exception:
                 if not self._evt_exit.is_set():
                     proginit.logger.exception("accept exception")
@@ -174,6 +195,7 @@ class RevPiSlaveDev(Thread):
         self._deadtime = None
         self._devcon, self._addr = devcon
         self._evt_exit = Event()
+        self.got_replace_ios = False
         self._writeerror = False
 
         # Sicherheitsbytes
@@ -381,10 +403,47 @@ class RevPiSlaveDev(Thread):
                     )
                     break
                 else:
-                    continue
-                finally:
                     # End-of-Transmission character immer senden
                     self._devcon.send(b'\x04')
+                    continue
+
+            elif cmd == b'PH':
+                # piCtory md5 Hashwert senden (16 Byte)
+                proginit.logger.debug(
+                    "send pictory hashvalue: {0}".format(HASH_PICT)
+                )
+                self._devcon.sendall(HASH_PICT)
+
+            elif cmd == b'RP':
+                # Replace_IOs Konfiguration senden, wenn hash existiert
+                proginit.logger.debug(
+                    "transfair replace_io configuration: {0}"
+                    "".format(proginit.pargs.configrsc)
+                )
+                replace_ios = proginit.conf["DEFAULT"].get("replace_ios", "")
+                try:
+                    if HASH_RPIO != HASH_NULL and replace_ios:
+                        with open(replace_ios, "rb") as fh:
+                            # Komplette replace_io Datei senden
+                            self._devcon.sendall(fh.read())
+                except Exception as e:
+                    proginit.logger.error(
+                        "error on replace_io transfair: {0}".format(e)
+                    )
+                    break
+                else:
+                    # End-of-Transmission character immer senden
+                    self._devcon.send(b'\x04')
+                    continue
+
+            elif cmd == b'RH':
+                # Replace_IOs md5 Hashwert senden (16 Byte)
+                self.got_replace_ios = True
+
+                proginit.logger.debug(
+                    "send replace_ios hashvalue: {0}".format(HASH_RPIO)
+                )
+                self._devcon.sendall(HASH_RPIO)
 
             elif cmd == b'EX':
                 # Sauber Verbindung verlassen
@@ -416,6 +475,7 @@ class RevPiSlaveDev(Thread):
                         )
                     else:
                         # Simulation
+                        # TODO: IOCTL für Dateien implementieren
                         proginit.logger.warning(
                             "ioctl {0} with {1} simulated".format(request, arg)
                         )
