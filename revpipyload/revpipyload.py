@@ -28,7 +28,7 @@ begrenzt werden!
 __author__ = "Sven Sager"
 __copyright__ = "Copyright (C) 2018 Sven Sager"
 __license__ = "GPLv3"
-__version__ = "0.8.0"
+__version__ = "0.8.1"
 import gzip
 import logsystem
 import picontrolserver
@@ -331,8 +331,15 @@ class RevPiPyLoad():
         os.chdir(self.plcworkdir)
 
         # Workdirectory owner setzen
-        if self.plcworkdir_set_uid:
-            os.chown(self.plcworkdir, self.plcuid,  -1)
+        try:
+            if self.plcworkdir_set_uid:
+                os.chown(self.plcworkdir, self.plcuid,  -1)
+            else:
+                os.chown(self.plcworkdir, 0,  -1)
+        except Exception:
+            proginit.logger.warning(
+                "could not set user id on working directory"
+            )
 
         # MQTT konfigurieren
         if restart_plcmqtt:
@@ -872,12 +879,14 @@ class RevPiPyLoad():
         dc["autoreloaddelay"] = self.autoreloaddelay
         dc["autostart"] = int(self.autostart)
         dc["plcworkdir"] = self.plcworkdir
+        dc["plcworkdir_set_uid"] = self.plcworkdir_set_uid
         dc["plcprogram"] = self.plcprogram
         dc["plcarguments"] = self.plcarguments
         dc["plcuid"] = self.plcuid
         dc["plcgid"] = self.plcgid
         dc["pythonversion"] = self.pythonversion
-        dc["replace_ios"] = self.replace_ios_config
+        dc["replace_ios"] = self.replace_ios_config.replace(
+            self.plcworkdir + "/", "")
         dc["rtlevel"] = self.rtlevel
         dc["zeroonerror"] = int(self.zeroonerror)
         dc["zeroonexit"] = int(self.zeroonexit)
@@ -1110,6 +1119,7 @@ class RevPiPyLoad():
                 "autostart": "[01]",
                 "plcprogram": ".+",
                 "plcarguments": ".*",
+                "plcworkdir_set_uid": "[01]",
                 # "plcuid": "[0-9]{,5}",
                 # "plcgid": "[0-9]{,5}",
                 "pythonversion": "[23]",
@@ -1144,6 +1154,11 @@ class RevPiPyLoad():
                 # "xmlslaveport": "[0-9]{,5}",
             }
         }
+
+        # Adjust values
+        if dc.get("replace_ios", "") and dc["replace_ios"].find("/") == -1:
+            dc["replace_ios"] = os.path.join(
+                self.plcworkdir, dc["replace_ios"])
 
         # Werte übernehmen, die eine Definition in key haben (andere nicht)
         for sektion in keys:
