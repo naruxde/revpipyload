@@ -89,6 +89,8 @@ class ProcimgServer():
                     io._slc_address.start + dev.offset,
                     io.bmk,
                     io._bitaddress,
+                    io._byteorder,
+                    io._signed,
                 ])
         return Binary(pickle.dumps(dict_ios))
 
@@ -152,7 +154,8 @@ class ProcimgServer():
                 self.rpi.io[io].set_value(
                     value.to_bytes(
                         self.rpi.io[io].length,
-                        byteorder=self.rpi.io[io].byteorder
+                        byteorder=self.rpi.io[io]._byteorder,
+                        signed=self.rpi.io[io]._signed,
                     )
                 )
         except Exception as e:
