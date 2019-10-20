@@ -188,6 +188,6 @@ def configure():
         loglevel = logging.WARNING
     elif pargs.verbose == 1:
         loglevel = logging.INFO
-    elif pargs.verbose > 1:
+    else:
         loglevel = logging.DEBUG
     logger.setLevel(loglevel)
