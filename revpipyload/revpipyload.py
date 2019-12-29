@@ -614,7 +614,7 @@ class RevPiPyLoad():
             return False
         self.pictorymtime = mtime
 
-        # TODO: Nur "Devices" list vergleich
+        # TODO: Nur "Devices" list vergleich da HASH immer neu wegen timestmap
 
         with open(proginit.pargs.configrsc, "rb") as fh:
             file_hash = md5(fh.read()).digest()
@@ -755,14 +755,16 @@ class RevPiPyLoad():
                 file_changed = True
 
                 # Alle Verbindungen von ProcImgServer trennen
-                self.th_plcslave.disconnect_all()
+                if self.plcslave and self.th_plcslave is not None:
+                    self.th_plcslave.disconnect_all()
 
                 proginit.logger.warning("piCtory configuration was changed")
 
             if self.check_replace_ios_changed():
                 if not file_changed:
                     # Verbindungen von ProcImgServer trennen mit replace_ios
-                    self.th_plcslave.disconnect_replace_ios()
+                    if self.plcslave and self.th_plcslave is not None:
+                        self.th_plcslave.disconnect_replace_ios()
 
                 file_changed = True
                 proginit.logger.warning("replace ios file was changed")
