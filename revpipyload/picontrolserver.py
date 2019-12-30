@@ -108,7 +108,7 @@ class RevPiSlave(Thread):
                 )
                 self._evt_exit.wait(1)
             else:
-                self.so.listen(15)
+                self.so.listen(32)
                 break
 
         # Mit Socket arbeiten
