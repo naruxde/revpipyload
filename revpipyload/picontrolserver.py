@@ -184,7 +184,6 @@ class RevPiSlaveDev(Thread):
         """Init RevPiSlaveDev-Class.
 
         @param devcon Tuple der Verbindung
-        @param deadtime Timeout der Vararbeitung
         @param acl Berechtigungslevel
 
         """
@@ -221,15 +220,27 @@ class RevPiSlaveDev(Thread):
                 "can not open process image {0}".format(proginit.pargs.procimg)
             )
 
+        buff_size = 2048
         dirty = True
+        netcmd = bytearray()
+        buff_block = bytearray(buff_size)
+        buff_recv = bytearray()
         while not self._evt_exit.is_set():
             # Laufzeitberechnung starten
             ot = default_timer()
+            netcmd.clear()
 
             # Meldung erhalten
             try:
-                netcmd = self._devcon.recv(16)
-            except Exception:
+                recv_len = 16
+                while recv_len > 0:
+                    count = self._devcon.recv_into(buff_block, recv_len)
+                    if count == 0:
+                        raise IOError("lost network connection")
+                    netcmd += buff_block[:count]
+                    recv_len -= count
+            except Exception as e:
+                proginit.logger.exception(e)
                 break
 
             # Wenn Meldung ungültig ist aussteigen
@@ -261,7 +272,7 @@ class RevPiSlaveDev(Thread):
 
                 # Berechtigung prüfen und ggf. trennen
                 if self._acl < 1:
-                    self._devcon.send(b'\x18')
+                    self._devcon.sendall(b'\x18')
                     break
 
                 position = int.from_bytes(netcmd[3:5], byteorder="little")
@@ -270,33 +281,33 @@ class RevPiSlaveDev(Thread):
 
                 if control == b'\x1d' and length > 0:
                     # Empfange Datenblock zu schreiben nach Meldung
+                    buff_recv.clear()
                     try:
-                        block = self._devcon.recv(length)
+                        while length > 0:
+                            count = self._devcon.recv_into(buff_block, min(length, buff_size))
+                            if count == 0:
+                                raise IOError("lost network connection")
+                            buff_recv += buff_block[:count]
+                            length -= count
                     except Exception:
                         proginit.logger.error("error while recv data to write")
                         self._writeerror = True
                         break
                     fh_proc.seek(position)
-
-                    # Länge der Daten prüfen
-                    if len(block) == length:
-                        fh_proc.write(block)
-                    else:
-                        proginit.logger.error("got wrong length to write")
-                        break
+                    fh_proc.write(buff_recv)
 
                 # Record seperator character
                 if control == b'\x1c':
                     # Bestätige Schreibvorgang aller Datenblöcke
                     if self._writeerror:
-                        self._devcon.send(b'\xff')
+                        self._devcon.sendall(b'\xff')
                     else:
-                        self._devcon.send(b'\x1e')
+                        self._devcon.sendall(b'\x1e')
                     self._writeerror = False
 
             elif cmd == b'\x06\x16':
                 # Just sync
-                self._devcon.send(b'\x06\x16')
+                self._devcon.sendall(b'\x06\x16')
 
             elif cmd == b'CF':
                 # Socket konfigurieren
@@ -316,10 +327,10 @@ class RevPiSlaveDev(Thread):
                     )
 
                     # Record seperator character
-                    self._devcon.send(b'\x1e')
+                    self._devcon.sendall(b'\x1e')
                 else:
                     proginit.logger.error("timeout value must be 0 to 65535")
-                    self._devcon.send(b'\xff')
+                    self._devcon.sendall(b'\xff')
                     break
 
             elif cmd == b'EY':
@@ -328,7 +339,7 @@ class RevPiSlaveDev(Thread):
 
                 # Berechtigung prüfen und ggf. trennen
                 if self._acl < 1:
-                    self._devcon.send(b'\x18')
+                    self._devcon.sendall(b'\x18')
                     break
 
                 position = int.from_bytes(netcmd[3:5], byteorder="little")
@@ -342,7 +353,7 @@ class RevPiSlaveDev(Thread):
                     self.ey_dict = {}
 
                     # Record seperator character
-                    self._devcon.send(ok_byte)
+                    self._devcon.sendall(ok_byte)
                     proginit.logger.info("cleared all dirty bytes")
 
                 elif control == b'\xfe':
@@ -352,7 +363,7 @@ class RevPiSlaveDev(Thread):
                         del self.ey_dict[position]
 
                     # Record seperator character
-                    self._devcon.send(ok_byte)
+                    self._devcon.sendall(ok_byte)
                     proginit.logger.info(
                         "cleared dirty bytes on position {0}"
                         "".format(position)
@@ -360,28 +371,23 @@ class RevPiSlaveDev(Thread):
 
                 else:
                     # Dirtybytes hinzufügen
-                    bytesbuff = bytearray()
+                    buff_recv.clear()
                     try:
-                        while not self._evt_exit.is_set() \
-                                and len(bytesbuff) < length:
-                            block = self._devcon.recv(1024)
-                            bytesbuff += block
-                            if block == b'':
-                                break
+                        while length > 0:
+                            count = self._devcon.recv_into(buff_block, min(length, buff_size))
+                            if count == 0:
+                                raise IOError("lost network connection")
+                            length -= count
+                            buff_recv += buff_block[:count]
 
                     except Exception:
                         proginit.logger.error("error while recv dirty bytes")
                         break
 
-                    # Länge der Daten prüfen
-                    if len(bytesbuff) == length:
-                        self.ey_dict[position] = bytesbuff
-                    else:
-                        proginit.logger.error("got wrong length to write")
-                        break
+                    self.ey_dict[position] = bytes(buff_recv)
 
                     # Record seperator character
-                    self._devcon.send(ok_byte)
+                    self._devcon.sendall(ok_byte)
                     proginit.logger.info(
                         "got dirty bytes to write on error on position {0}"
                         "".format(position)
@@ -404,7 +410,7 @@ class RevPiSlaveDev(Thread):
                     break
                 else:
                     # End-of-Transmission character immer senden
-                    self._devcon.send(b'\x04')
+                    self._devcon.sendall(b'\x04')
                     continue
 
             elif cmd == b'PH':
@@ -433,7 +439,7 @@ class RevPiSlaveDev(Thread):
                     break
                 else:
                     # End-of-Transmission character immer senden
-                    self._devcon.send(b'\x04')
+                    self._devcon.sendall(b'\x04')
                     continue
 
             elif cmd == b'RH':
@@ -458,39 +464,49 @@ class RevPiSlaveDev(Thread):
                 request = int.from_bytes(netcmd[3:7], byteorder="little")
                 length = int.from_bytes(netcmd[7:9], byteorder="little")
 
-                arg = self._devcon.recv(length)
+                buff_recv.clear()
+                try:
+                    while length > 0:
+                        count = self._devcon.recv_into(buff_block, min(length, buff_size))
+                        if count == 0:
+                            raise IOError("lost network connection")
+                        length -= count
+                        buff_recv += buff_block[:count]
+                except Exception:
+                    proginit.logger.error("error on network ioctl call")
+                    break
 
                 # Berechtigung prüfen und ggf. trennen
                 if self._acl < 1:
-                    self._devcon.send(b'\x18')
+                    self._devcon.sendall(b'\x18')
                     break
 
                 try:
                     if proginit.pargs.procimg == "/dev/piControl0":
                         # Läuft auf RevPi
-                        ioctl(fh_proc, request, arg)
+                        ioctl(fh_proc, request, bytes(buff_recv))
                         proginit.logger.debug(
                             "ioctl {0} with {1} successful"
-                            "".format(request, arg)
+                            "".format(request, bytes(buff_recv))
                         )
                     else:
                         # Simulation
                         # TODO: IOCTL für Dateien implementieren
                         proginit.logger.warning(
-                            "ioctl {0} with {1} simulated".format(request, arg)
+                            "ioctl {0} with {1} simulated".format(request, bytes(buff_recv))
                         )
                 except Exception as ex:
                     proginit.logger.error(ex)
-                    self._devcon.send(b'\xff')
+                    self._devcon.sendall(b'\xff')
                 else:
-                    self._devcon.send(b'\x1e')
+                    self._devcon.sendall(b'\x1e')
 
             elif proginit.pargs.developermode and cmd == b'DV':
                 # Development options
                 # bCMc00000000000b = 16
                 if self._acl < 9:
                     # Spezieller ACL-Wert für Entwicklung
-                    self._devcon.send(b'\x18')
+                    self._devcon.sendall(b'\x18')
                     break
 
                 c = netcmd[3:4]
@@ -498,7 +514,7 @@ class RevPiSlaveDev(Thread):
                     # CMD a = Switch ACL to 0
                     self._acl = 0
                     proginit.logger.warning("DV: set acl to 0")
-                    self._devcon.send(b'\x1e')
+                    self._devcon.sendall(b'\x1e')
                 elif c == b'b':
                     # CMD b = Aktiviert/Deaktiviert den Fehlermodus
                     if netcmd[4:5] == b'\x01':
@@ -507,7 +523,7 @@ class RevPiSlaveDev(Thread):
                     else:
                         self.__doerror = False
                         proginit.logger.warning("DV: reset do_error")
-                    self._devcon.send(b'\x1e')
+                    self._devcon.sendall(b'\x1e')
 
             else:
                 # Kein gültiges CMD gefunden, abbruch!
