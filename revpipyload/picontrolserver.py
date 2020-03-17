@@ -6,7 +6,7 @@ __license__ = "GPLv3"
 
 import socket
 from fcntl import ioctl
-from struct import unpack, pack
+from struct import pack, unpack
 from threading import Event, Thread
 from timeit import default_timer
 
@@ -30,12 +30,13 @@ class RevPiSlave(Thread):
 
     """
 
-    def __init__(self, ipacl, port=55234, bindip=""):
+    def __init__(self, ipacl, port=55234, bindip="", watchdog=True):
         """Instantiiert RevPiSlave-Klasse.
 
         @param ipacl AclManager <class 'IpAclManager'>
         @param port Listen Port fuer plc Slaveserver
         @param bindip IP-Adresse an die der Dienst gebunden wird (leer=alle)
+        @param watchdog Trennen, wenn Verarbeitungszeit zu lang
 
         """
         if not isinstance(ipacl, IpAclManager):
@@ -55,6 +56,7 @@ class RevPiSlave(Thread):
         self._port = port
         self.so = None
         self._th_dev = []
+        self._watchdog = watchdog
         self.zeroonerror = False
         self.zeroonexit = False
 
@@ -138,7 +140,7 @@ class RevPiSlave(Thread):
                 )
             else:
                 # Thread starten
-                th = RevPiSlaveDev(tup_sock, aclstatus)
+                th = RevPiSlaveDev(tup_sock, aclstatus, self._watchdog)
                 th.start()
                 self._th_dev.append(th)
 
@@ -172,21 +174,30 @@ class RevPiSlave(Thread):
 
         proginit.logger.debug("leave RevPiSlave.stop()")
 
+    @property
+    def watchdog(self) -> bool:
+        return self._watchdog
+
+    @watchdog.setter
+    def watchdog(self, value: bool):
+        self._watchdog = value
+        for th in self._th_dev:  # type: RevPiSlaveDev
+            th.watchdog = value
+
 
 class RevPiSlaveDev(Thread):
     """Klasse um eine RevPiModIO Verbindung zu verwalten.
 
     Diese Klasste stellt die Funktionen zur Verfuegung um Daten ueber das
     Netzwerk mit dem Prozessabbild auszutauschen.
-
     """
 
-    def __init__(self, devcon, acl):
+    def __init__(self, devcon, acl, watchdog: bool):
         """Init RevPiSlaveDev-Class.
 
         @param devcon Tuple der Verbindung
         @param acl Berechtigungslevel
-
+        @param watchdog Trennen, wenn Verarbeitungszeit zu lang
         """
         super().__init__()
         self.__doerror = False
@@ -196,6 +207,7 @@ class RevPiSlaveDev(Thread):
         self._devcon, self._addr = devcon
         self._evt_exit = Event()
         self.got_replace_ios = False
+        self.watchdog = watchdog
 
         # Sicherheitsbytes
         self.ey_dict = {}
@@ -214,11 +226,14 @@ class RevPiSlaveDev(Thread):
         try:
             fh_proc = open(proginit.pargs.procimg, "r+b", 0)
         except Exception:
-            fh_proc = None
             self._evt_exit.set()
             proginit.logger.error(
-                "can not open process image {0}".format(proginit.pargs.procimg)
+                "can not open process image {0} for {1}"
+                "".format(proginit.pargs.procimg, self._addr)
             )
+            self._devcon.close()
+            self._devcon = None
+            return
 
         buff_size = 2048
         dirty = True
@@ -240,23 +255,23 @@ class RevPiSlaveDev(Thread):
                     recv_len -= count
 
                 # Unpack ist schneller als Direktzugriff oder Umwandlung
-                netcmd = unpack("=c2sHH8sc", buff_recv)
+                p_start, cmd, position, length, blob, p_stop = \
+                    unpack("=c2sHH8sc", buff_recv)
             except Exception as e:
                 proginit.logger.error(e)
                 break
 
             # Wenn Meldung ungültig ist aussteigen
-            if netcmd[0] != b'\x01' or netcmd[5] != b'\x17':
-                proginit.logger.error("net cmd not valid {0}".format(netcmd))
+            if p_start != b'\x01' or p_stop != b'\x17':
+                proginit.logger.error(
+                    "net cmd not valid {0}|{1}|..|{2}"
+                    "".format(p_start, cmd, p_stop)
+                )
                 break
 
-            cmd = netcmd[1]
             if cmd == b'DA':
                 # Processabbild übertragen
                 # b CM ii ii 00000000 b = 16
-
-                position = netcmd[2]
-                length = netcmd[3]
 
                 fh_proc.seek(position)
                 try:
@@ -273,9 +288,6 @@ class RevPiSlaveDev(Thread):
                 if self._acl < 1:
                     self._devcon.sendall(b'\x18')
                     break
-
-                position = netcmd[2]
-                length = netcmd[3]
 
                 # Datenblock schreiben
                 buff_recv.clear()
@@ -297,7 +309,7 @@ class RevPiSlaveDev(Thread):
                 self._devcon.sendall(b'\x1e')
 
             elif cmd == b'FD':
-                # Ausgänge gepuffert setzen, deutlich schneller als SD
+                # Ausgänge gepuffert setzen, deutlich schneller als WD
                 # b CM ii ii 00000000 b = 16
 
                 # Berechtigung prüfen und ggf. trennen
@@ -306,7 +318,7 @@ class RevPiSlaveDev(Thread):
                     break
 
                 buff_recv.clear()
-                counter = netcmd[2]
+                counter = length
                 try:
                     while counter > 0:
                         count = self._devcon.recv_into(buff_block, min(counter, buff_size))
@@ -320,14 +332,14 @@ class RevPiSlaveDev(Thread):
 
                 # Header: ppllbuff
                 index = 0
-                while index < netcmd[2]:
-                    position, length = unpack("=HH", buff_recv[index: index + 4])
+                while index < length:
+                    r_position, r_length = unpack("=HH", buff_recv[index: index + 4])
                     index += 4
 
-                    fh_proc.seek(position)
-                    fh_proc.write(buff_recv[index:index + length])
+                    fh_proc.seek(r_position)
+                    fh_proc.write(buff_recv[index:index + r_length])
 
-                    index += length
+                    index += r_length
 
                 # Record separator character
                 self._devcon.sendall(b'\x1e')
@@ -340,10 +352,9 @@ class RevPiSlaveDev(Thread):
                 # Socket konfigurieren
                 # b CM ii xx 00000000 b = 16
 
-                timeoutms = netcmd[2]
-
-                if 0 < timeoutms <= 65535:
-                    self._deadtime = timeoutms / 1000
+                # position = timeoutms
+                if 0 < position <= 65535:
+                    self._deadtime = position / 1000
                     self._devcon.settimeout(self._deadtime)
                     proginit.logger.debug(
                         "set socket timeout to {0}".format(self._deadtime)
@@ -365,9 +376,7 @@ class RevPiSlaveDev(Thread):
                     self._devcon.sendall(b'\x18')
                     break
 
-                position = netcmd[2]
-                length = netcmd[3]
-                control = netcmd[4][0]
+                control = blob[0:1]
 
                 ok_byte = b'\xff' if self.__doerror else b'\x1e'
 
@@ -487,8 +496,7 @@ class RevPiSlaveDev(Thread):
                 # Net-IOCTL ausführen
                 # b CM xx ii iiii0000 b = 16
 
-                request = unpack("=I4x", netcmd[4])[0]
-                length = netcmd[3]
+                request, = unpack("=I4x", blob)
 
                 buff_recv.clear()
                 try:
@@ -535,7 +543,7 @@ class RevPiSlaveDev(Thread):
                     self._devcon.sendall(b'\x18')
                     break
 
-                c = netcmd[4][0]
+                c, d = unpack("=cc6x", blob)
                 if c == b'a':
                     # CMD a = Switch ACL to 0
                     self._acl = 0
@@ -543,7 +551,7 @@ class RevPiSlaveDev(Thread):
                     self._devcon.sendall(b'\x1e')
                 elif c == b'b':
                     # CMD b = Aktiviert/Deaktiviert den Fehlermodus
-                    if netcmd[4][1] == b'\x01':
+                    if d == b'\x01':
                         self.__doerror = True
                         proginit.logger.warning("DV: set do_error")
                     else:
@@ -558,16 +566,23 @@ class RevPiSlaveDev(Thread):
                 )
                 break
 
-            # Verarbeitungszeit prüfen
-            if self._deadtime is not None:
-                comtime = default_timer() - ot
-                if comtime > self._deadtime:
-                    proginit.logger.warning(
-                        "runtime more than {0} ms: {1}!".format(
-                            int(self._deadtime * 1000), comtime
-                        )
+            # Verarbeitungszeit nicht prüfen
+            if self._deadtime is None:
+                continue
+
+            comtime = default_timer() - ot
+            if comtime > self._deadtime:
+                if self.watchdog:
+                    proginit.logger.error(
+                        "runtime more than {0} ms: {1} - force disconnect"
+                        "".format(int(self._deadtime * 1000), comtime)
                     )
-                    # TODO: Soll ein Fehler ausgelöst werden?
+                    break
+                else:
+                    proginit.logger.warning(
+                        "runtime more than {0} ms: {1}!"
+                        "".format(int(self._deadtime * 1000), comtime)
+                    )
 
         # Dirty verlassen
         if dirty:
@@ -577,8 +592,7 @@ class RevPiSlaveDev(Thread):
 
             proginit.logger.error("dirty shutdown of connection")
 
-        if fh_proc is not None:
-            fh_proc.close()
+        fh_proc.close()
         self._devcon.close()
         self._devcon = None
 
