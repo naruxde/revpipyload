@@ -28,7 +28,7 @@ begrenzt werden!
 __author__ = "Sven Sager"
 __copyright__ = "Copyright (C) 2018 Sven Sager"
 __license__ = "GPLv3"
-__version__ = "0.8.1"
+__version__ = "0.8.2"
 import gzip
 import logsystem
 import picontrolserver
@@ -299,6 +299,9 @@ class RevPiPyLoad():
 
             self.plcslaveport = \
                 self.globalconfig["PLCSLAVE"].getint("port", 55234)
+            self.plcwatchdog = self.globalconfig.getboolean(
+                "PLCSLAVE", "watchdog", fallback=True
+            )
 
         # Konfiguration verarbeiten [XMLRPC]
         self.xmlrpc = False
@@ -377,9 +380,10 @@ class RevPiPyLoad():
                 proginit.logger.info("restart plc slave after reload")
                 self.th_plcslave.start()
 
-        # PLC-Slave ACL prüfen
+        # PLC-Slave ACL und Einstellungen prüfen
         if self.th_plcslave is not None:
             self.th_plcslave.check_connectedacl()
+            self.th_plcslave.watchdog = self.plcwatchdog
 
         # XMLRPC-Server Instantiieren und konfigurieren
         if not self.xmlrpc:
@@ -571,7 +575,8 @@ class RevPiPyLoad():
 
         if self.plcslave:
             th_plc = picontrolserver.RevPiSlave(
-                self.plcslaveacl, self.plcslaveport, self.plcslavebindip
+                self.plcslaveacl, self.plcslaveport, self.plcslavebindip,
+                self.plcwatchdog
             )
 
         proginit.logger.debug("leave RevPiPyLoad._plcslave()")
@@ -911,6 +916,7 @@ class RevPiPyLoad():
         dc["plcslaveacl"] = self.plcslaveacl.acl
         dc["plcslavebindip"] = self.plcslavebindip
         dc["plcslaveport"] = self.plcslaveport
+        dc["plcslavewatchdog"] = self.plcwatchdog
 
         # XMLRPC Sektion
         dc["xmlrpc"] = int(self.xmlrpc)
@@ -1062,13 +1068,12 @@ class RevPiPyLoad():
     def xml_plcupload(self, filedata, filename):
         """Empfaengt Dateien fuer das PLC Programm einzeln.
 
-        @param filedata GZIP Binary data der datei
+        @param filedata GZIP Binary data der Datei
         @param filename Name inkl. Unterverzeichnis der Datei
         @return Ture, wenn Datei erfolgreich gespeichert wurde
 
         """
         proginit.logger.debug("xmlrpc call plcupload")
-        noerr = False
 
         if filedata is None or filename is None:
             return False
@@ -1087,13 +1092,11 @@ class RevPiPyLoad():
 
         # Datei erzeugen
         try:
-            fh = open(filename, "wb")
-            fh.write(gzip.decompress(filedata.data))
-            noerr = True
-        finally:
-            fh.close()
-
-        return noerr
+            with open(filename, "wb") as fh:
+                fh.write(gzip.decompress(filedata.data))
+            return True
+        except Exception:
+            return False
 
     def xml_plcuploadclean(self):
         """Loescht das gesamte plcworkdir Verzeichnis.
@@ -1148,6 +1151,7 @@ class RevPiPyLoad():
                 "plcslaveacl": self.plcslaveacl.regex_acl,
                 # "plcslavebindip": "^((([\\d]{1,3}\\.){3}[\\d]{1,3})|\\*)+$",
                 "plcslaveport": "[0-9]{,5}",
+                "plcslavewatchdog": "[01]",
             },
             "XMLRPC": {
                 "xmlrpc": "[01]",
