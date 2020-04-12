@@ -28,7 +28,7 @@ begrenzt werden!
 __author__ = "Sven Sager"
 __copyright__ = "Copyright (C) 2018 Sven Sager"
 __license__ = "GPLv3"
-__version__ = "0.8.2"
+__version__ = "0.8.5"
 import gzip
 import logsystem
 import picontrolserver
@@ -50,7 +50,7 @@ from time import asctime
 from xmlrpc.client import Binary
 from xrpcserver import SaveXMLRPCServer
 
-min_revpimodio = "2.4.1"
+min_revpimodio = "2.4.5"
 
 
 class RevPiPyLoad():
@@ -619,7 +619,7 @@ class RevPiPyLoad():
             return False
         self.pictorymtime = mtime
 
-        # TODO: Nur "Devices" list vergleich da HASH immer neu wegen timestmap
+        # TODO: Nur "Devices" list vergleich da HASH immer neu wegen timestamp
 
         with open(proginit.pargs.configrsc, "rb") as fh:
             file_hash = md5(fh.read()).digest()
@@ -690,6 +690,8 @@ class RevPiPyLoad():
             wd = os.walk("./")
             try:
                 for tup_dir in wd:
+                    if tup_dir[0].find("__pycache__") != -1:
+                        continue
                     for file in tup_dir[2]:
                         arcname = os.path.join(
                             os.path.basename(self.plcworkdir),
@@ -932,6 +934,8 @@ class RevPiPyLoad():
         lst_file = []
         wd = os.walk("./")
         for tup_dir in wd:
+            if tup_dir[0].find("__pycache__") != -1:
+                continue
             for file in tup_dir[2]:
                 lst_file.append(os.path.join(tup_dir[0], file)[2:])
         return lst_file
@@ -998,7 +1002,7 @@ class RevPiPyLoad():
         """
         proginit.logger.debug("xmlrpc call plcdownload")
 
-        # TODO: Daten blockweise übertragen
+        # TODO: Daten einzeln übertragen
 
         file = self.packapp(mode, pictory)
         if os.path.exists(file):
