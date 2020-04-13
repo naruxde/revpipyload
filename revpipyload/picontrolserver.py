@@ -175,11 +175,11 @@ class RevPiSlave(Thread):
         proginit.logger.debug("leave RevPiSlave.stop()")
 
     @property
-    def watchdog(self) -> bool:
+    def watchdog(self):
         return self._watchdog
 
     @watchdog.setter
-    def watchdog(self, value: bool):
+    def watchdog(self, value):
         self._watchdog = value
         for th in self._th_dev:  # type: RevPiSlaveDev
             th.watchdog = value
@@ -192,7 +192,7 @@ class RevPiSlaveDev(Thread):
     Netzwerk mit dem Prozessabbild auszutauschen.
     """
 
-    def __init__(self, devcon, acl, watchdog: bool):
+    def __init__(self, devcon, acl, watchdog):
         """Init RevPiSlaveDev-Class.
 
         @param devcon Tuple der Verbindung
@@ -333,7 +333,7 @@ class RevPiSlaveDev(Thread):
                 # Header: ppllbuff
                 index = 0
                 while index < length:
-                    r_position, r_length = unpack("=HH", buff_recv[index: index + 4])
+                    r_position, r_length = unpack("=HH", buff_recv[index:index + 4])
                     index += 4
 
                     fh_proc.seek(r_position)
