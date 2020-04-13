@@ -139,7 +139,7 @@ class MqttServer(Thread):
                 configrsc=proginit.pargs.configrsc,
                 procimg=proginit.pargs.procimg,
                 replace_io_file=self._replace_ios,
-                direct_output=True,
+                shared_procimg=True,
             )
 
             if self._replace_ios:
@@ -153,7 +153,7 @@ class MqttServer(Thread):
                     monitoring=not self._write_outputs,
                     configrsc=proginit.pargs.configrsc,
                     procimg=proginit.pargs.procimg,
-                    direct_output=True,
+                    shared_procimg=True,
                 )
                 proginit.logger.warning(
                     "replace_ios_file not loadable for MQTT - using "

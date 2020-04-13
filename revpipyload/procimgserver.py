@@ -107,7 +107,7 @@ class ProcimgServer():
                 configrsc=proginit.pargs.configrsc,
                 procimg=proginit.pargs.procimg,
                 replace_io_file=self.replace_ios,
-                direct_output=True,
+                shared_procimg=True,
             )
 
             if self.replace_ios:
@@ -118,7 +118,7 @@ class ProcimgServer():
                 self.rpi = revpimodio2.RevPiModIO(
                     configrsc=proginit.pargs.configrsc,
                     procimg=proginit.pargs.procimg,
-                    direct_output=True,
+                    shared_procimg=True,
                 )
                 proginit.logger.warning(
                     "replace_ios_file not loadable for ProcimgServer - using "

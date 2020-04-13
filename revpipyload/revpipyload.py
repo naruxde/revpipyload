@@ -918,7 +918,7 @@ class RevPiPyLoad():
         dc["plcslaveacl"] = self.plcslaveacl.acl
         dc["plcslavebindip"] = self.plcslavebindip
         dc["plcslaveport"] = self.plcslaveport
-        dc["plcslavewatchdog"] = self.plcwatchdog
+        dc["plcslavewatchdog"] = int(self.plcwatchdog)
 
         # XMLRPC Sektion
         dc["xmlrpc"] = int(self.xmlrpc)
