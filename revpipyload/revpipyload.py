@@ -29,32 +29,34 @@ __author__ = "Sven Sager"
 __copyright__ = "Copyright (C) 2018 Sven Sager"
 __license__ = "GPLv3"
 __version__ = "0.8.5"
+
 import gzip
-import logsystem
-import picontrolserver
-import plcsystem
-import proginit
 import os
 import signal
 import tarfile
 import zipfile
 from configparser import ConfigParser
 from hashlib import md5
-from helper import refullmatch
 from json import loads as jloads
-from shared.ipaclmanager import IpAclManager
 from shutil import rmtree
 from tempfile import mkstemp
 from threading import Event
 from time import asctime
 from xmlrpc.client import Binary
+
+import logsystem
+import picontrolserver
+import plcsystem
+import proginit
+from helper import refullmatch
+from shared.ipaclmanager import IpAclManager
+from watchdogs import ResetDriverWatchdog
 from xrpcserver import SaveXMLRPCServer
 
 min_revpimodio = "2.4.5"
 
 
 class RevPiPyLoad():
-
     """Hauptklasse, die alle Funktionen zur Verfuegung stellt.
 
     Hier wird die gesamte Konfiguraiton eingelesen und der ggf. aktivierte
@@ -207,34 +209,38 @@ class RevPiPyLoad():
         restart_plcprogram = self._check_mustrestart_plcprogram()
 
         # Konfiguration verarbeiten [DEFAULT]
-        self.autoreload = \
-            self.globalconfig["DEFAULT"].getboolean("autoreload", True)
-        self.autoreloaddelay = \
-            self.globalconfig["DEFAULT"].getint("autoreloaddelay", 5)
-        self.autostart = \
-            self.globalconfig["DEFAULT"].getboolean("autostart", False)
-        self.plcworkdir = \
-            self.globalconfig["DEFAULT"].get("plcworkdir", ".")
-        self.plcprogram = \
-            self.globalconfig["DEFAULT"].get("plcprogram", "none.py")
-        self.plcarguments = \
-            self.globalconfig["DEFAULT"].get("plcarguments", "")
+        self.autoreload = self.globalconfig["DEFAULT"].getboolean(
+            "autoreload", True)
+        self.autoreloaddelay = self.globalconfig["DEFAULT"].getint(
+            "autoreloaddelay", 5)
+        self.autostart = self.globalconfig["DEFAULT"].getboolean(
+            "autostart", False)
+        self.plcworkdir = self.globalconfig["DEFAULT"].get(
+            "plcworkdir", ".")
+        self.plcprogram = self.globalconfig["DEFAULT"].get(
+            "plcprogram", "none.py")
+        self.plcprogram_watchdog = self.globalconfig["DEFAULT"].getboolean(
+            "plcprogram_watchdog", False)
+        self.plcarguments = self.globalconfig["DEFAULT"].get(
+            "plcarguments", "")
         self.plcworkdir_set_uid = self.globalconfig["DEFAULT"].getboolean(
             "plcworkdir_set_uid", False)
-        self.plcuid = \
-            self.globalconfig["DEFAULT"].getint("plcuid", 65534)
-        self.plcgid = \
-            self.globalconfig["DEFAULT"].getint("plcgid", 65534)
-        self.pythonversion = \
-            self.globalconfig["DEFAULT"].getint("pythonversion", 3)
-        self.replace_ios_config = \
-            self.globalconfig["DEFAULT"].get("replace_ios", "")
-        self.rtlevel = \
-            self.globalconfig["DEFAULT"].getint("rtlevel", 0)
-        self.zeroonerror = \
-            self.globalconfig["DEFAULT"].getboolean("zeroonerror", True)
-        self.zeroonexit = \
-            self.globalconfig["DEFAULT"].getboolean("zeroonexit", True)
+        self.plcuid = self.globalconfig["DEFAULT"].getint(
+            "plcuid", 65534)
+        self.plcgid = self.globalconfig["DEFAULT"].getint(
+            "plcgid", 65534)
+        self.pythonversion = self.globalconfig["DEFAULT"].getint(
+            "pythonversion", 3)
+        self.replace_ios_config = self.globalconfig["DEFAULT"].get(
+            "replace_ios", "")
+        self.rtlevel = self.globalconfig["DEFAULT"].getint(
+            "rtlevel", 0)
+        self.reset_driver_action = self.globalconfig["DEFAULT"].getint(
+            "reset_driver_action", 2)
+        self.zeroonerror = self.globalconfig["DEFAULT"].getboolean(
+            "zeroonerror", True)
+        self.zeroonexit = self.globalconfig["DEFAULT"].getboolean(
+            "zeroonexit", True)
 
         # Dateiveränderungen prüfen
         file_changed = False
@@ -336,9 +342,9 @@ class RevPiPyLoad():
         # Workdirectory owner setzen
         try:
             if self.plcworkdir_set_uid:
-                os.chown(self.plcworkdir, self.plcuid,  -1)
+                os.chown(self.plcworkdir, self.plcuid, -1)
             else:
-                os.chown(self.plcworkdir, 0,  -1)
+                os.chown(self.plcworkdir, 0, -1)
         except Exception:
             proginit.logger.warning(
                 "could not set user id on working directory"
@@ -748,17 +754,21 @@ class RevPiPyLoad():
         if self.autostart and self.plc is not None:
             self.plc.start()
 
+        # Watchdog to detect the reset_driver event
+        pictory_reset_driver = ResetDriverWatchdog()
+
         # mainloop
         while not self._exit:
-            file_changed = False
-
             # Neue Konfiguration laden
             if self.evt_loadconfig.is_set():
                 proginit.logger.info("got reqeust to reload config")
                 self._loadconfig()
 
+            file_changed = False
+            reset_driver_detected = pictory_reset_driver.triggered
+
             # Dateiveränderungen prüfen mit beiden Funktionen!
-            if self.check_pictory_changed():
+            if reset_driver_detected and self.check_pictory_changed():
                 file_changed = True
 
                 # Alle Verbindungen von ProcImgServer trennen
@@ -788,6 +798,18 @@ class RevPiPyLoad():
                     self.xml_psstop()
                     self.xml_ps.loadrevpimodio()
                     # Kein psstart um Reload im Client zu erzeugen
+
+            # Restart plc program after piCtory change
+            if self.plc is not None and self.plc.is_alive() and (
+                    self.reset_driver_action == 1 and file_changed or
+                    self.reset_driver_action == 2 and reset_driver_detected):
+                # Plc program is running and we have to restart it
+                proginit.logger.warning(
+                    "restart plc program after 'reset driver' was requested"
+                )
+                self.stop_plcprogram()
+                self.plc = self._plcthread()
+                self.plc.start()
 
             # MQTT Publisher Thread prüfen
             if self.mqtt and self.th_plcmqtt is not None \
@@ -890,12 +912,14 @@ class RevPiPyLoad():
         dc["plcworkdir"] = self.plcworkdir
         dc["plcworkdir_set_uid"] = self.plcworkdir_set_uid
         dc["plcprogram"] = self.plcprogram
+        dc["plcprogram_watchdog"] = self.plcprogram_watchdog
         dc["plcarguments"] = self.plcarguments
         dc["plcuid"] = self.plcuid
         dc["plcgid"] = self.plcgid
         dc["pythonversion"] = self.pythonversion
         dc["replace_ios"] = self.replace_ios_config.replace(
             self.plcworkdir + "/", "")
+        dc["reset_driver_action"] = self.reset_driver_action
         dc["rtlevel"] = self.rtlevel
         dc["zeroonerror"] = int(self.zeroonerror)
         dc["zeroonexit"] = int(self.zeroonexit)
@@ -1127,12 +1151,14 @@ class RevPiPyLoad():
                 "autoreloaddelay": "[0-9]+",
                 "autostart": "[01]",
                 "plcprogram": ".+",
+                "plcprogram_watchdog": "[01]",
                 "plcarguments": ".*",
                 "plcworkdir_set_uid": "[01]",
                 # "plcuid": "[0-9]{,5}",
                 # "plcgid": "[0-9]{,5}",
                 "pythonversion": "[23]",
                 "replace_ios": ".*",
+                "reset_driver_action": "[0-2]",
                 "rtlevel": "[0-1]",
                 "zeroonerror": "[01]",
                 "zeroonexit": "[01]",
@@ -1351,6 +1377,7 @@ if __name__ == "__main__":
 
     if proginit.pargs.test:
         from testsystem import TestSystem
+
         root = TestSystem()
     else:
         root = RevPiPyLoad()
