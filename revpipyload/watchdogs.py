@@ -6,9 +6,162 @@ __license__ = "GPLv3"
 
 import os
 from fcntl import ioctl
-from threading import Thread
+from random import random
+from struct import pack, unpack
+from subprocess import Popen
+from threading import Thread, Event
+from time import time
 
 import proginit as pi
+
+
+class SoftwareWatchdog:
+
+    def __init__(self, address: int, timeout: int, kill_process=None):
+        """
+        Software watchdog thread, which must be recreate if triggered.
+
+        :param address: Byte address of RevPiLED byte
+        :param timeout: Timeout to trigger watchdog on no change of bit
+        :param kill_process: Process to kill on trigger
+        """
+        self.__th = Thread()
+        self._exit = Event()
+        self._ioctl_bytes = b''
+        self._process = None
+        self._timeout = 0.0
+        self.triggered = False
+
+        # Process and check the values
+        self.address = address
+        self.kill_process = kill_process
+
+        # The timeout property will start/stop the thread
+        self.timeout = timeout
+
+    def __th_run(self):
+        """Thread function for watchdog."""
+        pi.logger.debug("enter SoftwareWatchdog.__th_run()")
+
+        # Startup delay to let the python program start and trigger
+        # todo: Is this fix value okay?
+        if self._exit.wait(2.0):
+            pi.logger.debug("leave SoftwareWatchdog.__th_run()")
+            return
+
+        fd = os.open(pi.pargs.procimg, os.O_RDONLY)
+        mrk = self._ioctl_bytes
+        tmr = time()
+
+        # Random wait value 0.0-0.1 to become async to process image
+        while not self._exit.wait(random() / 10):
+            try:
+                # Get SoftWatchdog bit
+                bit_7 = ioctl(fd, 19215, self._ioctl_bytes)
+            except Exception:
+                pass
+            else:
+                if bit_7 != mrk:
+                    # Toggling detected, wait the rest of time to free cpu
+                    self._exit.wait(self._timeout - (time() - tmr))
+                    mrk = bit_7
+                    tmr = time()
+                    continue
+
+            if time() - tmr >= self._timeout:
+                pi.logger.debug("software watchdog timeout reached")
+                self.triggered = True
+                if self._process is not None:
+                    self._process.kill()
+                    pi.logger.warning(
+                        "process killed by software watchdog"
+                    )
+                break
+
+        os.close(fd)
+
+        pi.logger.debug("leave SoftwareWatchdog.__th_run()")
+
+    def reset(self):
+        """Reset watchdog functions after triggered or stopped."""
+        pi.logger.debug("enter SoftwareWatchdog.reset()")
+        self._exit.clear()
+        self.triggered = False
+
+        # The timeout property will start / stop the thread
+        self.timeout = int(self.timeout)
+
+        pi.logger.debug("leave SoftwareWatchdog.reset()")
+
+    def stop(self):
+        """Shut down watchdog task and wait for exit."""
+        pi.logger.debug("enter SoftwareWatchdog.stop()")
+        self._exit.set()
+        if self.__th.is_alive():
+            self.__th.join()
+        pi.logger.debug("leave SoftwareWatchdog.stop()")
+
+    @property
+    def address(self) -> int:
+        """Byte address of RevPiLED byte."""
+        return unpack("<Hxx", self._ioctl_bytes)[0]
+
+    @address.setter
+    def address(self, value: int) -> None:
+        """Byte address of RevPiLED byte."""
+        if not isinstance(value, int):
+            raise TypeError("address must be <class 'int'>")
+        if not 0 <= value < 4096:
+            raise ValueError("address must be 0 - 4095")
+
+        # Use Bit 7 of RevPiLED byte (wd of Connect device)
+        self._ioctl_bytes = pack("<HBx", value, 7)
+
+        pi.logger.debug("set software watchdog address to {0}".format(value))
+
+    @property
+    def kill_process(self) -> Popen:
+        return self._process
+
+    @kill_process.setter
+    def kill_process(self, value: Popen) -> None:
+        if not (value is None or isinstance(value, Popen)):
+            raise TypeError("kill_process must be <class 'subprocess.Popen'>")
+        self._process = value
+
+    @property
+    def timeout(self) -> int:
+        """Timeout to trigger watchdog on no change of bit."""
+        return int(self._timeout)
+
+    @timeout.setter
+    def timeout(self, value: int):
+        """
+        Timeout to trigger watchdog on no change of bit.
+
+        Value in seconds, 0 will stop watchdog monitoring.
+        """
+        if not isinstance(value, int):
+            raise TypeError("timeout must be <class 'int'>")
+        if value < 0:
+            raise ValueError(
+                "timeout value must be 0 to disable or a positive number"
+            )
+
+        if value == 0:
+            # A value of 0 will stop the watchdog thread
+            self.stop()
+            self._timeout = 0.0
+        else:
+            self._timeout = float(value)
+            if not (self.triggered or
+                    self._exit.is_set() or self.__th.is_alive()):
+                self.__th = Thread(target=self.__th_run)
+                self.__th.start()
+            pi.logger.debug(
+                "set software watchdog timeout to {0} seconds"
+                "".format(value)
+            )
 
 
 class ResetDriverWatchdog(Thread):

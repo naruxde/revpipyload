@@ -1,12 +1,15 @@
 # -*- coding: utf-8 -*-
 """Helperfunktionen fuer das gesamte RevPiPyLoad-System."""
 __author__ = "Sven Sager"
-__copyright__ = "Copyright (C) 2018 Sven Sager"
+__copyright__ = "Copyright (C) 2020 Sven Sager"
 __license__ = "GPLv3"
+
 import os
-import proginit
+from json import load, loads
 from re import match as rematch
 from subprocess import Popen, PIPE
+
+import proginit
 
 
 def _setuprt(pid, evt_exit):
@@ -115,6 +118,32 @@ def _zeroprocimg():
             proginit.logger.error(
                 "zeroprocimg can not write to piControl device"
             )
+
+
+def get_revpiled_address(configrsc_bytes: bytes) -> int:
+    """
+    Find byte address of revpiled output.
+
+    :return: Address or -1 on error
+    """
+    try:
+        rsc = loads(configrsc_bytes.decode())  # type: dict
+    except Exception:
+        return -1
+
+    byte_address = -1
+    for device in rsc.get("Devices", ()):  # type: dict
+        if device.get("type", "") == "BASE":
+            try:
+                byte_address = device["offset"] + int(device["out"]["0"][3])
+                proginit.logger.debug(
+                    "found revpi_led_address on {0} byte".format(byte_address)
+                )
+            except Exception:
+                pass
+            break
+
+    return byte_address
 
 
 def refullmatch(regex, string):

@@ -26,7 +26,7 @@ begrenzt werden!
 
 """
 __author__ = "Sven Sager"
-__copyright__ = "Copyright (C) 2018 Sven Sager"
+__copyright__ = "Copyright (C) 2020 Sven Sager"
 __license__ = "GPLv3"
 __version__ = "0.8.5"
 
@@ -48,7 +48,7 @@ import logsystem
 import picontrolserver
 import plcsystem
 import proginit
-from helper import refullmatch
+from helper import refullmatch, get_revpiled_address
 from shared.ipaclmanager import IpAclManager
 from watchdogs import ResetDriverWatchdog
 from xrpcserver import SaveXMLRPCServer
@@ -81,6 +81,7 @@ class RevPiPyLoad():
         self.pictorymtime = 0
         self.replaceiosmtime = 0
         self.replaceiofail = False
+        self.revpi_led_address = -1
 
         # Berechtigungsmanger
         if proginit.pargs.developermode:
@@ -219,8 +220,8 @@ class RevPiPyLoad():
             "plcworkdir", ".")
         self.plcprogram = self.globalconfig["DEFAULT"].get(
             "plcprogram", "none.py")
-        self.plcprogram_watchdog = self.globalconfig["DEFAULT"].getboolean(
-            "plcprogram_watchdog", False)
+        self.plcprogram_watchdog = self.globalconfig["DEFAULT"].getint(
+            "plcprogram_watchdog", 0)
         self.plcarguments = self.globalconfig["DEFAULT"].get(
             "plcarguments", "")
         self.plcworkdir_set_uid = self.globalconfig["DEFAULT"].getboolean(
@@ -374,6 +375,7 @@ class RevPiPyLoad():
             )
             self.plc.autoreload = self.autoreload
             self.plc.autoreloaddelay = self.autoreloaddelay
+            self.plc.softdog.timeout = self.plcprogram_watchdog
             self.plc.zeroonerror = self.zeroonerror
             self.plc.zeroonexit = self.zeroonexit
 
@@ -547,7 +549,6 @@ class RevPiPyLoad():
         """Konfiguriert den PLC-Thread fuer die Ausfuehrung.
         @return PLC-Thread Object or None"""
         proginit.logger.debug("enter RevPiPyLoad._plcthread()")
-        th_plc = None
 
         # Prüfen ob Programm existiert
         if not os.path.exists(os.path.join(self.plcworkdir, self.plcprogram)):
@@ -555,6 +556,16 @@ class RevPiPyLoad():
                 os.path.join(self.plcworkdir, self.plcprogram)
             ))
             return None
+
+        # Check software watchdog
+        if self.revpi_led_address < 0 < self.plcprogram_watchdog:
+            proginit.logger.error(
+                "can not start plc program, because watchdog is activated "
+                "but no address was found in piCtory configuration"
+            )
+            return None
+
+        th_plc = None
 
         proginit.logger.debug("create PLC program watcher")
         th_plc = plcsystem.RevPiPlc(
@@ -567,6 +578,9 @@ class RevPiPyLoad():
         th_plc.gid = self.plcgid
         th_plc.uid = self.plcuid
         th_plc.rtlevel = self.rtlevel
+        th_plc.softdog.address = \
+            0 if self.revpi_led_address < 0 else self.revpi_led_address
+        th_plc.softdog.timeout = self.plcprogram_watchdog
         th_plc.zeroonerror = self.zeroonerror
         th_plc.zeroonexit = self.zeroonexit
 
@@ -628,7 +642,23 @@ class RevPiPyLoad():
         # TODO: Nur "Devices" list vergleich da HASH immer neu wegen timestamp
 
         with open(proginit.pargs.configrsc, "rb") as fh:
-            file_hash = md5(fh.read()).digest()
+            rsc_buff = fh.read()
+
+        # Check change of RevPiLED address
+        self.revpi_led_address = get_revpiled_address(rsc_buff)
+        if self.plc is not None and self.plc.is_alive():
+            if self.revpi_led_address >= 0:
+                self.plc.softdog.address = self.revpi_led_address
+            elif self.plcprogram_watchdog > 0:
+                # Stop plc program, if watchdog is needed but not found
+                proginit.logger.error(
+                    "stop plc program, because watchdog is activated but "
+                    "no address was found in piCtory configuration"
+                )
+                self.plc.stop()
+                self.plc.join()
+
+        file_hash = md5(rsc_buff).digest()
         if picontrolserver.HASH_PICT == file_hash:
             return False
         picontrolserver.HASH_PICT = file_hash
@@ -1151,7 +1181,7 @@ class RevPiPyLoad():
                 "autoreloaddelay": "[0-9]+",
                 "autostart": "[01]",
                 "plcprogram": ".+",
-                "plcprogram_watchdog": "[01]",
+                "plcprogram_watchdog": "[0-9]+",
                 "plcarguments": ".*",
                 "plcworkdir_set_uid": "[01]",
                 # "plcuid": "[0-9]{,5}",

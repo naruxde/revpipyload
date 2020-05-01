@@ -1,17 +1,19 @@
 # -*- coding: utf-8 -*-
 """Modul fuer die Verwaltung der PLC Funktionen."""
 __author__ = "Sven Sager"
-__copyright__ = "Copyright (C) 2018 Sven Sager"
+__copyright__ = "Copyright (C) 2020 Sven Sager"
 __license__ = "GPLv3"
 import os
-import proginit
 import shlex
 import subprocess
-from logsystem import PipeLogwriter
-from helper import _setuprt, _zeroprocimg
 from sys import stdout as sysstdout
 from threading import Event, Thread
 from time import sleep, asctime
+
+import proginit
+from helper import _setuprt, _zeroprocimg
+from logsystem import PipeLogwriter
+from watchdogs import SoftwareWatchdog
 
 
 class RevPiPlc(Thread):
@@ -44,6 +46,16 @@ class RevPiPlc(Thread):
         self.rtlevel = 0
         self.zeroonerror = False
         self.zeroonexit = False
+
+        # Software watchdog
+        self.softdog = SoftwareWatchdog(0, 0)
+
+    def __exec_rtlevel(self):
+        """RealTime Scheduler nutzen nach 5 Sekunden Programmvorlauf."""
+        if self.rtlevel > 0 \
+                and not self._evt_exit.wait(5) \
+                and self._procplc.poll() is None:
+            _setuprt(self._procplc.pid, self._evt_exit)
 
     def __get_autoreloaddelay(self):
         """Getter fuer autoreloaddelay.
@@ -103,6 +115,11 @@ class RevPiPlc(Thread):
             stderr=subprocess.STDOUT
         )
         proginit.logger.debug("leave RevPiPlc._spopen()")
+
+        # Pass process to watchdog
+        self.softdog.kill_process = sp
+        self.softdog.reset()
+
         return sp
 
     def newlogfile(self):
@@ -138,12 +155,7 @@ class RevPiPlc(Thread):
         # Prozess erstellen
         proginit.logger.info("start plc program {0}".format(self._program))
         self._procplc = self._spopen(lst_proc)
-
-        # RealTime Scheduler nutzen nach 5 Sekunden Programmvorlauf
-        if self.rtlevel > 0 \
-                and not self._evt_exit.wait(5) \
-                and self._procplc.poll() is None:
-            _setuprt(self._procplc.pid, self._evt_exit)
+        self.__exec_rtlevel()
 
         # Überwachung starten
         while not self._evt_exit.is_set():
@@ -152,22 +164,11 @@ class RevPiPlc(Thread):
             self.exitcode = self._procplc.poll()
 
             if self.exitcode is not None:
+                # Do nothing, if delay for restart is running
                 if self._delaycounter == self._autoreloaddelay:
-                    if self.exitcode > 0:
-                        # PLC Python Programm abgestürzt
-                        proginit.logger.error(
-                            "plc program crashed - exitcode: {0}".format(
-                                self.exitcode
-                            )
-                        )
-                        if self.zeroonerror:
-                            _zeroprocimg()
-                            proginit.logger.warning(
-                                "set piControl0 to ZERO after "
-                                "PLC program error"
-                            )
+                    self.softdog.stop()
 
-                    else:
+                    if self.exitcode == 0:
                         # PLC Python Programm sauber beendet
                         proginit.logger.info("plc program did a clean exit")
                         if self.zeroonexit:
@@ -175,6 +176,18 @@ class RevPiPlc(Thread):
                             proginit.logger.info(
                                 "set piControl0 to ZERO after "
                                 "PLC program returns clean exitcode"
+                            )
+                    else:
+                        # PLC Python Programm abgestürzt
+                        proginit.logger.error(
+                            "plc program crashed - exitcode: {0}"
+                            "".format(self.exitcode)
+                        )
+                        if self.zeroonerror:
+                            _zeroprocimg()
+                            proginit.logger.warning(
+                                "set piControl0 to ZERO after "
+                                "PLC program error"
                             )
 
                 if not self._evt_exit.is_set() and self.autoreload:
@@ -192,6 +205,7 @@ class RevPiPlc(Thread):
                             proginit.logger.warning(
                                 "restart plc program after crash"
                             )
+                        self.__exec_rtlevel()
                 else:
                     break
 
@@ -211,6 +225,7 @@ class RevPiPlc(Thread):
 
         proginit.logger.info("stop revpiplc thread")
         self._evt_exit.set()
+        self.softdog.stop()
 
         # Prüfen ob es einen subprocess gibt
         if self._procplc is None:
