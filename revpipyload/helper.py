@@ -120,7 +120,7 @@ def _zeroprocimg():
             )
 
 
-def get_revpiled_address(configrsc_bytes: bytes) -> int:
+def get_revpiled_address(configrsc_bytes):
     """
     Find byte address of revpiled output.
 

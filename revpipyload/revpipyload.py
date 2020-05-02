@@ -798,7 +798,9 @@ class RevPiPyLoad():
             reset_driver_detected = pictory_reset_driver.triggered
 
             # Dateiveränderungen prüfen mit beiden Funktionen!
-            if reset_driver_detected and self.check_pictory_changed():
+            if (reset_driver_detected or
+                    pictory_reset_driver.not_implemented) and \
+                    self.check_pictory_changed():
                 file_changed = True
 
                 # Alle Verbindungen von ProcImgServer trennen
@@ -830,9 +832,10 @@ class RevPiPyLoad():
                     # Kein psstart um Reload im Client zu erzeugen
 
             # Restart plc program after piCtory change
-            if self.plc is not None and self.plc.is_alive() and (
-                    self.reset_driver_action == 1 and file_changed or
-                    self.reset_driver_action == 2 and reset_driver_detected):
+            if not pictory_reset_driver.not_implemented and \
+                    self.plc is not None and self.plc.is_alive() and (
+                    self.reset_driver_action == 2 and reset_driver_detected or
+                    self.reset_driver_action == 1 and file_changed):
                 # Plc program is running and we have to restart it
                 proginit.logger.warning(
                     "restart plc program after 'reset driver' was requested"

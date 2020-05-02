@@ -17,7 +17,7 @@ import proginit as pi
 
 class SoftwareWatchdog:
 
-    def __init__(self, address: int, timeout: int, kill_process=None):
+    def __init__(self, address, timeout, kill_process=None):
         """
         Software watchdog thread, which must be recreate if triggered.
 
@@ -29,6 +29,7 @@ class SoftwareWatchdog:
         self._exit = Event()
         self._ioctl_bytes = b''
         self._process = None
+        self._stopped = False
         self._timeout = 0.0
         self.triggered = False
 
@@ -85,6 +86,7 @@ class SoftwareWatchdog:
     def reset(self):
         """Reset watchdog functions after triggered or stopped."""
         pi.logger.debug("enter SoftwareWatchdog.reset()")
+        self._stopped = False
         self._exit.clear()
         self.triggered = False
 
@@ -96,18 +98,19 @@ class SoftwareWatchdog:
     def stop(self):
         """Shut down watchdog task and wait for exit."""
         pi.logger.debug("enter SoftwareWatchdog.stop()")
+        self._stopped = True
         self._exit.set()
         if self.__th.is_alive():
             self.__th.join()
         pi.logger.debug("leave SoftwareWatchdog.stop()")
 
     @property
-    def address(self) -> int:
+    def address(self):
         """Byte address of RevPiLED byte."""
         return unpack("<Hxx", self._ioctl_bytes)[0]
 
     @address.setter
-    def address(self, value: int) -> None:
+    def address(self, value):
         """Byte address of RevPiLED byte."""
         if not isinstance(value, int):
             raise TypeError("address must be <class 'int'>")
@@ -120,22 +123,22 @@ class SoftwareWatchdog:
         pi.logger.debug("set software watchdog address to {0}".format(value))
 
     @property
-    def kill_process(self) -> Popen:
+    def kill_process(self):
         return self._process
 
     @kill_process.setter
-    def kill_process(self, value: Popen) -> None:
+    def kill_process(self, value):
         if not (value is None or isinstance(value, Popen)):
             raise TypeError("kill_process must be <class 'subprocess.Popen'>")
         self._process = value
 
     @property
-    def timeout(self) -> int:
+    def timeout(self):
         """Timeout to trigger watchdog on no change of bit."""
         return int(self._timeout)
 
     @timeout.setter
-    def timeout(self, value: int):
+    def timeout(self, value):
         """
         Timeout to trigger watchdog on no change of bit.
 
@@ -150,12 +153,17 @@ class SoftwareWatchdog:
 
         if value == 0:
             # A value of 0 will stop the watchdog thread
-            self.stop()
+            self._exit.set()
+            if self.__th.is_alive():
+                self.__th.join()
+
+            # Set after exit thread to not trigger watchdog
             self._timeout = 0.0
         else:
             self._timeout = float(value)
             if not (self.triggered or
-                    self._exit.is_set() or self.__th.is_alive()):
+                    self._stopped or self.__th.is_alive()):
+                self._exit.clear()
                 self.__th = Thread(target=self.__th_run)
                 self.__th.start()
             pi.logger.debug(
@@ -172,10 +180,12 @@ class ResetDriverWatchdog(Thread):
         self.daemon = True
         self._exit = False
         self._fh = None
+        self.not_implemented = False
+        """True, if KB_WAIT_FOR_EVENT is not implemented in piControl."""
         self._triggered = False
         self.start()
 
-    def run(self) -> None:
+    def run(self):
         """
         Mainloop of watchdog for reset_driver.
 
@@ -188,6 +198,7 @@ class ResetDriverWatchdog(Thread):
         try:
             self._fh = os.open(pi.pargs.procimg, os.O_RDONLY)
         except Exception:
+            self.not_implemented = True
             pi.logger.error(
                 "can not open process image at '{0}' for piCtory "
                 "reset_driver watchdog".format(pi.pargs.procimg)
@@ -203,6 +214,7 @@ class ResetDriverWatchdog(Thread):
                     self._triggered = True
                     pi.logger.debug("piCtory reset_driver detected")
             except Exception:
+                self.not_implemented = True
                 os.close(self._fh)
                 self._fh = None
                 pi.logger.warning("IOCTL KB_WAIT_FOR_EVENT is not implemented")
@@ -210,7 +222,7 @@ class ResetDriverWatchdog(Thread):
 
         pi.logger.debug("leave ResetDriverWatchdog.run()")
 
-    def stop(self) -> None:
+    def stop(self):
         """Stop watchdog for piCtory reset_driver."""
         pi.logger.debug("enter ResetDriverWatchdog.stop()")
 
@@ -222,7 +234,8 @@ class ResetDriverWatchdog(Thread):
         pi.logger.debug("leave ResetDriverWatchdog.stop()")
 
     @property
-    def triggered(self) -> bool:
-        rc = self._triggered or not self.is_alive()
+    def triggered(self):
+        """Will return True one time after watchdog was triggered."""
+        rc = self._triggered
         self._triggered = False
         return rc
