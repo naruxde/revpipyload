@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Stellt die MQTT Uebertragung fuer IoT-Zwecke bereit."""
 __author__ = "Sven Sager"
-__copyright__ = "Copyright (C) 2018 Sven Sager"
+__copyright__ = "Copyright (C) 2020 Sven Sager"
 __license__ = "GPLv3"
 import proginit
 import revpimodio2
@@ -141,6 +141,7 @@ class MqttServer(Thread):
                 replace_io_file=self._replace_ios,
                 shared_procimg=True,
             )
+            self._rpi.debug = -1
 
             if self._replace_ios:
                 proginit.logger.info("loaded replace_ios to MQTT")
@@ -155,6 +156,7 @@ class MqttServer(Thread):
                     procimg=proginit.pargs.procimg,
                     shared_procimg=True,
                 )
+                self._rpi.debug = -1
                 proginit.logger.warning(
                     "replace_ios_file not loadable for MQTT - using "
                     "defaults now | {0}".format(e)
@@ -175,27 +177,28 @@ class MqttServer(Thread):
 
         # CoreIOs prüfen und zu export hinzufügen
         lst_coreio = []
-        if self._rpi.core.a1green.export:
-            lst_coreio.append(self._rpi.core.a1green)
-        if self._rpi.core.a1red.export:
-            lst_coreio.append(self._rpi.core.a1red)
-        if self._rpi.core.a2green.export:
-            lst_coreio.append(self._rpi.core.a2green)
-        if self._rpi.core.a2red.export:
-            lst_coreio.append(self._rpi.core.a2red)
-
-        # Connect-IOs anhängen
-        if type(self._rpi.core) == revpimodio2.device.Connect:
-            if self._rpi.core.a3green.export:
-                lst_coreio.append(self._rpi.core.a3green)
-            if self._rpi.core.a3red.export:
-                lst_coreio.append(self._rpi.core.a3red)
+        if self._rpi.core:
+            if self._rpi.core.a1green.export:
+                lst_coreio.append(self._rpi.core.a1green)
+            if self._rpi.core.a1red.export:
+                lst_coreio.append(self._rpi.core.a1red)
+            if self._rpi.core.a2green.export:
+                lst_coreio.append(self._rpi.core.a2green)
+            if self._rpi.core.a2red.export:
+                lst_coreio.append(self._rpi.core.a2red)
             if self._rpi.core.wd.export:
                 lst_coreio.append(self._rpi.core.wd)
-            if self._rpi.core.x2in.export:
-                lst_coreio.append(self._rpi.core.x2in)
-            if self._rpi.core.x2out.export:
-                lst_coreio.append(self._rpi.core.x2out)
+
+            # Connect-IOs anhängen
+            if type(self._rpi.core) == revpimodio2.device.Connect:
+                if self._rpi.core.a3green.export:
+                    lst_coreio.append(self._rpi.core.a3green)
+                if self._rpi.core.a3red.export:
+                    lst_coreio.append(self._rpi.core.a3red)
+                if self._rpi.core.x2in.export:
+                    lst_coreio.append(self._rpi.core.x2in)
+                if self._rpi.core.x2out.export:
+                    lst_coreio.append(self._rpi.core.x2out)
 
         # IOs exportieren und Events anmelden
         for io in lst_coreio:

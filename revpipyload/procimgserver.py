@@ -6,7 +6,7 @@ IO-Check bei Inbetriebname durchzufuehren.
 
 """
 __author__ = "Sven Sager"
-__copyright__ = "Copyright (C) 2018 Sven Sager"
+__copyright__ = "Copyright (C) 2020 Sven Sager"
 __license__ = "GPLv3"
 import pickle
 import proginit
@@ -109,6 +109,7 @@ class ProcimgServer():
                 replace_io_file=self.replace_ios,
                 shared_procimg=True,
             )
+            self.rpi.debug = -1
 
             if self.replace_ios:
                 proginit.logger.info("loaded replace_ios to ProcimgServer")
@@ -120,6 +121,7 @@ class ProcimgServer():
                     procimg=proginit.pargs.procimg,
                     shared_procimg=True,
                 )
+                self.rpi.debug = -1
                 proginit.logger.warning(
                     "replace_ios_file not loadable for ProcimgServer - using "
                     "defaults now | {0}".format(e)

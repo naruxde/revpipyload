@@ -1076,11 +1076,12 @@ class RevPiPyLoad():
             -1 laeuft noch
             -2 Datei nicht gefunden
             -3 Lief nie
+            -9 Killed by watchdog or os
 
         """
         if self.plc is None:
             return -2
-        elif self.plc.is_alive():
+        elif self.plc.exitcode is None and self.plc.is_alive():
             return -1
         else:
             return -3 if self.plc.exitcode is None else self.plc.exitcode
