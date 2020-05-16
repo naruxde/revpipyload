@@ -162,10 +162,11 @@ class MqttServer(Thread):
                     "defaults now | {0}".format(e)
                 )
 
-            except Exception:
+            except Exception as e:
                 self._rpi = None
                 proginit.logger.error(
-                    "piCtory configuration not loadable for MQTT"
+                    "piCtory configuration not loadable for MQTT | "
+                    "{0}".format(e)
                 )
                 raise e
 

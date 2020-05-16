@@ -28,7 +28,7 @@ begrenzt werden!
 __author__ = "Sven Sager"
 __copyright__ = "Copyright (C) 2020 Sven Sager"
 __license__ = "GPLv3"
-__version__ = "0.8.5"
+__version__ = "0.9.0"
 
 import gzip
 import os
@@ -53,7 +53,7 @@ from shared.ipaclmanager import IpAclManager
 from watchdogs import ResetDriverWatchdog
 from xrpcserver import SaveXMLRPCServer
 
-min_revpimodio = "2.4.5"
+min_revpimodio = "2.5.0"
 
 
 class RevPiPyLoad():
@@ -634,15 +634,23 @@ class RevPiPyLoad():
     def check_pictory_changed(self):
         """Prueft ob sich die piCtory Datei veraendert hat.
         @return True, wenn veraendert wurde"""
-        mtime = os.path.getmtime(proginit.pargs.configrsc)
+        try:
+            mtime = os.path.getmtime(proginit.pargs.configrsc)
+        except FileNotFoundError:
+            self.pictorymtime = 0
+            return False
+
         if self.pictorymtime == mtime:
             return False
         self.pictorymtime = mtime
 
         # TODO: Nur "Devices" list vergleich da HASH immer neu wegen timestamp
 
-        with open(proginit.pargs.configrsc, "rb") as fh:
-            rsc_buff = fh.read()
+        try:
+            with open(proginit.pargs.configrsc, "rb") as fh:
+                rsc_buff = fh.read()
+        except Exception:
+            return False
 
         # Check change of RevPiLED address
         self.revpi_led_address = get_revpiled_address(rsc_buff)
@@ -675,7 +683,7 @@ class RevPiPyLoad():
 
             if not self.replaceiofail:
                 proginit.logger.error(
-                    "can not access (r/w) the replace_ios file '{0}' "
+                    "can not access the replace_ios file '{0}' "
                     "using defaults".format(self.replace_ios_config)
                 )
             self.replaceiofail = True
@@ -737,7 +745,7 @@ class RevPiPyLoad():
                         fh_pack.write(
                             os.path.join(tup_dir[0], file), arcname=arcname
                         )
-                if pictory:
+                if pictory and os.access(proginit.pargs.configrsc, os.R_OK):
                     fh_pack.write(
                         proginit.pargs.configrsc, arcname="config.rsc"
                     )
@@ -751,7 +759,7 @@ class RevPiPyLoad():
                 name=filename, mode="w:gz", dereference=True)
             try:
                 fh_pack.add(".", arcname=os.path.basename(self.plcworkdir))
-                if pictory:
+                if pictory and os.access(proginit.pargs.configrsc, os.R_OK):
                     fh_pack.add(proginit.pargs.configrsc, arcname="config.rsc")
             except Exception:
                 filename = ""
@@ -943,7 +951,7 @@ class RevPiPyLoad():
         dc["autoreloaddelay"] = self.autoreloaddelay
         dc["autostart"] = int(self.autostart)
         dc["plcworkdir"] = self.plcworkdir
-        dc["plcworkdir_set_uid"] = self.plcworkdir_set_uid
+        dc["plcworkdir_set_uid"] = int(self.plcworkdir_set_uid)
         dc["plcprogram"] = self.plcprogram
         dc["plcprogram_watchdog"] = self.plcprogram_watchdog
         dc["plcarguments"] = self.plcarguments

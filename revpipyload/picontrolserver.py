@@ -452,11 +452,11 @@ class RevPiSlaveDev(Thread):
 
             elif cmd == b'RP':
                 # Replace_IOs Konfiguration senden, wenn hash existiert
+                replace_ios = proginit.conf["DEFAULT"].get("replace_ios", "")
                 proginit.logger.debug(
                     "transfair replace_io configuration: {0}"
-                    "".format(proginit.pargs.configrsc)
+                    "".format(replace_ios)
                 )
-                replace_ios = proginit.conf["DEFAULT"].get("replace_ios", "")
                 if HASH_RPIO != HASH_NULL and replace_ios:
                     try:
                         with open(replace_ios, "rb") as fh:

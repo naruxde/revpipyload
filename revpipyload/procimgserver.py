@@ -126,10 +126,11 @@ class ProcimgServer():
                     "replace_ios_file not loadable for ProcimgServer - using "
                     "defaults now | {0}".format(e)
                 )
-            except Exception:
+            except Exception as e:
                 self.rpi = None
                 proginit.logger.error(
-                    "piCtory configuration not loadable for ProcimgServer"
+                    "piCtory configuration not loadable for ProcimgServer | "
+                    "{0}".format(e)
                 )
                 return e
 

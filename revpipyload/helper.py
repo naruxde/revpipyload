@@ -131,6 +131,10 @@ def get_revpiled_address(configrsc_bytes):
     except Exception:
         return -1
 
+    # Check the result does match
+    if not type(rsc) == dict:
+        return -1
+
     byte_address = -1
     for device in rsc.get("Devices", ()):  # type: dict
         if device.get("type", "") == "BASE":
