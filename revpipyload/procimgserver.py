@@ -48,9 +48,7 @@ class ProcimgServer():
         }
 
         # RevPiModIO laden oder mit Exception aussteigen
-        ex = self.loadrevpimodio()
-        if ex is not None:
-            raise ex
+        self.loadrevpimodio()
 
         proginit.logger.debug("leave ProcimgServer.__init__()")
 

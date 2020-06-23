@@ -445,17 +445,14 @@ class RevPiPyLoad():
                     "".format(min_revpimodio)
                 )
             else:
-                try:
-                    self.xml_ps = procimgserver.ProcimgServer(
-                        self.xsrv,
-                        None if not self.replace_ios_config
-                        else self.replace_ios_config,
-                    )
-                    self.xsrv.register_function(1, self.xml_psstart, "psstart")
-                    self.xsrv.register_function(1, self.xml_psstop, "psstop")
-                except Exception as e:
-                    self.xml_ps = None
-                    proginit.logger.error(e)
+                self.xml_ps = procimgserver.ProcimgServer(
+                    self.xsrv,
+                    None if not self.replace_ios_config
+                    else self.replace_ios_config,
+                )
+
+                self.xsrv.register_function(1, self.xml_psstart, "psstart")
+                self.xsrv.register_function(1, self.xml_psstop, "psstop")
 
             # XML Modus 2 Einstellungen lesen und Programm herunterladen
             self.xsrv.register_function(
