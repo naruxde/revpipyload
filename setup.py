@@ -29,7 +29,10 @@ setup(
     name="revpipyload",
     version="0.9.1",
 
-    scripts=["data/revpipyload"],
+    scripts=[
+        "data/revpipyload",
+        "data/revpipyload_secure_installation",
+    ],
 
     install_requires=["revpimodio2 >= 2.5.0"],
     python_requires=">=3.2",
