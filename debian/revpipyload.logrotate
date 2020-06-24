@@ -3,6 +3,7 @@
 {
     rotate 6
     weekly
+    maxsize 1M
     compress
     delaycompress
     missingok
