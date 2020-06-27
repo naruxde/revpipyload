@@ -131,7 +131,8 @@ try:
                 "grant access? (y/N) "
             ).lower()
             if cmd == "y":
-                lst_ip = []
+                # Always set local host
+                lst_ip = ["127.*.*.*,4 "]
                 while True:
                     cmd = input(
                         "Enter single IPv4 address | "
@@ -142,7 +143,9 @@ try:
                         save_xmlrpcacls()
                         break
                     elif match(r"([\d*]{1,3}\.){3}[\d*]{1,3}", cmd):
-                        lst_ip.append("{0},4".format(cmd))
+                        ip_level = "{0},4".format(cmd)
+                        if ip_level not in lst_ip:
+                            lst_ip.append(ip_level)
                     else:
                         stderr.write("Wrong format (0.0.0.0)\n")
 
