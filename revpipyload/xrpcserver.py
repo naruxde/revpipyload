@@ -3,10 +3,11 @@
 __author__ = "Sven Sager"
 __copyright__ = "Copyright (C) 2018 Sven Sager"
 __license__ = "GPLv3"
+
+from xmlrpc.server import SimpleXMLRPCServer, SimpleXMLRPCRequestHandler
+
 import proginit
 from shared.ipaclmanager import IpAclManager
-from concurrent import futures
-from xmlrpc.server import SimpleXMLRPCServer, SimpleXMLRPCRequestHandler
 
 
 class SaveXMLRPCServer(SimpleXMLRPCServer):
@@ -31,6 +32,7 @@ class SaveXMLRPCServer(SimpleXMLRPCServer):
             encoding="utf-8",
             bind_and_activate=False,
         )
+        self.timeout = 0.5
 
         # Klassenvariablen
         if ipacl is None:
@@ -39,8 +41,6 @@ class SaveXMLRPCServer(SimpleXMLRPCServer):
             self.aclmgr = ipacl
         self.funcacls = {}
         self.requestacl = -1
-        self.tpe = futures.ThreadPoolExecutor(max_workers=1)
-        self.fut = None
 
         proginit.logger.debug("leave SaveXMLRPCServer.__init__()")
 
@@ -62,11 +62,6 @@ class SaveXMLRPCServer(SimpleXMLRPCServer):
 
         return super()._dispatch(method, params)
 
-    def is_alive(self):
-        """Prueft ob der XML RPC Server laeuft.
-        @return True, wenn Server noch laeuft"""
-        return False if self.fut is None else self.fut.running()
-
     def register_function(self, acl_level, function, name=None):
         """Override register_function to add acl_level.
 
@@ -82,32 +77,6 @@ class SaveXMLRPCServer(SimpleXMLRPCServer):
             name = function.__name__
         self.funcs[name] = function
         self.funcacls[name] = acl_level
-
-    def start(self):
-        """Startet den XML-RPC Server."""
-        proginit.logger.debug("enter SaveXMLRPCServer.start()")
-
-        if self.fut is None:
-            self.server_bind()
-            self.server_activate()
-            self.fut = self.tpe.submit(self.serve_forever)
-        else:
-            raise RuntimeError("savexmlrpcservers can only be started once")
-
-        proginit.logger.debug("leave SaveXMLRPCServer.start()")
-
-    def stop(self):
-        """Stoppt den XML-RPC Server."""
-        proginit.logger.debug("enter SaveXMLRPCServer.stop()")
-
-        if self.fut is not None:
-            self.shutdown()
-            self.tpe.shutdown()
-            self.server_close()
-        else:
-            raise RuntimeError("save xml rpc server was not started")
-
-        proginit.logger.debug("leave SaveXMLRPCServer.stop()")
 
 
 class SaveXMLRPCRequestHandler(SimpleXMLRPCRequestHandler):

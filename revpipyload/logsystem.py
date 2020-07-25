@@ -9,7 +9,7 @@ from threading import Event, Lock, Thread
 from xmlrpc.client import Binary
 
 
-class LogReader():
+class LogReader:
 
     """Ermoeglicht den Zugriff auf die Logdateien.
 
@@ -112,7 +112,6 @@ class PipeLogwriter(Thread):
         @return FileHandler-Objekt"""
         proginit.logger.debug("enter PipeLogwriter._configurefh()")
 
-        logfile = None
         dirname = os.path.dirname(self.logfile)
 
         if os.access(dirname, os.R_OK | os.W_OK):

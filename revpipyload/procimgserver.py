@@ -14,7 +14,7 @@ import revpimodio2
 from xmlrpc.client import Binary
 
 
-class ProcimgServer():
+class ProcimgServer:
 
     """Serverkomponente fuer zusaetzliche XML-RPC Funktionen.
 

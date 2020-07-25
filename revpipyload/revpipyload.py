@@ -56,7 +56,7 @@ from xrpcserver import SaveXMLRPCServer
 min_revpimodio = "2.5.0"
 
 
-class RevPiPyLoad():
+class RevPiPyLoad:
     """Hauptklasse, die alle Funktionen zur Verfuegung stellt.
 
     Hier wird die gesamte Konfiguraiton eingelesen und der ggf. aktivierte
@@ -495,8 +495,9 @@ class RevPiPyLoad():
 
             # Neustart bei reload
             if not self._exit:
-                proginit.logger.info("start xmlrpc-server")
-                self.xsrv.start()
+                proginit.logger.info("bind xmlrpc-server")
+                self.xsrv.server_bind()
+                self.xsrv.server_activate()
 
         # Konfiguration abschließen
         self.evt_loadconfig.clear()
@@ -561,8 +562,6 @@ class RevPiPyLoad():
                 "but no address was found in piCtory configuration"
             )
             return None
-
-        th_plc = None
 
         proginit.logger.debug("create PLC program watcher")
         th_plc = plcsystem.RevPiPlc(
@@ -774,8 +773,9 @@ class RevPiPyLoad():
         self._exit = False
 
         if self.xmlrpc and self.xsrv is not None:
-            proginit.logger.info("start xmlrpc-server")
-            self.xsrv.start()
+            proginit.logger.info("bind xmlrpc-server")
+            self.xsrv.server_bind()
+            self.xsrv.server_activate()
 
         # MQTT Uebertragung starten
         if self.th_plcmqtt is not None:
@@ -871,7 +871,11 @@ class RevPiPyLoad():
                 if self.th_plcslave is not None:
                     self.th_plcslave.start()
 
-            self.evt_loadconfig.wait(1)
+            if self.xmlrpc and self.xsrv is not None:
+                # Wort xml calls in same thread or wait till timeout
+                self.xsrv.handle_request()
+            else:
+                self.evt_loadconfig.wait(1)
 
         proginit.logger.info("stopping revpipyload")
 
@@ -911,8 +915,11 @@ class RevPiPyLoad():
         if self.plc is not None and self.plc.is_alive():
             proginit.logger.info("stopping revpiplc thread")
             self.plc.stop()
-            self.plc.join()
-            proginit.logger.debug("revpiplc thread successfully closed")
+            self.plc.join(5.0)
+            if self.plc.is_alive():
+                proginit.logger.warning("revpiplc thread not closed")
+            else:
+                proginit.logger.debug("revpiplc thread successfully closed")
 
         proginit.logger.debug("leave RevPiPyLoad.stop_plcprogram()")
 
@@ -933,8 +940,8 @@ class RevPiPyLoad():
         proginit.logger.debug("enter RevPiPyLoad.stop_xmlrpcserver()")
 
         if self.xsrv is not None:
-            proginit.logger.info("shutting down xmlrpc-server")
-            self.xsrv.stop()
+            proginit.logger.info("close xmlrpc-server")
+            self.xsrv.server_close()
 
         proginit.logger.debug("leave RevPiPyLoad.stop_xmlrpcserver()")
 

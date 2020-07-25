@@ -5,7 +5,7 @@ __copyright__ = "Copyright (C) 2020 Sven Sager"
 __license__ = "GPLv3"
 
 import os
-from json import load, loads
+from json import loads
 from re import match as rematch
 from subprocess import Popen, PIPE
 
