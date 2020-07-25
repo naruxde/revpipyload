@@ -178,6 +178,7 @@ class ResetDriverWatchdog(Thread):
     def __init__(self):
         super(ResetDriverWatchdog, self).__init__()
         self.daemon = True
+        self._calls = []
         self._exit = False
         self._fh = None
         self.not_implemented = False
@@ -213,6 +214,8 @@ class ResetDriverWatchdog(Thread):
                 if rc == 0 and byte_buff[0] == 1:
                     self._triggered = True
                     pi.logger.debug("piCtory reset_driver detected")
+                    for func in self._calls:
+                        func()
             except Exception:
                 self.not_implemented = True
                 os.close(self._fh)
@@ -221,6 +224,13 @@ class ResetDriverWatchdog(Thread):
                 return
 
         pi.logger.debug("leave ResetDriverWatchdog.run()")
+
+    def register_call(self, function):
+        """Register a function, if watchdog triggers."""
+        if not callable(function):
+            return ValueError("Function is not callable.")
+        if function not in self._calls:
+            self._calls.append(function)
 
     def stop(self):
         """Stop watchdog for piCtory reset_driver."""
@@ -232,6 +242,13 @@ class ResetDriverWatchdog(Thread):
             self._fh = None
 
         pi.logger.debug("leave ResetDriverWatchdog.stop()")
+
+    def unregister_call(self, function=None):
+        """Remove a function call on watchdog trigger."""
+        if function is None:
+            self._calls.clear()
+        elif function in self._calls:
+            self._calls.remove(function)
 
     @property
     def triggered(self):

@@ -791,6 +791,7 @@ class RevPiPyLoad():
 
         # Watchdog to detect the reset_driver event
         pictory_reset_driver = ResetDriverWatchdog()
+        pictory_reset_driver.register_call(self.xml_psstop)
 
         # mainloop
         while not self._exit:
@@ -1369,6 +1370,7 @@ class RevPiPyLoad():
         @return True, wenn stop erfolgreich"""
         if self.xml_ps is not None:
             self.xml_ps.stop()
+            self.xml_ps.loadrevpimodio()
             return True
         else:
             return False
