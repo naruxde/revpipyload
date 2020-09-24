@@ -484,6 +484,10 @@ class RevPiPyLoad:
                 3, self.xml_plcslavestart, "plcslavestart")
             self.xsrv.register_function(
                 3, self.xml_plcslavestop, "plcslavestop")
+            self.xsrv.register_function(
+                3, self.xml_plcdelete_file, "plcdeletefile")
+            self.xsrv.register_function(
+                3, self.xml_plcdownload_file, "plcdownload_file")
 
             # XML Modus 4 Einstellungen ändern
             self.xsrv.register_function(
@@ -872,7 +876,7 @@ class RevPiPyLoad:
                     self.th_plcslave.start()
 
             if self.xmlrpc and self.xsrv is not None:
-                # Wort xml calls in same thread or wait till timeout
+                # Work xml calls in same thread or wait till timeout
                 self.xsrv.handle_request()
             else:
                 self.evt_loadconfig.wait(1)
@@ -1062,6 +1066,24 @@ class RevPiPyLoad:
         else:
             return False
 
+    def xml_plcdelete_file(self, file_name: str):
+        """
+        Delete a single file in work directory.
+
+        :param file_name: File with full path relative to work directory
+        :return: True on success
+        """
+        file_name = os.path.join(self.plcworkdir, file_name)
+        if os.path.exists(file_name):
+            os.remove(file_name)
+            try:
+                # Try to remove directory if empty
+                os.rmdir(os.path.dirname(file_name))
+            except Exception:
+                pass
+            return True
+        return False
+
     def xml_plcdownload(self, mode="tar", pictory=False):
         """Uebertraegt ein Archiv vom plcworkdir.
 
@@ -1079,6 +1101,20 @@ class RevPiPyLoad:
             with open(file, "rb") as fh:
                 xmldata = Binary(fh.read())
             os.remove(file)
+            return xmldata
+        return Binary()
+
+    def xml_plcdownload_file(self, file_name:str):
+        """
+        Download a single file from work directory.
+
+        :param file_name: File with full path relative to work directory
+        :return: Binary object in gzip format
+        """
+        file_name = os.path.join(self.plcworkdir, file_name)
+        if os.path.exists(file_name):
+            with open(file_name, "rb") as fh:
+                xmldata = Binary(gzip.compress(fh.read()))
             return xmldata
         return Binary()
 
