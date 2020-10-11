@@ -41,7 +41,7 @@ from json import loads as jloads
 from shutil import rmtree
 from tempfile import mkstemp
 from threading import Event
-from time import asctime
+from time import asctime, time
 from xmlrpc.client import Binary
 
 import logsystem
@@ -876,10 +876,12 @@ class RevPiPyLoad:
                     self.th_plcslave.start()
 
             if self.xmlrpc and self.xsrv is not None:
-                # Work xml calls in same thread or wait till timeout
-                self.xsrv.handle_request()
+                # Work multiple xml calls in same thread until timeout
+                xml_start = time()
+                while time() - xml_start < 1.0:
+                    self.xsrv.handle_request()
             else:
-                self.evt_loadconfig.wait(1)
+                self.evt_loadconfig.wait(1.0)
 
         proginit.logger.info("stopping revpipyload")
 

@@ -140,6 +140,9 @@ def get_revpiled_address(configrsc_bytes):
         if device.get("type", "") == "BASE":
             try:
                 byte_address = device["offset"] + int(device["out"]["0"][3])
+                if device.get("productType", "0") == "135":
+                    # On the Flat device the LEDs are 2 Bytes (last Bit is wd)
+                    byte_address += 1
                 proginit.logger.debug(
                     "found revpi_led_address on {0} byte".format(byte_address)
                 )

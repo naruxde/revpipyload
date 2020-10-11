@@ -83,6 +83,8 @@ class SaveXMLRPCRequestHandler(SimpleXMLRPCRequestHandler):
 
     """Verwaltet die XML-Requests und prueft Berechtigungen."""
 
+    timeout = 2.0
+
     def parse_request(self):
         """Berechtigungen pruefen.
         @return True, wenn Parsen erfolgreich war"""

@@ -18,6 +18,9 @@ class LogReader:
 
     """
 
+    MAX_UPLOAD_SIZE = 1048576
+    """Maximum block of logfile."""
+
     def __init__(self):
         """Instantiiert LogReader-Klasse."""
         self.fhapp = None
@@ -40,10 +43,17 @@ class LogReader:
         @return Binary() der Logdatei
 
         """
+        # Max block to prevent freeze
+        if count > self.MAX_UPLOAD_SIZE:
+            raise ValueError(
+                "Parameter count has a max value of {0}"
+                "".format(self.MAX_UPLOAD_SIZE)
+            )
+
         if not os.access(proginit.logapp, os.R_OK):
-            return Binary(b'\x16')  # 
+            return Binary(b'\x16')  # ESC
         elif start > os.path.getsize(proginit.logapp):
-            return Binary(b'\x19')  # 
+            return Binary(b'\x19')  # EM
         else:
             with self.fhapplk:
                 if self.fhapp is None or self.fhapp.closed:
@@ -60,10 +70,17 @@ class LogReader:
         @return Binary() der Logdatei
 
         """
+        # Max block to prevent freeze
+        if count > self.MAX_UPLOAD_SIZE:
+            raise ValueError(
+                "Parameter count has a max value of {0}"
+                "".format(self.MAX_UPLOAD_SIZE)
+            )
+
         if not os.access(proginit.logplc, os.R_OK):
-            return Binary(b'\x16')  # 
+            return Binary(b'\x16')  # ESC
         elif start > os.path.getsize(proginit.logplc):
-            return Binary(b'\x19')  # 
+            return Binary(b'\x19')  # EM
         else:
             with self.fhplclk:
                 if self.fhplc is None or self.fhplc.closed:
