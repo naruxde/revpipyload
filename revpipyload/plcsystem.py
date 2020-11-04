@@ -6,6 +6,7 @@ __license__ = "GPLv3"
 import os
 import shlex
 import subprocess
+from pwd import getpwuid
 from sys import stdout as sysstdout
 from threading import Event, Thread
 from time import sleep, asctime
@@ -94,6 +95,15 @@ class RevPiPlc(Thread):
         proginit.logger.info(
             "set uid {0} and gid {1} for plc program".format(
                 self.uid, self.gid)
+            )
+
+        # Set user last to hold root right to do the group things
+        try:
+            name = getpwuid(self.uid).pw_name
+            os.initgroups(name, self.gid)
+        except Exception:
+            proginit.logger.warning(
+                "could not initialize the group access list with all groups"
             )
         os.setgid(self.gid)
         os.setuid(self.uid)

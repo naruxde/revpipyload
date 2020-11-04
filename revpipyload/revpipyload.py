@@ -343,9 +343,9 @@ class RevPiPyLoad:
         # Workdirectory owner setzen
         try:
             if self.plcworkdir_set_uid:
-                os.chown(self.plcworkdir, self.plcuid, -1)
+                os.chown(self.plcworkdir, self.plcuid, self.plcgid)
             else:
-                os.chown(self.plcworkdir, 0, -1)
+                os.chown(self.plcworkdir, 0, 0)
         except Exception:
             proginit.logger.warning(
                 "could not set user id on working directory"
@@ -1207,6 +1207,10 @@ class RevPiPyLoad:
         try:
             with open(filename, "wb") as fh:
                 fh.write(gzip.decompress(filedata.data))
+            if self.plcworkdir_set_uid:
+                os.chown(self.plcworkdir, self.plcuid, self.plcgid)
+            else:
+                os.chown(self.plcworkdir, 0, 0)
             return True
         except Exception:
             return False
