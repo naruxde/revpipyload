@@ -103,13 +103,22 @@ class RevPiSlave(Thread):
         # Socket öffnen und konfigurieren bis Erfolg oder Ende
         self.so = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.so.settimeout(2)
+        sock_bind_err = False
         while not self._evt_exit.is_set():
             try:
                 self.so.bind((self._bindip, self._port))
+                if sock_bind_err:
+                    proginit.logger.warning(
+                        "successful bind picontrolserver to socket "
+                        "after error"
+                    )
             except Exception as e:
-                proginit.logger.warning(
-                    "can not bind socket: {0} - retry".format(e)
-                )
+                if not sock_bind_err:
+                    sock_bind_err = True
+                    proginit.logger.warning(
+                        "can not bind picontrolserver to socket: {0} "
+                        "- retrying".format(e)
+                    )
                 self._evt_exit.wait(1)
             else:
                 self.so.listen(32)
@@ -149,9 +158,18 @@ class RevPiSlave(Thread):
                 th_check for th_check in self._th_dev if th_check.is_alive()
             ]
 
-        # Alle Threads beenden
-        for th in self._th_dev:
+        # Disconnect all clients and wait some time, because they are daemons
+        th_close_err = False
+        for th in self._th_dev:  # type: RevPiSlaveDev
             th.stop()
+        for th in self._th_dev:  # type: RevPiSlaveDev
+            th.join(2.0)
+            if th.is_alive():
+                th_close_err = True
+        if th_close_err:
+            proginit.logger.warning(
+                "piControlServer could not disconnect all clients in timeout"
+            )
 
         # Socket schließen
         self.so.close()
@@ -600,7 +618,13 @@ class RevPiSlaveDev(Thread):
         proginit.logger.debug("leave RevPiSlaveDev.run()")
 
     def stop(self):
-        """Beendet Verbindungsthread."""
+        """
+        Send signal to disconnect from client.
+
+        This will be a dirty disconnect and the thread needs some time to close
+        the connection. Call .join() to give the thread some time, it is a
+        daemon!
+        """
         proginit.logger.debug("enter RevPiSlaveDev.stop()")
 
         self._evt_exit.set()
