@@ -1194,23 +1194,31 @@ class RevPiPyLoad:
         # Windowszeichen prüfen
         filename = filename.replace("\\", "/")
 
-        # Absoluten Pfad prüfen
+        # Build absolut path, join will return last element, if absolute
         dirname = os.path.join(self.plcworkdir, os.path.dirname(filename))
         if self.plcworkdir not in os.path.abspath(dirname):
             return False
 
-        # Ordner erzeugen
+        set_uid = self.plcuid if self.plcworkdir_set_uid else 0
+        set_gid = self.plcgid if self.plcworkdir_set_uid else 0
+
+        # Set permissions only to newly created directories
         if not os.path.exists(dirname):
-            os.makedirs(dirname)
+            lst_subdir = dirname.lstrip(self.plcworkdir).split("/")
+            for i in range(len(lst_subdir)):
+                dir_part = os.path.join(self.plcworkdir, *lst_subdir[:i + 1])
+                if os.path.exists(dir_part):
+                    # Do not change owner of existing directorys
+                    continue
+
+                os.makedirs(dirname)
+                os.chown(dir_part, set_uid, set_gid)
 
         # Datei erzeugen
         try:
             with open(filename, "wb") as fh:
                 fh.write(gzip.decompress(filedata.data))
-            if self.plcworkdir_set_uid:
-                os.chown(self.plcworkdir, self.plcuid, self.plcgid)
-            else:
-                os.chown(self.plcworkdir, 0, 0)
+            os.chown(filename, set_uid, set_gid)
             return True
         except Exception:
             return False
