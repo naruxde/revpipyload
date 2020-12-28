@@ -1196,7 +1196,7 @@ class RevPiPyLoad:
 
         # Build absolut path, join will return last element, if absolute
         dirname = os.path.join(self.plcworkdir, os.path.dirname(filename))
-        if self.plcworkdir not in os.path.abspath(dirname):
+        if os.path.abspath(dirname).find(self.plcworkdir) != 0:
             return False
 
         set_uid = self.plcuid if self.plcworkdir_set_uid else 0
@@ -1204,7 +1204,7 @@ class RevPiPyLoad:
 
         # Set permissions only to newly created directories
         if not os.path.exists(dirname):
-            lst_subdir = dirname.lstrip(self.plcworkdir).split("/")
+            lst_subdir = dirname.replace(self.plcworkdir + "/", "").split("/")
             for i in range(len(lst_subdir)):
                 dir_part = os.path.join(self.plcworkdir, *lst_subdir[:i + 1])
                 if os.path.exists(dir_part):
