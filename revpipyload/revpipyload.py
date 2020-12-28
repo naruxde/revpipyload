@@ -1078,11 +1078,13 @@ class RevPiPyLoad:
         file_name = os.path.join(self.plcworkdir, file_name)
         if os.path.exists(file_name):
             os.remove(file_name)
-            try:
-                # Try to remove directory if empty
-                os.rmdir(os.path.dirname(file_name))
-            except Exception:
-                pass
+            dirname = os.path.dirname(file_name)
+            if dirname != self.plcworkdir:
+                try:
+                    # Try to remove directory, which will work if it is empty
+                    os.rmdir(dirname)
+                except Exception:
+                    pass
             return True
         return False
 
@@ -1197,6 +1199,9 @@ class RevPiPyLoad:
         # Build absolut path, join will return last element, if absolute
         dirname = os.path.join(self.plcworkdir, os.path.dirname(filename))
         if os.path.abspath(dirname).find(self.plcworkdir) != 0:
+            proginit.logger.warning(
+                "file path is not in plc working directory"
+            )
             return False
 
         set_uid = self.plcuid if self.plcworkdir_set_uid else 0
