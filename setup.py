@@ -27,7 +27,7 @@ setup(
 
     license="LGPLv3",
     name="revpipyload",
-    version="0.9.2f",
+    version="0.9.5",
 
     scripts=[
         "data/revpipyload",
