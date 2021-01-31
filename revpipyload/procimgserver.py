@@ -159,6 +159,7 @@ class ProcimgServer:
                         signed=self.rpi.io[io]._signed,
                     )
                 )
+            self.rpi.writeprocimg()
         except Exception as e:
             return [device, io, False, str(e)]
 
