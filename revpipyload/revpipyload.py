@@ -220,6 +220,8 @@ class RevPiPyLoad:
             "plcworkdir", ".")
         self.plcprogram = self.globalconfig["DEFAULT"].get(
             "plcprogram", "none.py")
+        self.plcprogram_stop_timeout = self.globalconfig.getint(
+            "DEFAULT", "plcprogram_stop_timeout", fallback=5)
         self.plcprogram_watchdog = self.globalconfig["DEFAULT"].getint(
             "plcprogram_watchdog", 0)
         self.plcarguments = self.globalconfig["DEFAULT"].get(
@@ -376,6 +378,7 @@ class RevPiPyLoad:
             self.plc.autoreload = self.autoreload
             self.plc.autoreloaddelay = self.autoreloaddelay
             self.plc.softdog.timeout = self.plcprogram_watchdog
+            self.plc.stop_timeout = self.plcprogram_stop_timeout
             self.plc.zeroonerror = self.zeroonerror
             self.plc.zeroonexit = self.zeroonexit
 
@@ -581,6 +584,7 @@ class RevPiPyLoad:
         th_plc.softdog.address = \
             0 if self.revpi_led_address < 0 else self.revpi_led_address
         th_plc.softdog.timeout = self.plcprogram_watchdog
+        th_plc.stop_timeout = self.plcprogram_stop_timeout
         th_plc.zeroonerror = self.zeroonerror
         th_plc.zeroonexit = self.zeroonexit
 
@@ -964,6 +968,7 @@ class RevPiPyLoad:
         dc["plcworkdir"] = self.plcworkdir
         dc["plcworkdir_set_uid"] = int(self.plcworkdir_set_uid)
         dc["plcprogram"] = self.plcprogram
+        dc["plcprogram_stop_timeout"] = self.plcprogram_stop_timeout
         dc["plcprogram_watchdog"] = self.plcprogram_watchdog
         dc["plcarguments"] = self.plcarguments
         dc["plcuid"] = self.plcuid
@@ -1253,6 +1258,7 @@ class RevPiPyLoad:
                 "autoreloaddelay": "[0-9]+",
                 "autostart": "[01]",
                 "plcprogram": ".+",
+                "plcprogram_stop_timeout": "[0-9]+",
                 "plcprogram_watchdog": "[0-9]+",
                 "plcarguments": ".*",
                 "plcworkdir_set_uid": "[01]",

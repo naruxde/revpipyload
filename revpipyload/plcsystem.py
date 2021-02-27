@@ -40,6 +40,7 @@ class RevPiPlc(Thread):
         self._program = program
         self._procplc = None
         self._pversion = pversion
+        self._stop_timeout_steps = 10
         self.autoreload = False
         self.exitcode = None
         self.gid = 65534
@@ -257,7 +258,7 @@ class RevPiPlc(Thread):
             proginit.logger.debug("leave RevPiPlc.stop()")
             return
 
-        while self._procplc.poll() is None and count < 10:
+        while self._procplc.poll() is None and count < self._stop_timeout_steps:
             count += 1
             proginit.logger.info(
                 "wait term plc program {0} seconds".format(count * 0.5)
@@ -284,3 +285,15 @@ class RevPiPlc(Thread):
         proginit.logger.debug("leave RevPiPlc.stop()")
 
     autoreloaddelay = property(__get_autoreloaddelay, __set_autoreloaddelay)
+
+    @property
+    def stop_timeout(self) -> int:
+        """Get program stop timeout in seconds."""
+        return self._stop_timeout_steps // 2
+
+    @stop_timeout.setter
+    def stop_timeout(self, value: int):
+        """Set program stop timeout in seconds."""
+        if type(value) != int:
+            raise TypeError("Value of stop_timeout must be <class 'int'>")
+        self._stop_timeout_steps = value * 2
