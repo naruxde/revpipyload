@@ -48,7 +48,7 @@ import logsystem
 import picontrolserver
 import plcsystem
 import proginit
-from helper import refullmatch, get_revpiled_address
+from helper import get_revpiled_address, pi_control_reset, refullmatch
 from shared.ipaclmanager import IpAclManager
 from watchdogs import ResetDriverWatchdog
 from xrpcserver import SaveXMLRPCServer
@@ -475,10 +475,7 @@ class RevPiPyLoad:
             self.xsrv.register_function(
                 3, self.xml_plcuploadclean, "plcuploadclean")
             self.xsrv.register_function(
-                3,
-                lambda: os.system(proginit.picontrolreset),
-                "resetpicontrol"
-            )
+                3, pi_control_reset, "resetpicontrol")
             self.xsrv.register_function(
                 3, self.xml_mqttstart, "mqttstart")
             self.xsrv.register_function(
@@ -1113,7 +1110,7 @@ class RevPiPyLoad:
             return xmldata
         return Binary()
 
-    def xml_plcdownload_file(self, file_name:str):
+    def xml_plcdownload_file(self, file_name: str):
         """
         Download a single file from work directory.
 
@@ -1380,7 +1377,7 @@ class RevPiPyLoad:
             -3 Konnte Konfiguraiton nicht schreiben
             -4 Module in Konfiguration enthalten, die es nicht gibt
             -5 Kein RAP Katalog zur Ueberpruefung gefunden
-            Positive Zahl ist exitcode von piControlReset
+            Positive Zahl ist exitcode von pi_control_reset
 
         """
         proginit.logger.debug("xmlrpc call setpictoryrsc")
@@ -1421,7 +1418,7 @@ class RevPiPyLoad:
             return -3
         else:
             if reset:
-                return os.system(proginit.picontrolreset)
+                return pi_control_reset()
             else:
                 return 0
 
