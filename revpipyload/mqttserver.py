@@ -167,27 +167,10 @@ class MqttServer(Thread):
         # CoreIOs prüfen und zu export hinzufügen
         lst_coreio = []
         if self._rpi.core:
-            if self._rpi.core.a1green.export:
-                lst_coreio.append(self._rpi.core.a1green)
-            if self._rpi.core.a1red.export:
-                lst_coreio.append(self._rpi.core.a1red)
-            if self._rpi.core.a2green.export:
-                lst_coreio.append(self._rpi.core.a2green)
-            if self._rpi.core.a2red.export:
-                lst_coreio.append(self._rpi.core.a2red)
-            if self._rpi.core.wd.export:
-                lst_coreio.append(self._rpi.core.wd)
-
-            # Connect-IOs anhängen
-            if type(self._rpi.core) == revpimodio2.device.Connect:
-                if self._rpi.core.a3green.export:
-                    lst_coreio.append(self._rpi.core.a3green)
-                if self._rpi.core.a3red.export:
-                    lst_coreio.append(self._rpi.core.a3red)
-                if self._rpi.core.x2in.export:
-                    lst_coreio.append(self._rpi.core.x2in)
-                if self._rpi.core.x2out.export:
-                    lst_coreio.append(self._rpi.core.x2out)
+            for obj_name in self._rpi.core.__slots__:
+                obj = getattr(self._rpi.core, obj_name)
+                if isinstance(obj, revpimodio2.io.IOBase):
+                    lst_coreio.append(obj)
 
         # IOs exportieren und Events anmelden
         for io in lst_coreio:
@@ -292,9 +275,9 @@ class MqttServer(Thread):
                             proginit.logger.error("can not convert value '{0}' to fitting bytes".format(value))
                             return
 
-                elif value == "false" and not io_needbytes:
+                elif value.lower() == "false" and not io_needbytes:
                     value = 0
-                elif value == "true" and not io_needbytes:
+                elif value.lower() == "true" and not io_needbytes:
                     value = 1
                 else:
                     proginit.logger.error("can not convert value '{0}' for output '{1}'".format(value, ioname))
