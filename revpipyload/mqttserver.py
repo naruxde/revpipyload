@@ -303,6 +303,9 @@ class MqttServer(Thread):
                 # Write Value to RevPi
                 try:
                     io.value = value
+                    # Write data without autorefresh
+                    if not self._send_events:
+                        io._parentdevice.writeprocimg()
                 except Exception:
                     proginit.logger.error("could not write '{0}' to Output '{1}'".format(value, ioname))
 
