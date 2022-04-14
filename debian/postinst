@@ -10,7 +10,7 @@ case "$1" in
 
 		========== Important RevPiPyLoad post-installation note ==========
 
-    The XML-RPC service is bind to localhost, only. To access the
+    By default the XML-RPC service listens on localhost only. To access the
     daemon via RevPiCommander from your network, please change the
     bindip in /etc/revpipyload/revpipyload.conf or execute:
 
