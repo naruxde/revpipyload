@@ -76,6 +76,7 @@ class MqttServer(Thread):
         self._loadrevpimodio()
 
         # Topics konfigurieren
+        self._basetopic = basetopic
         self._mqtt_evt_io = join(basetopic, "event/{0}")
         self._mqtt_got_io = join(basetopic, "got/{0}")
         self._mqtt_io = join(basetopic, "io/{0}")
@@ -222,16 +223,29 @@ class MqttServer(Thread):
             self._evt_data.set()
 
         else:
-            lst_topic = msg.topic.split("/")
+            # The I/O name may contain forward slashes. Those look nice on the
+            # MQTT bus, but make parsing the topic for actions a bit harder since
+            # we cannot simply split the topic and know at what index to find the
+            # action. To find the action we first remove the base topic (keeping
+            # in mind that it may or may not have a trailing / in the
+            # configuration file), determine the I/O action and finally reassemble
+            # the I/O name with slashes.
+
+            lst_topic = msg.topic[len(self._basetopic):]
+            if lst_topic[0] == '/':
+        	    lst_topic = lst_topic[1:]
+            lst_topic = lst_topic.split("/")
+            proginit.logger.error("lst_topic {0}".format(lst_topic))
+
             if len(lst_topic) < 2:
-                proginit.logger.info("wrong topic format - need ./get/ioname or ./set/ioname")
+                proginit.logger.error("wrong format for topic '{0}', expected '{1}/(get/set/reset)/<ioname>'".format(msg.topic, self._basetopic))
                 return
 
             # Aktion und IO auswerten
-            ioget = lst_topic[-2].lower() == "get"
-            ioset = lst_topic[-2].lower() == "set"
-            ioreset = lst_topic[-2].lower() == "reset"
-            ioname = lst_topic[-1]
+            ioget = lst_topic[0].lower() == "get"
+            ioset = lst_topic[0].lower() == "set"
+            ioreset = lst_topic[0].lower() == "reset"
+            ioname = '/'.join(lst_topic[1:])
             coreio = ioname.find(".") != -1
 
             try:
@@ -245,7 +259,7 @@ class MqttServer(Thread):
                     io = self._rpi.io[ioname]
                 io_needbytes = type(io.value) == bytes
             except Exception:
-                proginit.logger.error("can not find io '{0}' for MQTT".format(ioname))
+                proginit.logger.error("can not find io '{0}'".format(ioname))
                 return
 
             # Aktion verarbeiten
@@ -261,7 +275,7 @@ class MqttServer(Thread):
                 self._evt_io(io.name, io.value, requested=True)
 
             elif ioset and io.type != revpimodio2.OUT:
-                proginit.logger.error("can not write to inputs with MQTT")
+                proginit.logger.error("can not write to input '{0}'".format(ioname))
 
             elif ioset:
                 # Convert MQTT Payload to valid Output-Value
@@ -275,7 +289,7 @@ class MqttServer(Thread):
                         try:
                             value = value.to_bytes(io.length, io.byteorder)
                         except OverflowError:
-                            proginit.logger.error("can not convert value '{0}' to fitting bytes".format(value))
+                            proginit.logger.error("can not convert value '{0}' to fitting bytes for output '{1}'".format(value, ioname))
                             return
 
                 elif value.lower() == "false" and not io_needbytes:
@@ -293,18 +307,18 @@ class MqttServer(Thread):
                     if not self._send_events:
                         io._parentdevice.writeprocimg()
                 except Exception:
-                    proginit.logger.error("could not write '{0}' to Output '{1}'".format(value, ioname))
+                    proginit.logger.error("could not write value '{0}' to output '{1}'".format(value, ioname))
 
             elif ioreset:
                 # Counter zurücksetzen
                 if not isinstance(io, revpimodio2.io.IntIOCounter):
-                    proginit.logger.warning("this io has no counter")
+                    proginit.logger.warning("io '{0}' is not a counter".format(ioname))
                 else:
                     io.reset()
 
             else:
                 # Aktion nicht erkennbar
-                proginit.logger.warning("can not see get/set in topic '{0}'".format(msg.topic))
+                proginit.logger.warning("can not find get/set/reset in topic '{0}'".format(msg.topic))
 
     def _send_pictory_conf(self):
         """Sendet piCtory Konfiguration per MQTT."""
