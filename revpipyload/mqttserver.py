@@ -76,7 +76,8 @@ class MqttServer(Thread):
         self._loadrevpimodio()
 
         # Topics konfigurieren
-        self._basetopic = basetopic
+        self._basetopic = basetopic.strip("/")
+        self._basetopic_len = len(self._basetopic.split("/"))
         self._mqtt_evt_io = join(basetopic, "event/{0}")
         self._mqtt_got_io = join(basetopic, "got/{0}")
         self._mqtt_io = join(basetopic, "io/{0}")
@@ -214,6 +215,8 @@ class MqttServer(Thread):
 
     def _on_message(self, client, userdata, msg):
         """Sendet piCtory Konfiguration."""
+        proginit.logger.debug("Received topic: {0}".format(msg.topic))
+
         if msg.topic == self._mqtt_pictory:
             # piCtory Konfiguration senden
             self._send_pictory_conf()
@@ -226,27 +229,23 @@ class MqttServer(Thread):
             # The I/O name may contain forward slashes. Those look nice on the
             # MQTT bus, but make parsing the topic for actions a bit harder since
             # we cannot simply split the topic and know at what index to find the
-            # action. To find the action we first remove the base topic (keeping
-            # in mind that it may or may not have a trailing / in the
-            # configuration file), determine the I/O action and finally reassemble
-            # the I/O name with slashes.
-
-            lst_topic = msg.topic[len(self._basetopic):]
-            if lst_topic[0] == '/':
-        	    lst_topic = lst_topic[1:]
-            lst_topic = lst_topic.split("/")
-            proginit.logger.error("lst_topic {0}".format(lst_topic))
-
-            if len(lst_topic) < 2:
-                proginit.logger.error("wrong format for topic '{0}', expected '{1}/(get/set/reset)/<ioname>'".format(msg.topic, self._basetopic))
+            # action. To find the action we remove base topic parts to get the
+            # action and finally reassemble the I/O name with slashes.
+            lst_topic = msg.topic.split("/")[self._basetopic_len:]
+            if len(lst_topic) < 2 or lst_topic[0].lower() not in ("get", "set", "reset"):
+                proginit.logger.error(
+                    "wrong format for topic '{0}', expected '{1}/[get|set|reset]/<ioname>'"
+                    "".format(msg.topic, self._basetopic)
+                )
                 return
 
             # Aktion und IO auswerten
-            ioget = lst_topic[0].lower() == "get"
-            ioset = lst_topic[0].lower() == "set"
-            ioreset = lst_topic[0].lower() == "reset"
+            io_action = lst_topic[0].lower()
+            ioget = io_action == "get"
+            ioset = io_action == "set"
+            ioreset = io_action == "reset"
             ioname = '/'.join(lst_topic[1:])
-            coreio = ioname.find(".") != -1
+            coreio = ioname.find("core.") == 0
 
             try:
                 # IO holen
