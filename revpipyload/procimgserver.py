@@ -13,6 +13,8 @@ import proginit
 import revpimodio2
 from xmlrpc.client import Binary
 
+from revpimodio2.io import StructIO
+
 
 class ProcimgServer:
 
@@ -89,6 +91,7 @@ class ProcimgServer:
                     io._bitaddress,
                     io._byteorder,
                     io._signed,
+                    io.wordorder if issubclass(io, StructIO) else "ignored"
                 ])
         return Binary(pickle.dumps(dict_ios))
 
