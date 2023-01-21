@@ -2,7 +2,7 @@
 """Main functions of our program."""
 __author__ = "Sven Sager"
 __copyright__ = "Copyright (C) 2018 Sven Sager"
-__license__ = "GPLv3"
+__license__ = "GPLv2"
 
 import logging
 import os
@@ -82,7 +82,6 @@ def configure():
     # Prüfen ob als Daemon ausgeführt werden soll
     global forked
     pidfile = "/var/run/revpipyload.pid"
-    pid = 0
     if pargs.daemon and not forked:
         # Prüfen ob daemon schon läuft
         if os.path.exists(pidfile):

@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """Modul fuer die Verwaltung der PLC Funktionen."""
 __author__ = "Sven Sager"
-__copyright__ = "Copyright (C) 2020 Sven Sager"
-__license__ = "GPLv3"
+__copyright__ = "Copyright (C) 2023 Sven Sager"
+__license__ = "GPLv2"
 
 import os
 import shlex
@@ -12,10 +12,10 @@ from sys import stdout as sysstdout
 from threading import Event, Thread
 from time import asctime, sleep
 
-import proginit
-from helper import _setuprt, _zeroprocimg
-from logsystem import PipeLogwriter
-from watchdogs import SoftwareWatchdog
+from . import proginit
+from .helper import _setuprt, _zeroprocimg
+from .logsystem import PipeLogwriter
+from .watchdogs import SoftwareWatchdog
 
 
 class RevPiPlc(Thread):

@@ -1,16 +1,17 @@
 # -*- coding: utf-8 -*-
 """Modul fuer die Verwaltung der Logdateien."""
 __author__ = "Sven Sager"
-__copyright__ = "Copyright (C) 2018 Sven Sager"
-__license__ = "GPLv3"
+__copyright__ = "Copyright (C) 2023 Sven Sager"
+__license__ = "GPLv2"
+
 import os
-import proginit
 from threading import Event, Lock, Thread
 from xmlrpc.client import Binary
 
+from . import proginit
+
 
 class LogReader:
-
     """Ermoeglicht den Zugriff auf die Logdateien.
 
     Beinhaltet Funktionen fuer den Abruf der gesamten Logdatei fuer das
@@ -91,7 +92,6 @@ class LogReader:
 
 
 class PipeLogwriter(Thread):
-
     """File PIPE fuer das Schreiben des APP Log.
 
     Spezieller LogFile-Handler fuer die Ausgabe des subprocess fuer das Python

@@ -1,4 +1,3 @@
-#!/usr/bin/python3
 # -*- coding: utf-8 -*-
 """Revolution Pi Python PLC Loader.
 
@@ -26,9 +25,8 @@ begrenzt werden!
 
 """
 __author__ = "Sven Sager"
-__copyright__ = "Copyright (C) 2020 Sven Sager"
-__license__ = "GPLv3"
-__version__ = "0.9.8"
+__copyright__ = "Copyright (C) 2023 Sven Sager"
+__license__ = "GPLv2"
 
 import gzip
 import os
@@ -38,20 +36,22 @@ import zipfile
 from configparser import ConfigParser
 from hashlib import md5
 from json import loads as jloads
+from re import search
 from shutil import rmtree
 from tempfile import mkstemp
 from threading import Event
 from time import asctime, time
 from xmlrpc.client import Binary
 
-import logsystem
-import picontrolserver
-import plcsystem
-import proginit
-from helper import get_revpiled_address, pi_control_reset, refullmatch
-from shared.ipaclmanager import IpAclManager
-from watchdogs import ResetDriverWatchdog
-from xrpcserver import SaveXMLRPCServer
+from . import __version__
+from . import logsystem
+from . import picontrolserver
+from . import plcsystem
+from . import proginit
+from .helper import get_revpiled_address, pi_control_reset, refullmatch
+from .shared.ipaclmanager import IpAclManager
+from .watchdogs import ResetDriverWatchdog
+from .xrpcserver import SaveXMLRPCServer
 
 min_revpimodio = "2.5.0"
 
@@ -76,6 +76,10 @@ class RevPiPyLoad:
         self.logr = logsystem.LogReader()
         self.xsrv = None
         self.xml_ps = None
+
+        # Generate version number for RevPi Commander, it will parse each part via int()
+        version_match = search(r"(\d+\.){2}\d+", __version__)
+        self._pyload_version = version_match.group(0) if version_match else "0.0.0"
 
         # Dateimerker
         self.pictorymtime = 0
@@ -115,32 +119,18 @@ class RevPiPyLoad:
         elif "MQTT" not in self.globalconfig:
             return True
         else:
-            return (
-                self.replace_ios_config !=
-                self.globalconfig["DEFAULT"].get("replace_ios", "") or
-                self.mqtt !=
-                self.globalconfig["MQTT"].getboolean("mqtt", False) or
-                self.mqttbasetopic !=
-                self.globalconfig["MQTT"].get("basetopic", "") or
-                self.mqttsendinterval !=
-                self.globalconfig["MQTT"].getint("sendinterval", 30) or
-                self.mqttbroker_address !=
-                self.globalconfig["MQTT"].get("broker_address", "localhost") or
-                self.mqttport !=
-                self.globalconfig["MQTT"].getint("port", 1883) or
-                self.mqtttls_set !=
-                self.globalconfig["MQTT"].getboolean("tls_set", False) or
-                self.mqttusername !=
-                self.globalconfig["MQTT"].get("username", "") or
-                self.mqttpassword !=
-                self.globalconfig["MQTT"].get("password", "") or
-                self.mqttclient_id !=
-                self.globalconfig["MQTT"].get("client_id", "") or
-                self.mqttsend_on_event !=
-                self.globalconfig["MQTT"].getboolean("send_on_event", False) or
-                self.mqttwrite_outputs !=
-                self.globalconfig["MQTT"].getboolean("write_outputs", False)
-            )
+            return self.replace_ios_config != self.globalconfig["DEFAULT"].get("replace_ios", "") \
+                or self.mqtt != self.globalconfig["MQTT"].getboolean("mqtt", False) \
+                or self.mqttbasetopic != self.globalconfig["MQTT"].get("basetopic", "") \
+                or self.mqttsendinterval != self.globalconfig["MQTT"].getint("sendinterval", 30) \
+                or self.mqttbroker_address != self.globalconfig["MQTT"].get("broker_address", "localhost") \
+                or self.mqttport != self.globalconfig["MQTT"].getint("port", 1883) \
+                or self.mqtttls_set != self.globalconfig["MQTT"].getboolean("tls_set", False) \
+                or self.mqttusername != self.globalconfig["MQTT"].get("username", "") \
+                or self.mqttpassword != self.globalconfig["MQTT"].get("password", "") \
+                or self.mqttclient_id != self.globalconfig["MQTT"].get("client_id", "") \
+                or self.mqttsend_on_event != self.globalconfig["MQTT"].getboolean("send_on_event", False) \
+                or self.mqttwrite_outputs != self.globalconfig["MQTT"].getboolean("write_outputs", False)
 
     def _check_mustrestart_plcslave(self):
         """Prueft ob sich kritische Werte veraendert haben.
@@ -157,12 +147,9 @@ class RevPiPyLoad:
                 ip = "127.0.0.1"
             port = self.globalconfig["PLCSLAVE"].getint("port", 55234)
 
-            return (
-                self.plcslave !=
-                self.globalconfig["PLCSLAVE"].getboolean("plcslave", False) or
-                self.plcslavebindip != ip or
-                self.plcslaveport != port
-            )
+            return self.plcslave != self.globalconfig["PLCSLAVE"].getboolean("plcslave", False) \
+                or self.plcslavebindip != ip \
+                or self.plcslaveport != port
 
     def _check_mustrestart_plcprogram(self):
         """Prueft ob sich kritische Werte veraendert haben.
@@ -170,25 +157,18 @@ class RevPiPyLoad:
         if self.plc is None:
             return True
         else:
-            return (
-                self.plcworkdir !=
-                self.globalconfig["DEFAULT"].get("plcworkdir", ".") or
-                self.plcprogram !=
-                self.globalconfig["DEFAULT"].get("plcprogram", "none.py") or
-                self.plcarguments !=
-                self.globalconfig["DEFAULT"].get("plcarguments", "") or
-                self.plcuid !=
-                self.globalconfig["DEFAULT"].getint("plcuid", 65534) or
-                self.plcgid !=
-                self.globalconfig["DEFAULT"].getint("plcgid", 65534) or
-                self.pythonversion !=
-                self.globalconfig["DEFAULT"].getint("pythonversion", 3) or
-                self.rtlevel !=
-                self.globalconfig["DEFAULT"].getint("rtlevel", 0) or (
-                    not self.plc.is_alive() and not self.autostart and
-                    self.globalconfig["DEFAULT"].getboolean("autostart", False)
+            return self.plcworkdir != self.globalconfig["DEFAULT"].get("plcworkdir", ".") \
+                or self.plcprogram != self.globalconfig["DEFAULT"].get("plcprogram", "none.py") \
+                or self.plcarguments != self.globalconfig["DEFAULT"].get("plcarguments", "") \
+                or self.plcuid != self.globalconfig["DEFAULT"].getint("plcuid", 65534) \
+                or self.plcgid != self.globalconfig["DEFAULT"].getint("plcgid", 65534) \
+                or self.pythonversion != self.globalconfig["DEFAULT"].getint("pythonversion", 3) \
+                or self.rtlevel != self.globalconfig["DEFAULT"].getint("rtlevel", 0) \
+                or (
+                        not self.plc.is_alive()
+                        and not self.autostart
+                        and self.globalconfig["DEFAULT"].getboolean("autostart", False)
                 )
-            )
 
     def _loadconfig(self):
         """Load configuration file and setup modul."""
@@ -412,7 +392,7 @@ class RevPiPyLoad:
             self.xsrv.register_multicall_functions()
 
             # Allgemeine Funktionen
-            self.xsrv.register_function(0, lambda: __version__, "version")
+            self.xsrv.register_function(0, lambda: self._pyload_version, "version")
             self.xsrv.register_function(0, lambda acl: acl, "xmlmodus")
 
             # XML Modus 1 Nur Logs lesen und PLC Programm neu starten
@@ -810,7 +790,7 @@ class RevPiPyLoad:
 
             # Dateiveränderungen prüfen mit beiden Funktionen!
             if (reset_driver_detected or
-                    pictory_reset_driver.not_implemented) and \
+                pictory_reset_driver.not_implemented) and \
                     self.check_pictory_changed():
                 file_changed = True
 
@@ -1477,7 +1457,8 @@ class RevPiPyLoad:
             return False
 
 
-if __name__ == "__main__":
+def main() -> int:
+    """Entry point for RevPiPyLoad."""
     # Programmeinstellungen konfigurieren
     proginit.configure()
 
@@ -1493,3 +1474,11 @@ if __name__ == "__main__":
 
     # Aufräumen
     proginit.cleanup()
+
+    return 0
+
+
+if __name__ == '__main__':
+    import sys
+
+    sys.exit(main())

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Helperfunktionen fuer das gesamte RevPiPyLoad-System."""
 __author__ = "Sven Sager"
-__copyright__ = "Copyright (C) 2020 Sven Sager"
+__copyright__ = "Copyright (C) 2023 Sven Sager"
 __license__ = "GPLv3"
 
 import os
@@ -10,7 +10,7 @@ from json import loads
 from re import match as rematch
 from subprocess import PIPE, Popen
 
-import proginit
+from . import proginit
 
 
 def _setuprt(pid, evt_exit):
@@ -122,7 +122,7 @@ def get_revpiled_address(configrsc_bytes):
                 if device.get("productType", "0") == "135":
                     # On the Flat device the LEDs are 2 Bytes (last Bit is wd)
                     byte_address += 1
-                proginit.logger.debug("found revpi_led_address on {0} byte".format(byte_address))
+                proginit.logger.debug("found revpi_led_address on byte {0}".format(byte_address))
             except Exception:
                 pass
             break

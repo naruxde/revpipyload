@@ -1,17 +1,16 @@
 # -*- coding: utf-8 -*-
 """XML-RPC Server anpassungen fuer Absicherung."""
 __author__ = "Sven Sager"
-__copyright__ = "Copyright (C) 2018 Sven Sager"
-__license__ = "GPLv3"
+__copyright__ = "Copyright (C) 2023 Sven Sager"
+__license__ = "GPLv2"
 
-from xmlrpc.server import SimpleXMLRPCServer, SimpleXMLRPCRequestHandler
+from xmlrpc.server import SimpleXMLRPCRequestHandler, SimpleXMLRPCServer
 
-import proginit
-from shared.ipaclmanager import IpAclManager
+from . import proginit
+from .shared.ipaclmanager import IpAclManager
 
 
 class SaveXMLRPCServer(SimpleXMLRPCServer):
-
     """Erstellt einen erweiterten XMLRPCServer."""
 
     def __init__(
@@ -80,7 +79,6 @@ class SaveXMLRPCServer(SimpleXMLRPCServer):
 
 
 class SaveXMLRPCRequestHandler(SimpleXMLRPCRequestHandler):
-
     """Verwaltet die XML-Requests und prueft Berechtigungen."""
 
     timeout = 2.0

@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """Modul fuer die Verwaltung der PLC-Slave Funktionen."""
 __author__ = "Sven Sager"
-__copyright__ = "Copyright (C) 2018 Sven Sager"
-__license__ = "GPLv3"
+__copyright__ = "Copyright (C) 2023 Sven Sager"
+__license__ = "GPLv2"
 
 import socket
 from fcntl import ioctl
@@ -10,8 +10,8 @@ from struct import pack, unpack
 from threading import Event, Thread
 from timeit import default_timer
 
-import proginit
-from shared.ipaclmanager import IpAclManager
+from . import proginit
+from .shared.ipaclmanager import IpAclManager
 
 # Hashvalues
 HASH_NULL = b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'

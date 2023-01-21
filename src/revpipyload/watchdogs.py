@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """Watchdog systems to monitor plc program and reset_driver of piCtory."""
 __author__ = "Sven Sager"
-__copyright__ = "Copyright (C) 2020 Sven Sager"
-__license__ = "GPLv3"
+__copyright__ = "Copyright (C) 2023 Sven Sager"
+__license__ = "GPLv2"
 
 import os
 from fcntl import ioctl
@@ -12,7 +12,7 @@ from subprocess import Popen
 from threading import Event, Thread
 from time import time
 
-import proginit as pi
+from . import proginit as pi
 
 
 class SoftwareWatchdog:

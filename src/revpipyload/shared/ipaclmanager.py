@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 """Verwaltet IP Adressen und deren ACLs."""
 __author__ = "Sven Sager"
-__copyright__ = "Copyright (C) 2018 Sven Sager"
-__license__ = "GPLv3"
+__copyright__ = "Copyright (C) 2023 Sven Sager"
+__license__ = "GPLv2"
 __version__ = "0.1.0"
-from os import access, R_OK, W_OK
+
+from os import R_OK, W_OK, access
 from re import match as rematch
 
 
@@ -21,7 +22,6 @@ def refullmatch(regex, string):
 
 
 class IpAclManager():
-
     """Verwaltung fuer IP Adressen und deren ACL Level."""
 
     def __init__(self, minlevel, maxlevel, acl=None):
@@ -48,7 +48,7 @@ class IpAclManager():
         self.__dict_knownips = {}
         self.__filename = None
         self.__re_ipacl = "(([\\d\\*]{1,3}\\.){3}[\\d\\*]{1,3},[" \
-            + str(minlevel) + "-" + str(maxlevel) + "] ?)*"
+                          + str(minlevel) + "-" + str(maxlevel) + "] ?)*"
 
         # Liste erstellen, wenn übergeben
         if acl is not None:
@@ -172,8 +172,8 @@ class IpAclManager():
             return False
 
         header = "# {0}Access Control List (acl)\n" \
-            "# One entry per Line IPADRESS,LEVEL\n" \
-            "#\n".format("" if aclname is None else aclname + " ")
+                 "# One entry per Line IPADRESS,LEVEL\n" \
+                 "#\n".format("" if aclname is None else aclname + " ")
 
         with open(filename, "w") as fh:
             fh.write(header)

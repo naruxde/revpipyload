@@ -1,18 +1,20 @@
 # -*- coding: utf-8 -*-
 """Stellt die MQTT Uebertragung fuer IoT-Zwecke bereit."""
 __author__ = "Sven Sager"
-__copyright__ = "Copyright (C) 2020 Sven Sager"
-__license__ = "GPLv3"
-import proginit
-import revpimodio2
+__copyright__ = "Copyright (C) 2023 Sven Sager"
+__license__ = "GPLv2"
+
 from os.path import join
-from paho.mqtt.client import Client, connack_string
 from ssl import CERT_NONE
-from threading import Thread, Event
+from threading import Event, Thread
+
+import revpimodio2
+from paho.mqtt.client import Client, connack_string
+
+from . import proginit
 
 
 class MqttServer(Thread):
-
     """Server fuer die Uebertragung des Prozessabbilds per MQTT."""
 
     def __init__(
@@ -288,7 +290,8 @@ class MqttServer(Thread):
                         try:
                             value = value.to_bytes(io.length, io.byteorder)
                         except OverflowError:
-                            proginit.logger.error("can not convert value '{0}' to fitting bytes for output '{1}'".format(value, ioname))
+                            proginit.logger.error(
+                                "can not convert value '{0}' to fitting bytes for output '{1}'".format(value, ioname))
                             return
 
                 elif value.lower() == "false" and not io_needbytes:

@@ -1,16 +1,17 @@
 # -*- coding: utf-8 -*-
 """Test all config files and print results."""
 __author__ = "Sven Sager"
-__copyright__ = "Copyright (C) 2019 Sven Sager"
-__license__ = "GPLv3"
-import proginit
+__copyright__ = "Copyright (C) 2023 Sven Sager"
+__license__ = "GPLv2"
+
 from configparser import ConfigParser
+
+import proginit
 
 newline = "\n------------------------------------------------------------\n"
 
 
 class TestSystem:
-
     """Main class for test system of revpipyload."""
 
     def __init__(self):

@@ -6,18 +6,19 @@ IO-Check bei Inbetriebname durchzufuehren.
 
 """
 __author__ = "Sven Sager"
-__copyright__ = "Copyright (C) 2020 Sven Sager"
-__license__ = "GPLv3"
+__copyright__ = "Copyright (C) 2023 Sven Sager"
+__license__ = "GPLv2"
+
 import pickle
-import proginit
-import revpimodio2
 from xmlrpc.client import Binary
 
+import revpimodio2
 from revpimodio2.io import StructIO
+
+from . import proginit
 
 
 class ProcimgServer:
-
     """Serverkomponente fuer zusaetzliche XML-RPC Funktionen.
 
     Diese Klasse registriert zusaetzliche Funktionen an einem besthenden
@@ -152,6 +153,7 @@ class ProcimgServer:
 
         try:
             # Neuen Wert übernehmen
+            # fixme: Warum wird hier alles in Bytes umgewandelt?
             if type(value) == bytes or type(value) == bool:
                 self.rpi.io[io].set_value(value)
             else:
