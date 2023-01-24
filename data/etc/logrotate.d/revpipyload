@@ -1,0 +1,15 @@
+/var/log/revpipyload
+/var/log/revpipyloadapp
+{
+    rotate 6
+    weekly
+    maxsize 1M
+    compress
+    delaycompress
+    missingok
+    notifempty
+    sharedscripts
+    postrotate
+        /bin/kill -s USR1 `cat /var/run/revpipyload.pid` > /dev/null 2>&1 || true
+    endscript
+}
