@@ -89,15 +89,15 @@ class RevPiPyLoad:
 
         # Berechtigungsmanger
         if proginit.pargs.developermode:
-            self.plcslaveacl = IpAclManager(minlevel=0, maxlevel=9)
+            self.plcserveracl = IpAclManager(minlevel=0, maxlevel=9)
             self.xmlrpcacl = IpAclManager(minlevel=0, maxlevel=9)
         else:
-            self.plcslaveacl = IpAclManager(minlevel=0, maxlevel=1)
+            self.plcserveracl = IpAclManager(minlevel=0, maxlevel=1)
             self.xmlrpcacl = IpAclManager(minlevel=0, maxlevel=4)
 
         # Threads/Prozesse
         self.th_plcmqtt = None
-        self.th_plcslave = None
+        self.th_plcserver = None
         self.plc = None
 
         # Konfiguration laden
@@ -132,24 +132,24 @@ class RevPiPyLoad:
                 or self.mqttsend_on_event != self.globalconfig["MQTT"].getboolean("send_on_event", False) \
                 or self.mqttwrite_outputs != self.globalconfig["MQTT"].getboolean("write_outputs", False)
 
-    def _check_mustrestart_plcslave(self):
+    def _check_mustrestart_plcserver(self):
         """Prueft ob sich kritische Werte veraendert haben.
         @return True, wenn Subsystemneustart noetig ist"""
-        if self.th_plcslave is None:
+        if self.th_plcserver is None:
             return True
-        elif "PLCSLAVE" not in self.globalconfig:
+        elif "PLCSERVER" not in self.globalconfig:
             return True
         else:
-            ip = self.globalconfig["PLCSLAVE"].get("bindip", "127.0.0.1")
+            ip = self.globalconfig["PLCSERVER"].get("bindip", "127.0.0.1")
             if ip == "*":
                 ip = ""
             elif ip == "":
                 ip = "127.0.0.1"
-            port = self.globalconfig["PLCSLAVE"].getint("port", 55234)
+            port = self.globalconfig["PLCSERVER"].getint("port", 55234)
 
-            return self.plcslave != self.globalconfig["PLCSLAVE"].getboolean("plcslave", False) \
-                or self.plcslavebindip != ip \
-                or self.plcslaveport != port
+            return self.plcserver != self.globalconfig["PLCSERVER"].getboolean("plcserver", False) \
+                or self.plcserverbindip != ip \
+                or self.plcserverport != port
 
     def _check_mustrestart_plcprogram(self):
         """Prueft ob sich kritische Werte veraendert haben.
@@ -186,7 +186,7 @@ class RevPiPyLoad:
 
         # Merker für Subsystem-Neustart nach laden, vor setzen
         restart_plcmqtt = self._check_mustrestart_mqtt()
-        restart_plcslave = self._check_mustrestart_plcslave()
+        restart_plcserver = self._check_mustrestart_plcserver()
         restart_plcprogram = self._check_mustrestart_plcprogram()
 
         # Konfiguration verarbeiten [DEFAULT]
@@ -234,7 +234,7 @@ class RevPiPyLoad:
             file_changed = True
         if file_changed:
             restart_plcmqtt = True
-            restart_plcslave = True
+            restart_plcserver = True
             restart_plcprogram = True
 
         # Konfiguration verarbeiten [MQTT]
@@ -263,33 +263,33 @@ class RevPiPyLoad:
             self.mqttwrite_outputs = \
                 self.globalconfig["MQTT"].getboolean("write_outputs", False)
 
-        # Konfiguration verarbeiten [PLCSLAVE]
-        self.plcslave = False
-        if "PLCSLAVE" in self.globalconfig:
-            self.plcslave = \
-                self.globalconfig["PLCSLAVE"].getboolean("plcslave", False)
+        # Konfiguration verarbeiten [PLCSERVER]
+        self.plcserver = False
+        if "PLCSERVER" in self.globalconfig:
+            self.plcserver = \
+                self.globalconfig["PLCSERVER"].getboolean("plcserver", False)
 
             # Berechtigungen laden
-            if not self.plcslaveacl.loadaclfile(
-                    self.globalconfig["PLCSLAVE"].get("aclfile", "")):
+            if not self.plcserveracl.loadaclfile(
+                    self.globalconfig["PLCSERVER"].get("aclfile", "")):
                 proginit.logger.warning(
-                    "can not load plcslave acl - wrong format"
+                    "can not load plcserver acl - wrong format"
                 )
-            if not self.plcslave:
-                self.stop_plcslave()
+            if not self.plcserver:
+                self.stop_plcserver()
 
             # Bind IP lesen und anpassen
-            self.plcslavebindip = \
-                self.globalconfig["PLCSLAVE"].get("bindip", "127.0.0.1")
-            if self.plcslavebindip == "*":
-                self.plcslavebindip = ""
-            elif self.plcslavebindip == "":
-                self.plcslavebindip = "127.0.0.1"
+            self.plcserverbindip = \
+                self.globalconfig["PLCSERVER"].get("bindip", "127.0.0.1")
+            if self.plcserverbindip == "*":
+                self.plcserverbindip = ""
+            elif self.plcserverbindip == "":
+                self.plcserverbindip = "127.0.0.1"
 
-            self.plcslaveport = \
-                self.globalconfig["PLCSLAVE"].getint("port", 55234)
+            self.plcserverport = \
+                self.globalconfig["PLCSERVER"].getint("port", 55234)
             self.plcwatchdog = self.globalconfig.getboolean(
-                "PLCSLAVE", "watchdog", fallback=True
+                "PLCSERVER", "watchdog", fallback=True
             )
 
         # Konfiguration verarbeiten [XMLRPC]
@@ -362,19 +362,19 @@ class RevPiPyLoad:
             self.plc.zeroonerror = self.zeroonerror
             self.plc.zeroonexit = self.zeroonexit
 
-        # PLC-Slave konfigurieren
-        if restart_plcslave:
-            self.stop_plcslave()
-            self.th_plcslave = self._plcslave()
+        # PLC-Server konfigurieren
+        if restart_plcserver:
+            self.stop_plcserver()
+            self.th_plcserver = self._plcserver()
 
-            if not self._exit and self.th_plcslave is not None:
-                proginit.logger.info("restart plc slave after reload")
-                self.th_plcslave.start()
+            if not self._exit and self.th_plcserver is not None:
+                proginit.logger.info("restart plc server after reload")
+                self.th_plcserver.start()
 
-        # PLC-Slave ACL und Einstellungen prüfen
-        if self.th_plcslave is not None:
-            self.th_plcslave.check_connectedacl()
-            self.th_plcslave.watchdog = self.plcwatchdog
+        # PLC-Server ACL und Einstellungen prüfen
+        if self.th_plcserver is not None:
+            self.th_plcserver.check_connectedacl()
+            self.th_plcserver.watchdog = self.plcwatchdog
 
         # XMLRPC-Server Instantiieren und konfigurieren
         if not self.xmlrpc:
@@ -413,7 +413,7 @@ class RevPiPyLoad:
             self.xsrv.register_function(
                 0, self.xml_mqttrunning, "mqttrunning")
             self.xsrv.register_function(
-                0, self.xml_plcslaverunning, "plcslaverunning")
+                0, self.xml_plcserverrunning, "plcserverrunning")
 
             # Erweiterte Funktionen anmelden
             try:
@@ -461,9 +461,9 @@ class RevPiPyLoad:
             self.xsrv.register_function(
                 3, self.xml_mqttstop, "mqttstop")
             self.xsrv.register_function(
-                3, self.xml_plcslavestart, "plcslavestart")
+                3, self.xml_plcserverstart, "plcserverstart")
             self.xsrv.register_function(
-                3, self.xml_plcslavestop, "plcslavestop")
+                3, self.xml_plcserverstop, "plcserverstop")
             self.xsrv.register_function(
                 3, self.xml_plcdelete_file, "plcdeletefile")
             self.xsrv.register_function(
@@ -568,19 +568,19 @@ class RevPiPyLoad:
         proginit.logger.debug("leave RevPiPyLoad._plcthread()")
         return th_plc
 
-    def _plcslave(self):
-        """Erstellt den PlcSlave-Server Thread.
+    def _plcserver(self):
+        """Erstellt den PLC-Server Thread.
         @return PLC-Server-Thread Object or None"""
-        proginit.logger.debug("enter RevPiPyLoad._plcslave()")
+        proginit.logger.debug("enter RevPiPyLoad._plcserver()")
         th_plc = None
 
-        if self.plcslave:
-            th_plc = picontrolserver.RevPiSlave(
-                self.plcslaveacl, self.plcslaveport, self.plcslavebindip,
+        if self.plcserver:
+            th_plc = picontrolserver.RevPiPlcServer(
+                self.plcserveracl, self.plcserverport, self.plcserverbindip,
                 self.plcwatchdog
             )
 
-        proginit.logger.debug("leave RevPiPyLoad._plcslave()")
+        proginit.logger.debug("leave RevPiPyLoad._plcserver()")
         return th_plc
 
     def _sigexit(self, signum, frame):
@@ -766,9 +766,9 @@ class RevPiPyLoad:
         if self.th_plcmqtt is not None:
             self.th_plcmqtt.start()
 
-        # Slaveausfuehrung übergeben
-        if self.th_plcslave is not None:
-            self.th_plcslave.start()
+        # Serverausfuehrung übergeben
+        if self.th_plcserver is not None:
+            self.th_plcserver.start()
 
         # PLC Programm automatisch starten
         if self.autostart and self.plc is not None:
@@ -795,16 +795,16 @@ class RevPiPyLoad:
                 file_changed = True
 
                 # Alle Verbindungen von ProcImgServer trennen
-                if self.plcslave and self.th_plcslave is not None:
-                    self.th_plcslave.disconnect_all()
+                if self.plcserver and self.th_plcserver is not None:
+                    self.th_plcserver.disconnect_all()
 
                 proginit.logger.warning("piCtory configuration was changed")
 
             if self.check_replace_ios_changed():
                 if not file_changed:
                     # Verbindungen von ProcImgServer trennen mit replace_ios
-                    if self.plcslave and self.th_plcslave is not None:
-                        self.th_plcslave.disconnect_replace_ios()
+                    if self.plcserver and self.th_plcserver is not None:
+                        self.th_plcserver.disconnect_replace_ios()
 
                 file_changed = True
                 proginit.logger.warning("replace ios file was changed")
@@ -846,15 +846,15 @@ class RevPiPyLoad:
                     self.th_plcmqtt.start()
 
             # PLC Server Thread prüfen
-            if self.plcslave and self.th_plcslave is not None \
-                    and not self.th_plcslave.is_alive():
+            if self.plcserver and self.th_plcserver is not None \
+                    and not self.th_plcserver.is_alive():
                 if not file_changed:
                     proginit.logger.warning(
-                        "restart plc slave after thread was not running"
+                        "restart plc server after thread was not running"
                     )
-                self.th_plcslave = self._plcslave()
-                if self.th_plcslave is not None:
-                    self.th_plcslave.start()
+                self.th_plcserver = self._plcserver()
+                if self.th_plcserver is not None:
+                    self.th_plcserver.start()
 
             if self.xmlrpc and self.xsrv is not None:
                 # Work multiple xml calls in same thread until timeout
@@ -869,7 +869,7 @@ class RevPiPyLoad:
         # Alle Sub-Systeme beenden
         self.stop_plcprogram()
         self.stop_plcmqtt()
-        self.stop_plcslave()
+        self.stop_plcserver()
         self.stop_xmlrpcserver()
 
         # Logreader schließen
@@ -910,17 +910,17 @@ class RevPiPyLoad:
 
         proginit.logger.debug("leave RevPiPyLoad.stop_plcprogram()")
 
-    def stop_plcslave(self):
-        """Beendet PLC Slave."""
-        proginit.logger.debug("enter RevPiPyLoad.stop_plcslave()")
+    def stop_plcserver(self):
+        """Beendet PLC Server."""
+        proginit.logger.debug("enter RevPiPyLoad.stop_plcserver()")
 
-        if self.th_plcslave is not None and self.th_plcslave.is_alive():
-            proginit.logger.info("stopping revpi slave thread")
-            self.th_plcslave.stop()
-            self.th_plcslave.join()
-            proginit.logger.debug("revpi slave thread successfully closed")
+        if self.th_plcserver is not None and self.th_plcserver.is_alive():
+            proginit.logger.info("stopping revpi server thread")
+            self.th_plcserver.stop()
+            self.th_plcserver.join()
+            proginit.logger.debug("revpi server thread successfully closed")
 
-        proginit.logger.debug("leave RevPiPyLoad.stop_plcslave()")
+        proginit.logger.debug("leave RevPiPyLoad.stop_plcserver()")
 
     def stop_xmlrpcserver(self):
         """Beendet XML-RPC."""
@@ -971,12 +971,12 @@ class RevPiPyLoad:
         dc["mqttsend_on_event"] = int(self.mqttsend_on_event)
         dc["mqttwrite_outputs"] = int(self.mqttwrite_outputs)
 
-        # PLCSLAVE Sektion
-        dc["plcslave"] = int(self.plcslave)
-        dc["plcslaveacl"] = self.plcslaveacl.acl
-        dc["plcslavebindip"] = self.plcslavebindip
-        dc["plcslaveport"] = self.plcslaveport
-        dc["plcslavewatchdog"] = int(self.plcwatchdog)
+        # PLCSERVER Sektion
+        dc["plcserver"] = int(self.plcserver)
+        dc["plcserveracl"] = self.plcserveracl.acl
+        dc["plcserverbindip"] = self.plcserverbindip
+        dc["plcserverport"] = self.plcserverport
+        dc["plcserverwatchdog"] = int(self.plcwatchdog)
 
         # XMLRPC Sektion
         dc["xmlrpc"] = int(self.xmlrpc)
@@ -1261,18 +1261,18 @@ class RevPiPyLoad:
                 "mqttsend_on_event": "[01]",
                 "mqttwrite_outputs": "[01]",
             },
-            "PLCSLAVE": {
-                "plcslave": "[01]",
-                "plcslaveacl": self.plcslaveacl.regex_acl,
-                # "plcslavebindip": "^((([\\d]{1,3}\\.){3}[\\d]{1,3})|\\*)+$",
-                "plcslaveport": "[0-9]{,5}",
-                "plcslavewatchdog": "[01]",
+            "PLCSERVER": {
+                "plcserver": "[01]",
+                "plcserveracl": self.plcserveracl.regex_acl,
+                # "plcserverbindip": "^((([\\d]{1,3}\\.){3}[\\d]{1,3})|\\*)+$",
+                "plcserverport": "[0-9]{,5}",
+                "plcserverwatchdog": "[01]",
             },
             "XMLRPC": {
                 "xmlrpc": "[01]",
                 "xmlrpcacl": self.xmlrpcacl.regex_acl,
                 # "xmlrpcbindip": "^((([\\d]{1,3}\\.){3}[\\d]{1,3})|\\*)+$",
-                # "xmlslaveport": "[0-9]{,5}",
+                # "xmlrpcport": "[0-9]{,5}",
             }
         }
 
@@ -1311,19 +1311,19 @@ class RevPiPyLoad:
         )
 
         # ACLs sofort übernehmen und schreiben
-        str_acl = dc.get("plcslaveacl", None)
-        if str_acl is not None and self.plcslaveacl.acl != str_acl:
-            self.plcslaveacl.acl = str_acl
-            if not self.plcslaveacl.writeaclfile(aclname="PLC-SLAVE"):
+        str_acl = dc.get("plcserveracl", None)
+        if str_acl is not None and self.plcserveracl.acl != str_acl:
+            self.plcserveracl.acl = str_acl
+            if not self.plcserveracl.writeaclfile(aclname="PLC-SERVER"):
                 proginit.logger.error(
-                    "can not write acl file '{0}' for PLC-SLAVE"
-                    "".format(self.plcslaveacl.filename)
+                    "can not write acl file '{0}' for PLC-SERVER"
+                    "".format(self.plcserveracl.filename)
                 )
                 return False
             else:
                 proginit.logger.info(
-                    "wrote new acl file '{0}' for PLC-SLAVE"
-                    "".format(self.plcslaveacl.filename)
+                    "wrote new acl file '{0}' for PLC-SERVER"
+                    "".format(self.plcserveracl.filename)
                 )
         str_acl = dc.get("xmlrpcacl", None)
         if str_acl is not None and self.xmlrpcacl.acl != str_acl:
@@ -1420,15 +1420,15 @@ class RevPiPyLoad:
         else:
             return False
 
-    def xml_plcslaverunning(self):
-        """Prueft ob PLC-Slave noch lauft.
-        @return True, wenn PLC-Slave noch lauft"""
-        proginit.logger.debug("xmlrpc call plcslaverunning")
-        return False if self.th_plcslave is None \
-            else self.th_plcslave.is_alive()
+    def xml_plcserverrunning(self):
+        """Prueft ob PLC-Server noch lauft.
+        @return True, wenn PLC-Server noch lauft"""
+        proginit.logger.debug("xmlrpc call plcserverrunning")
+        return False if self.th_plcserver is None \
+            else self.th_plcserver.is_alive()
 
-    def xml_plcslavestart(self):
-        """Startet den PLC Slave Server.
+    def xml_plcserverstart(self):
+        """Startet den PLC Server.
 
         @return Statuscode:
             0: erfolgreich gestartet
@@ -1436,22 +1436,22 @@ class RevPiPyLoad:
             -2: Laeuft bereits
 
         """
-        if self.th_plcslave is not None and self.th_plcslave.is_alive():
+        if self.th_plcserver is not None and self.th_plcserver.is_alive():
             return -2
         else:
-            self.th_plcslave = self._plcslave()
-            if self.th_plcslave is None:
+            self.th_plcserver = self._plcserver()
+            if self.th_plcserver is None:
                 return -1
             else:
-                self.th_plcslave.start()
+                self.th_plcserver.start()
                 return 0
 
-    def xml_plcslavestop(self):
-        """Stoppt den PLC Slave Server.
+    def xml_plcserverstop(self):
+        """Stoppt den PLC Server.
         @return True, wenn stop erfolgreich"""
-        if self.th_plcslave is not None:
-            self.stop_plcslave()
-            self.th_plcslave = None
+        if self.th_plcserver is not None:
+            self.stop_plcserver()
+            self.th_plcserver = None
             return True
         else:
             return False

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Modul fuer die Verwaltung der PLC-Slave Funktionen."""
+"""Modul fuer die Verwaltung der PLC-Server Funktionen."""
 __author__ = "Sven Sager"
 __copyright__ = "Copyright (C) 2023 Sven Sager"
 __license__ = "GPLv2"
@@ -20,21 +20,21 @@ HASH_PICT = HASH_FAIL
 HASH_RPIO = HASH_NULL
 
 
-class RevPiSlave(Thread):
+class RevPiPlcServer(Thread):
     """RevPi PLC-Server.
 
     Diese Klasste stellt den RevPi PLC-Server zur verfuegung und akzeptiert
-    neue Verbindungen. Diese werden dann als RevPiSlaveDev abgebildet.
+    neue Verbindungen. Diese werden dann als RevPiPlcServerDev abgebildet.
 
     Ueber die angegebenen ACLs koennen Zugriffsbeschraenkungen vergeben werden.
 
     """
 
     def __init__(self, ipacl, port=55234, bindip="", watchdog=True):
-        """Instantiiert RevPiSlave-Klasse.
+        """Instantiiert RevPiPlcServer-Klasse.
 
         @param ipacl AclManager <class 'IpAclManager'>
-        @param port Listen Port fuer plc Slaveserver
+        @param port Listen Port fuer plc server
         @param bindip IP-Adresse an die der Dienst gebunden wird (leer=alle)
         @param watchdog Trennen, wenn Verarbeitungszeit zu lang
 
@@ -98,7 +98,7 @@ class RevPiSlave(Thread):
 
     def run(self):
         """Startet Serverkomponente fuer die Annahme neuer Verbindungen."""
-        proginit.logger.debug("enter RevPiSlave.run()")
+        proginit.logger.debug("enter RevPiPlcServer.run()")
 
         # Socket öffnen und konfigurieren bis Erfolg oder Ende
         self.so = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -149,7 +149,7 @@ class RevPiSlave(Thread):
                 )
             else:
                 # Thread starten
-                th = RevPiSlaveDev(tup_sock, aclstatus, self._watchdog)
+                th = RevPiPlcServerDev(tup_sock, aclstatus, self._watchdog)
                 th.start()
                 self._th_dev.append(th)
 
@@ -160,9 +160,9 @@ class RevPiSlave(Thread):
 
         # Disconnect all clients and wait some time, because they are daemons
         th_close_err = False
-        for th in self._th_dev:  # type: RevPiSlaveDev
+        for th in self._th_dev:  # type: RevPiPlcServerDev
             th.stop()
-        for th in self._th_dev:  # type: RevPiSlaveDev
+        for th in self._th_dev:  # type: RevPiPlcServerDev
             th.join(2.0)
             if th.is_alive():
                 th_close_err = True
@@ -177,11 +177,11 @@ class RevPiSlave(Thread):
 
         self.exitcode = 0
 
-        proginit.logger.debug("leave RevPiSlave.run()")
+        proginit.logger.debug("leave RevPiPlcServer.run()")
 
     def stop(self):
-        """Beendet Slaveausfuehrung."""
-        proginit.logger.debug("enter RevPiSlave.stop()")
+        """Beendet Serverausfuehrung."""
+        proginit.logger.debug("enter RevPiPlcServer.stop()")
 
         self._evt_exit.set()
         if self.so is not None:
@@ -190,7 +190,7 @@ class RevPiSlave(Thread):
             except Exception:
                 pass
 
-        proginit.logger.debug("leave RevPiSlave.stop()")
+        proginit.logger.debug("leave RevPiPlcServer.stop()")
 
     @property
     def watchdog(self):
@@ -199,11 +199,11 @@ class RevPiSlave(Thread):
     @watchdog.setter
     def watchdog(self, value):
         self._watchdog = value
-        for th in self._th_dev:  # type: RevPiSlaveDev
+        for th in self._th_dev:  # type: RevPiPlcServerDev
             th.watchdog = value
 
 
-class RevPiSlaveDev(Thread):
+class RevPiPlcServerDev(Thread):
     """Klasse um eine RevPiModIO Verbindung zu verwalten.
 
     Diese Klasste stellt die Funktionen zur Verfuegung um Daten ueber das
@@ -211,7 +211,7 @@ class RevPiSlaveDev(Thread):
     """
 
     def __init__(self, devcon, acl, watchdog):
-        """Init RevPiSlaveDev-Class.
+        """Init RevPiPlcServerDev-Class.
 
         @param devcon Tuple der Verbindung
         @param acl Berechtigungslevel
@@ -232,7 +232,7 @@ class RevPiSlaveDev(Thread):
 
     def run(self):
         """Verarbeitet Anfragen von Remoteteilnehmer."""
-        proginit.logger.debug("enter RevPiSlaveDev.run()")
+        proginit.logger.debug("enter RevPiPlcServerDev.run()")
 
         proginit.logger.info(
             "got new connection from host {0} with acl {1}".format(
@@ -615,7 +615,7 @@ class RevPiSlaveDev(Thread):
         self._devcon = None
 
         proginit.logger.info("disconnected from {0}".format(self._addr))
-        proginit.logger.debug("leave RevPiSlaveDev.run()")
+        proginit.logger.debug("leave RevPiPlcServerDev.run()")
 
     def stop(self):
         """
@@ -625,10 +625,10 @@ class RevPiSlaveDev(Thread):
         the connection. Call .join() to give the thread some time, it is a
         daemon!
         """
-        proginit.logger.debug("enter RevPiSlaveDev.stop()")
+        proginit.logger.debug("enter RevPiPlcServerDev.stop()")
 
         self._evt_exit.set()
         if self._devcon is not None:
             self._devcon.shutdown(socket.SHUT_RDWR)
 
-        proginit.logger.debug("leave RevPiSlaveDev.stop()")
+        proginit.logger.debug("leave RevPiPlcServerDev.stop()")

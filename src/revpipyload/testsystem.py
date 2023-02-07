@@ -63,7 +63,7 @@ class TestSystem:
         @return 0 if successful testet"""
         print("Parse config file:")
         print("\tSection DEFAULT : {0}".format("DEFAULT" in self.gc))
-        print("\tSection PLCSLAVE: {0}".format("PLCSLAVE" in self.gc))
+        print("\tSection PLCSERVER: {0}".format("PLCSERVER" in self.gc))
         print("\tSection XMLRPC  : {0}".format("XMLRPC" in self.gc))
         print("\tSection MQTT    : {0}".format("MQTT" in self.gc))
         return 0
