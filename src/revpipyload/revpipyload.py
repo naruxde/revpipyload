@@ -417,7 +417,7 @@ class RevPiPyLoad:
 
             # Erweiterte Funktionen anmelden
             try:
-                import procimgserver
+                from . import procimgserver
             except Exception:
                 self.xml_ps = None
                 proginit.logger.warning(
@@ -496,7 +496,7 @@ class RevPiPyLoad:
         th_plc = None
         if self.mqtt:
             try:
-                from mqttserver import MqttServer
+                from .mqttserver import MqttServer
             except Exception:
                 proginit.logger.warning(
                     "can not load revpimodio2 module. maybe its not installed "
@@ -1463,7 +1463,7 @@ def main() -> int:
     proginit.configure()
 
     if proginit.pargs.test:
-        from testsystem import TestSystem
+        from .testsystem import TestSystem
 
         root = TestSystem()
     else:

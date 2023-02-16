@@ -6,7 +6,7 @@ __license__ = "GPLv2"
 
 from configparser import ConfigParser
 
-import proginit
+from . import proginit
 
 newline = "\n------------------------------------------------------------\n"
 
