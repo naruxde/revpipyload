@@ -2,7 +2,7 @@
 <!DOCTYPE service-group SYSTEM "avahi-service.dtd">
 <service-group>
     <name replace-wildcards="yes">%h</name>
-    <service protocol="ipv4">
+    <service protocol="any">
         <type>_revpipyload._tcp</type>
         <port>55123</port>
     </service>
