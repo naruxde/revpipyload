@@ -18,7 +18,7 @@ setup(
 
     install_requires=[
         "paho-mqtt >= 1.4.0",
-        "revpimodio2 >= 2.6.0rc1",
+        "revpimodio2 >= 2.6.0",
     ],
     entry_points={
         'console_scripts': [
