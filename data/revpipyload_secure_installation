@@ -1,6 +1,0 @@
-#!/bin/sh
-# This will call the entry point of the python package, if it is installed
-# in /usr/share/revpipyload. Put this to your bin directory, which is in
-# the PATH value
-
-exec "/usr/share/revpipyload/secure_installation" "$@"
