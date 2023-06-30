@@ -238,82 +238,58 @@ class RevPiPyLoad:
             restart_plcprogram = True
 
         # Konfiguration verarbeiten [MQTT]
-        self.mqtt = 0
-        if "MQTT" in self.globalconfig:
-            self.mqtt = \
-                self.globalconfig["MQTT"].getboolean("mqtt", False)
-            self.mqttbasetopic = \
-                self.globalconfig["MQTT"].get("basetopic", "")
-            self.mqttsendinterval = \
-                self.globalconfig["MQTT"].getint("sendinterval", 30)
-            self.mqttbroker_address = \
-                self.globalconfig["MQTT"].get("broker_address", "localhost")
-            self.mqttport = \
-                self.globalconfig["MQTT"].getint("port", 1883)
-            self.mqtttls_set = \
-                self.globalconfig["MQTT"].getboolean("tls_set", False)
-            self.mqttusername = \
-                self.globalconfig["MQTT"].get("username", "")
-            self.mqttpassword = \
-                self.globalconfig["MQTT"].get("password", "")
-            self.mqttclient_id = \
-                self.globalconfig["MQTT"].get("client_id", "")
-            self.mqttsend_on_event = \
-                self.globalconfig["MQTT"].getboolean("send_on_event", False)
-            self.mqttwrite_outputs = \
-                self.globalconfig["MQTT"].getboolean("write_outputs", False)
+        self.mqtt = self.globalconfig.getboolean("MQTT", "mqtt", fallback=False)
+        self.mqttbasetopic = self.globalconfig.get("MQTT", "basetopic", fallback="")
+        self.mqttsendinterval = self.globalconfig.getint("MQTT", "sendinterval", fallback=30)
+        self.mqttbroker_address = self.globalconfig.get("MQTT", "broker_address", fallback="localhost")
+        self.mqttport = self.globalconfig.getint("MQTT", "port", fallback=1883)
+        self.mqtttls_set = self.globalconfig.getboolean("MQTT", "tls_set", fallback=False)
+        self.mqttusername = self.globalconfig.get("MQTT", "username", fallback="")
+        self.mqttpassword = self.globalconfig.get("MQTT", "password", fallback="")
+        self.mqttclient_id = self.globalconfig.get("MQTT", "client_id", fallback="")
+        self.mqttsend_on_event = self.globalconfig.getboolean("MQTT", "send_on_event", fallback=False)
+        self.mqttwrite_outputs = self.globalconfig.getboolean("MQTT", "write_outputs", fallback=False)
 
         # Konfiguration verarbeiten [PLCSERVER]
-        self.plcserver = False
-        if "PLCSERVER" in self.globalconfig:
-            self.plcserver = \
-                self.globalconfig["PLCSERVER"].getboolean("plcserver", False)
+        self.plcserver = self.globalconfig.getboolean("PLCSERVER", "plcserver", fallback=False)
 
-            # Berechtigungen laden
-            if not self.plcserveracl.loadaclfile(
-                    self.globalconfig["PLCSERVER"].get("aclfile", "")):
-                proginit.logger.warning(
-                    "can not load plcserver acl - wrong format"
-                )
-            if not self.plcserver:
-                self.stop_plcserver()
-
-            # Bind IP lesen und anpassen
-            self.plcserverbindip = \
-                self.globalconfig["PLCSERVER"].get("bindip", "127.0.0.1")
-            if self.plcserverbindip == "*":
-                self.plcserverbindip = ""
-            elif self.plcserverbindip == "":
-                self.plcserverbindip = "127.0.0.1"
-
-            self.plcserverport = \
-                self.globalconfig["PLCSERVER"].getint("port", 55234)
-            self.plcwatchdog = self.globalconfig.getboolean(
-                "PLCSERVER", "watchdog", fallback=True
+        # Berechtigungen laden
+        if self.plcserver \
+                and not self.plcserveracl.loadaclfile(self.globalconfig.get("PLCSERVER", "aclfile", fallback="")):
+            proginit.logger.warning(
+                "can not load plcserver acl - wrong format"
             )
+        if not self.plcserver:
+            self.stop_plcserver()
+
+        # Bind IP lesen und anpassen
+        self.plcserverbindip = self.globalconfig.get("PLCSERVER", "bindip", fallback="127.0.0.1")
+        if self.plcserverbindip == "*":
+            self.plcserverbindip = ""
+        elif self.plcserverbindip == "":
+            self.plcserverbindip = "127.0.0.1"
+
+        self.plcserverport = self.globalconfig.getint("PLCSERVER", "port", fallback=55234)
+        self.plcwatchdog = self.globalconfig.getboolean("PLCSERVER", "watchdog", fallback=True)
 
         # Konfiguration verarbeiten [XMLRPC]
-        self.xmlrpc = False
-        if "XMLRPC" in self.globalconfig:
-            self.xmlrpc = \
-                self.globalconfig["XMLRPC"].getboolean("xmlrpc", False)
+        self.xmlrpc = self.globalconfig.getboolean("XMLRPC", "xmlrpc", fallback=False)
 
-            if not self.xmlrpcacl.loadaclfile(
-                    self.globalconfig["XMLRPC"].get("aclfile", "")):
-                proginit.logger.warning(
-                    "can not load xmlrpc acl - wrong format"
-                )
+        if not self.xmlrpcacl.loadaclfile(
+                self.globalconfig.get("XMLRPC", "aclfile", fallback="")):
+            proginit.logger.warning(
+                "can not load xmlrpc acl - wrong format"
+            )
 
-            # Bind IP lesen und anpassen
-            self.xmlrpcbindip = \
-                self.globalconfig["XMLRPC"].get("bindip", "127.0.0.1")
-            if self.xmlrpcbindip == "*":
-                self.xmlrpcbindip = ""
-            elif self.xmlrpcbindip == "":
-                self.xmlrpcbindip = "127.0.0.1"
+        # Bind IP lesen und anpassen
+        self.xmlrpcbindip = \
+            self.globalconfig.get("XMLRPC", "bindip", fallback="127.0.0.1")
+        if self.xmlrpcbindip == "*":
+            self.xmlrpcbindip = ""
+        elif self.xmlrpcbindip == "":
+            self.xmlrpcbindip = "127.0.0.1"
 
-            self.xmlrpcport = \
-                self.globalconfig["XMLRPC"].getint("port", 55123)
+        self.xmlrpcport = self.globalconfig.getint("XMLRPC", "port", fallback=55123)
 
         # Workdirectory wechseln
         if not os.access(self.plcworkdir, os.R_OK | os.W_OK | os.X_OK):
