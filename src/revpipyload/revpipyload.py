@@ -111,6 +111,34 @@ class RevPiPyLoad:
 
         proginit.logger.debug("leave RevPiPyLoad.__init__()")
 
+    def __translate_config(self):
+        """
+        Translate settings values of revpipyload < 0.10.0.
+
+        With RevPiPyLoad 0.10.0 we replaced the words master-slave with
+        client-server. For this, we convert parts of existing configuration
+        files, too.
+        """
+        if "PLCSLAVE" in self.globalconfig:
+            if "PLCSERVER" not in self.globalconfig:
+                self.globalconfig.add_section("PLCSERVER")
+
+            for old_name, new_name in (
+                    ("plcslave", "plcserver"),
+                    ("aclfile", "aclfile"),
+                    ("bindip", "bindip"),
+                    ("port", "port"),
+                    ("watchdog", "watchdog"),
+            ):
+                if old_name in self.globalconfig["PLCSLAVE"]:
+                    self.globalconfig["PLCSERVER"][new_name] = self.globalconfig["PLCSLAVE"][old_name]
+
+            self.globalconfig.remove_section("PLCSLAVE")
+
+            with open(proginit.globalconffile, "w") as fh:
+                self.globalconfig.write(fh)
+            proginit.logger.info("renamed obsolet config values in {0}".format(proginit.globalconffile))
+
     def _check_mustrestart_mqtt(self):
         """Prueft ob sich kritische Werte veraendert haben.
         @return True, wenn Subsystemneustart noetig ist"""
@@ -182,6 +210,7 @@ class RevPiPyLoad:
             "loading config file: {0}".format(proginit.globalconffile)
         )
         self.globalconfig.read(proginit.globalconffile)
+        self.__translate_config()
         proginit.conf = self.globalconfig
 
         # Merker für Subsystem-Neustart nach laden, vor setzen
