@@ -418,7 +418,7 @@ class RevPiPyLoad:
             self.xsrv.register_function(
                 0, self.xml_mqttrunning, "mqttrunning")
             self.xsrv.register_function(
-                0, self.xml_plcserverrunning, "plcserverrunning")
+                0, self.xml_plcserverrunning, "plcslaverunning")
 
             # Erweiterte Funktionen anmelden
             try:
@@ -466,9 +466,9 @@ class RevPiPyLoad:
             self.xsrv.register_function(
                 3, self.xml_mqttstop, "mqttstop")
             self.xsrv.register_function(
-                3, self.xml_plcserverstart, "plcserverstart")
+                3, self.xml_plcserverstart, "plcslavestart")
             self.xsrv.register_function(
-                3, self.xml_plcserverstop, "plcserverstop")
+                3, self.xml_plcserverstop, "plcslavestop")
             self.xsrv.register_function(
                 3, self.xml_plcdelete_file, "plcdeletefile")
             self.xsrv.register_function(
@@ -977,11 +977,11 @@ class RevPiPyLoad:
         dc["mqttwrite_outputs"] = int(self.mqttwrite_outputs)
 
         # PLCSERVER Sektion
-        dc["plcserver"] = int(self.plcserver)
-        dc["plcserveracl"] = self.plcserveracl.acl
-        dc["plcserverbindip"] = self.plcserverbindip
-        dc["plcserverport"] = self.plcserverport
-        dc["plcserverwatchdog"] = int(self.plcwatchdog)
+        dc["plcslave"] = int(self.plcserver)
+        dc["plcslaveacl"] = self.plcserveracl.acl
+        dc["plcslavebindip"] = self.plcserverbindip
+        dc["plcslaveport"] = self.plcserverport
+        dc["plcslavewatchdog"] = int(self.plcwatchdog)
 
         # XMLRPC Sektion
         dc["xmlrpc"] = int(self.xmlrpc)
@@ -1286,6 +1286,17 @@ class RevPiPyLoad:
             dc["replace_ios"] = os.path.join(
                 self.plcworkdir, dc["replace_ios"])
 
+        # Rename values due to compatibility with the xml-rpc protocol
+        for key_from, key_to in (
+                ("plcslave", "plcserver"),
+                ("plcslaveacl", "plcserveracl"),
+                ("plcslavebindip", "plcserverbindip"),
+                ("plcslaveport", "plcserverport"),
+                ("plcslavewatchdog", "plcserverwatchdog"),
+        ):
+            dc[key_to] = dc[key_from]
+            del dc[key_from]
+
         # Werte übernehmen, die eine Definition in key haben (andere nicht)
         for sektion in keys:
             suffix = sektion.lower()
@@ -1300,6 +1311,8 @@ class RevPiPyLoad:
                         )
                         return False
                     if localkey != "acl":
+                        if sektion not in self.globalconfig:
+                            self.globalconfig.add_section(sektion)
                         self.globalconfig.set(
                             sektion,
                             key if localkey == "" else localkey,
