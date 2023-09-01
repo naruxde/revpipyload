@@ -1,0 +1,279 @@
+revpipyload (0.10.0-1) stable; urgency=medium
+
+  [ Sven Sager ]
+  * first checkin
+  * python buffer umgangen
+  * simple log viewer
+  * logs können ganz oder zeilenweise nachgeladen werden
+  * globalisierung von pargs und logger
+  * zeroonexit und zeroonerror parameter prüfen ob plc programm existiert 
+    docstrings und logmeldungen
+  * bugfixes PLC-Program up- and download
+  * get_config und set_config hinzugefügt
+  * Packversion tar/zip piCtory Up-Download ProcImg Download
+  * xml_plcupload um pictory-flags erweitert docstrings defaultwerte geändert 
+    und für deb vorbereitet pythonversion für plc programm kann angegeben werden
+  * Upload als Tar oder Zip möglich
+  * piCtory Konfigcheck vor Übernahme debian Vorbereitungen
+  * debian Vorbereitungen
+  * xmlrpc mit unterschiedlichen Modi versehen Fehlerabfang bei packapp init.d
+    script angepasst
+  * Übertragene Optionen per regex prüfen docstrings und codestyle
+  * defaultwerte verändert
+  * plcarguments können an Python Programm übergeben werden
+  * bugfix / TERM und KILL müssen auch als Fehler behandelt werden um piControl
+    auf NULL zu setzen
+  * signal für neue LogFiles erstellt. FileHandler werden umgehängt logrotate
+    ruft signal SIGUSR1 auf Ausgaben des Python PLC Programms über eine PIPE
+    führen um diese in neuen Loghandler zu schreiben proginit als globales Modul
+    umgebaut (kein Vererbung mehr)
+  * bugfixes im PipeLogwriter() logapp Datei wird von PipeLogwriter vollständig 
+    verwaltet
+  * bugfix typo
+  * slave funktion begonnen
+  * Laufzeitüberwachung eingebaut
+  * meldungen mit adress und längenangabe
+  * fehler in logrotate script
+  * "start new logfile" als Warnung ausgeben damit es immer im log erscheint
+  * blockweise übertragung bei mehr als 1024 Bytes
+  * Jedes Device bekommt eigenen Socket in Thread
+  * logger Meldungen hinzugefügt Zeitmessung verbessert, nimmt nur eigentliche
+    Laufzeit
+  * Logdateien als Binary übertragen resetpicontrol für XML hinzugefügt
+  * codestyle docstrings
+  * add: Prüfung für config.rsc Pfad add: Prüfung piControlReset oder piTest -x
+  * codestyle docstrings
+  * change: Debugmessage
+  * Exitcode angepasst für RevPiSlave Thread
+  * mktemp gegen mkstemp getauscht procimgserver hinzugefügt XML-RPC
+    Aufruffunktionen für ProcimgServer hinzugefügt
+  * Ausgänge im procimgserver immer als Bytes umgerechnet setzen XML-Server für
+    multicall konfigurieren LogReader auf Byteübertragung umgeschrieben Neue
+    XML-Funktionen für LogReader Byteübertragung eingebaut logger bei
+    proginit.configure() nicht doppelt erzeugen
+  * Name im init.d Script angepasst ProcimgServer.setvalue() gibt Liste als
+    Rückgabewert mit Ergebnissen Buxfix: mkstemp Umstellung Übertragene piCtory
+    Konfiguration auf existierende Module testen
+  * debug lognachrichten angepasst docstrings angepasst
+  * ProcimgServer.loadrevpimodio() erstellt um Veränderungen an piCtory zu
+    laden RevPiPyLoad prüft Änderungsdatum von piCtory und beendet ggf.
+    ProcimgServer
+  * docstrings und codestyle
+  * Wenn keine piCtory Konfiguration vorhanden ist, dennoch Modul laden Bei
+    RevPiModIO Instantiierung Rückgabewert False, sollte piCtory leer sein
+    description Text angepasst
+  * Client Thread mit nötiger Funktion ausgestattet
+  * Neuen NetworkFileHandler implementiert
+  * plcslave Thread startet automatisch, unabhängig vom plc Thread ACL Liste
+    für plcslave hinzugefügt plcslaveport als Parameter übergeben
+    getconfig/setconfig auf neue Parameter angepasst re.match auf re.fullmatch
+    geändert
+  * aclstatus von str() auf int() geändert RevPiSlave self.so im __init__
+    angelegt accept logging verbessert Threadliste von toten Threads reinigen
+    re.fullmatch für alte python verson auf wheezy nachgestellt Neues
+    NetFH-Protokoll implementiert
+  * Sync Paket verarbeiten Timeouts verarbeiten und das Socket Objekt auf diesen
+    einstellen
+  * Sicherheitsbytes, die bei unsauberer Trennung geschrieben werden sollen
+    Mehrere Byteblöcke mit Startpositionen definierbar Einzelne oder alle
+    Sicherheitsbytes löschbar
+  * ACL Regex angepasst Controlbyte für Schreiben
+  * FileHandler sauber schließen Procimg und pictory Konfiguraiton über
+    Parameter übergebbar für Simulationen
+  * RevPiSlaveDev SD deutlich schneller - meldet nur bei sysflush schreibstatus
+  * Umstellung auf proginit als globale Datenquelle Aufteilung der Funktionen in
+    mehrere Module FileHandler von stdout schließen
+  * Modul picontrolserver angelegt und PLCSlave-Funktionen verschoben Kleine
+    Anpassungen durch Übernehme von default-Zweig
+  * avahi Service hinzugefügt default-file über debian-dir integriert logsystem
+    closeall bei Programmende typo pyloadverion in pyloadversion geändert
+    default xmlport von 55123 auf 55239 geändert Bugfix: _zeroprocimg
+  * plc slave thread überwachen
+  * Konfigurationsparameter rtlevel mit Default 1 hinzugefügt PythonPLC Programm
+    kann über chrt scheduling policy erhalten PythonPLC Programm wird it -OO
+    aufgerufen Modul procimgserver auf revpimodio2 umgestellt xml-standardport
+    auf 55123 belassen xmlserver port nicht mehr über GUI konfigurierbar
+  * Änderungen aus default übernommen und Version hochgezogen
+  * RTLevel default 0 (aus) Workdirectory prüfen vor dem Wechseln Optimierung
+    -OO entfernt _setuprt(...) um ksoftirqd und ktimersoftd auf höhere
+    Prioritäten zu ziehen Python PLC Programm kann max auf Prio RR 1 laufen
+  * cmd == b'EY' vom picontrolserver wurde nicht richtig verarbeitet
+    Fehlerabfang in picontrolserver, wenn Prozessabbild nicht geöffnet werden
+    kann
+  * XML cmd plcslavestart angepasst XML cmd plcslaverunning eingefügt
+    Thradkontrolle für plc slave angepasst, wenn über xml gestoppt
+  * Helpermodul angelegt und Funktionen darauf umgestellt
+  * IP Prüfung für XML-RPC begonnen. Prüft lediglich auf IP und noch keine Level
+  * IpAclManager erweitert picontrolserver auf IpAclManager umgeschrieben
+  * IpAclManager.loadacl hinzugefügt IpAclManager.valid_acl_string entfernt
+    SaveXMLRPCServer übernimmt ACL Level bei Funktionsregistrierung
+    SaveXMLRPCServer _dispatch werte ACL Level der Methode aus Konfigdatei mit
+    neuen Sektionen PLCSLAVE und XMLRPC versehen Parameter autoreloaddelay für
+    PLC-Neustart integriert ACL Vergabe für alle register_function Aufrufe
+  * Neue Optionen für Config-file übernommen Neuen XML-Modus 4 angelegt
+  * autoreloaddelay implementiert Update der IpAclManager-Klasse
+  * IpAclManager ausgelagert in shared ACLs über Datei laden (Eine ACL pro
+    Zeile) ProcimgServer Parameter aclmode entfernt Codestyle
+  * Saved eric-project file aclx.conf in etc übernehmen (setup.py) shared 
+    übernehmen (setup.py) Dynamisches Neuladen der Konfiguraiton
+  * PLC-Slave ACL wird gegen bestehende Verbindungen angewendet
+  * Kompatibilität zu Python 3.2 (wheezy) hergestellt ACL Prüfung jetzt gegen
+    client_address[0] Bei Ordnerupload wurden \ von Windowspfaden nicht
+    umgewandelt
+  * Prozessabbildübertragung per MQTT begonnen
+  * Nur konfigurierte Bytes aus Procimg übertragen
+  * MQTT sendet beim Start piCtory und Daten um laufende RevPiMqttIO zu
+    informieren MQTT in XML-RPC eingebaut MQTT in XML Settings übernommen
+  * mqtt publisher automatisch starten, wenn Einstellungen neu geladen werden
+    Fehlerabfang beim Prozessabbild mqtt Client Verbindet sich async ohne
+    Fehler, wenn Broker noch nicht da ist
+  * Fehler bei deaktiviertem XMLRPC behoben Fehler bei AutoReloadDelay behoben
+    (Zeit passte nicht) ConfigParser mit Typen bei get versehen
+  * RevPiModIO2 2.1.6 muss verwendet werden wegen Device-Iterator Watch mode
+    Daten schneller zusammenfassen
+  * Fehler behoben bei Aufruf mit ungültigem configrsc Parameter code style
+  * Übertragung der Values für Watch-Mode an python3.2 angepasst Bei falschem
+    ACL Wert mit \x18 melden (Cancel)
+  * Alle IOs mit Export-Flag in piCtory werden per MQTT gesendet Parameter für
+    Event-Senden und Output-Schreiben in Konfig eingefügt Processabbild wird
+    nicht komplett per MQTT gesendet piCtory Konfig kann angefordert werden
+    Ausgänge können gesetzt werden (wenn Export-Flag)
+  * Einstellungen mit Sektion versehen Standardconfig geändert Versionsnummer
+    angepasst MQTT Wird nur bei Einstellungsänderung neu gestartet MQTT Thread
+    wird auf Fehler geprüft MQTT Nach piCtory Änderung neu starten XML config
+    nimmt leere mqtt client_id an
+  * Auch Outputs für bytes per MQTT ermöglichen Fehlermeldungen für MQTT
+    verbessert MQTT Parameter host auf broker_address mit localhost als default
+    geändert
+  * Debian postinst aufgenommen für Infos der Konfig-Migration Puffer für PLC
+    Prozess auf 0 gesetzt gegen hängenden Start von Popen
+  * Eventüberwachung von RevPiModIO in MQTT im Thread starten
+  * get_config Datentypen angepasst
+  * IOs des Core als einzelne Werte behandeln Topic base/get/ioname sendet den
+    angegebenen IO sofort per MQTT base/got/ioname Topic base/get sendet
+    Zyklische Daten sofort Funktion SaveXMLRPCServer.isAlive in
+    SaveXMLRPCServer.is_alive() umbenannt MqttServer läd RevPiModIO sofort neu
+    bei reload_revpimodio sendinterval=0 deaktiviert zyklische Übertragung
+  * Logging angepasst
+  * MQTT Defaultwerte angepasst init-file fest mit -d Argument versehen und
+    Codepage für Python
+  * Fehler bei MQTT-Werteübergabe der XML-RPC Schnittstelle behoben postinst
+    Link angepasst
+  * Verarbeitung der Exportflags von Core IOs in MQTT überarbeitet Bei reload
+    und autostart 0->1 wird PLC Programm nun sofort gestartet
+  * bindip für PlcSlave wird jetzt verarbeitet Fehlerabfang bei
+    piCtory-Übertragung IOCTL über das Netzwerk implementiert Parameter 
+    --developermode implementiert
+  * Counter Reset in MQTT eingebaut basename/reset/ioname - payload egal
+  * added LICENSE.txt
+  * Replace IOs aus Configfile übernehmen
+  * replace_io aus Datei importieren wird direkt vararbeitet
+  * replace_io_file wird von RevPiModIO verarbeitet Parameter kann per XML-RPC
+    übergeben werden Argument --test hinzugefügt um replace_io_file testen zu
+    können
+  * ProcimgServer lädt standard IOs, wenn replace_ios_file nicht gültig ist MQTT
+    lädt standard IOs, wenn replace_ios_file nicht gültig ist replace_ios_file
+    wird beim reload geprüft und ggf. neu geladen Startbar ohne replace_ios
+    Parameter Bei fehlender replace_ios Datei werden standard IOs verwendet
+  * Übertragung der replace_io über das Netzwerk begonnen
+  * Alle revpimodio verwenden nun direct_write
+  * Dateikontrolle für pictory und replace_ios per timestamp und hash Wert
+    Hashwerte der Dateien über RevPiNetIO abrufbar b'PH' b'RH' Alte Testfunktion
+    für replace_ios aus helper entfernt
+  * Fehler bei Hashwerte bei Dateien behoben Neuanordnugn für Reload der Dienste
+    bei Dateiänderungen
+  * Bei ProcImgServer fehlte cleanup von RevPiModIO check_replace_ios_changed
+    brachte falsche Werte, wenn nicht angegeben RevPiModIO min 2.4.1
+  * Hashwerte als Bytes übertragen 16 mal \x00 senden, wenn replace_ios nicht
+    existiert
+  * Bei Änderung der Configuration nur die PLC-Slave-Verbindungen trennen Accept
+    Timeout auf 2 Sekunden festgelegt
+  * Bei Änderung von replace_ios nur Clients trennen, die Hashwert anforderten
+  * Wenn replace_ios nicht gefunden wurde, wird HASH_FAIL übertragen UID kann
+    nun auf Workdirectory gesetzt werden
+  * picontrolserver enthält Hashvariablen von piCtory und replace_io Datei
+    TODO: File-Hash-Werte sollten gegen Inhaltsprüfung getauscht werden
+  * PLC-Programm-Neustart unabhängig von XMLRPC Sektion in .conf
+  * Übertragung piCtory Datei trennt bei Fehler Verbindung Übertragung
+    replace_io Datei trennt bei Fehler Verbindung Replace IO wird nur
+    übertragen, wenn HASH nicht HASH_NULL ist
+  * Byteorder und Vorzeichen an PyControl übergeben und verarbeiten
+  * Konfiguration von "plcworkdir_set_uid" über PyControl möglich User ID wird
+    auf 0 oder angegebene gesetzt je nach Parameter in config file Relative
+    replace_ios Datei wird mit workdir versehen replace_ios Datei in workdir
+    wird relativ an PyControl gesendet
+
+  [ Sven Sager ]
+  * Moved paho to lib and switched VCS and IDE
+  * Fix error in piCtory checker
+  * Increase number of NetIO-Clients to 32 (16 Devices)
+  * Implement bytebuffer and length check to picontrolserver.py
+  * Use struct module for net commands, send files with length, replace SD with
+    WD
+  * Insert watchdog for netcmd-loop, put unpack values directly to variables
+
+  [ Sven Sager ]
+  * Change plc-watchdog value in .conf and xml-rpc
+  * Cleanup and new version number
+  * Fix compile error on older Python3 versions
+  * Use new RevPiModIO features
+  * "Reset Driver" of piCtory can now restart your plc program
+  * Bugfix RtLevel, software watchdog for PLC Program
+  * Bugfix on watchdogs.py, remove type hints because of wheezy and jessie
+  * Return PLC program exitcode on crash, Watchdog in MQTT for all Cores, no
+    debug-message on internal revpimodio
+  * Bugfix on missing piCtory config, cleanup
+  * Bug fix to reload created piCtory configuration, while daemon is running
+  * New release
+  * Added assistant program revpipyload_secure_installation to setup access via
+    RevPiPyControl
+  * New default values for revpipyload.conf
+  * New release
+  * Set always localhost to ACL with revpipyload_secure_installation
+  * Call functions with watchdogs.py.
+  * XML-RPC is managed by main thread
+  * Create FUNDING.yml
+  * New XML functions for RevPiCommander
+  * XML-RPC performance, RevPi Flat soft watchdog bit
+  * Fix problem with extended unix user groups
+  * Fix closing connected RevPiSlaveDev on program exit.
+  * Set configured owner of files and directories after plc program upload
+  * Bugfix in upload function
+  * Bugfix - Do not remove empty plcworkdir on xml_plcdelete_file function
+  * New release
+  * Prepare for new shared_procimg behavior
+  * New release
+  * Parameter for shutdown timeout in seconds for plc program
+    (default is and was 5 seconds)
+  * The MQTT system sends byte IOs as real byte to the broker
+  * Reset of piControl via ioctl
+  * Bugfix: Write MQTT values without enabled `send_on_event`
+  * Bugfix: Missing core. IOs in MQTT on RevPi FLAT devices
+  * secure_installation will only reload settings, if daemon is running
+  * Code cleanup
+  * Improve log information about plc program exit like termed/killed/exit code
+  * New release
+  * Object scan in MQTT server uses wrong name source, ignoring export flag
+  * New release
+
+  [ Kees Jan Koster ]
+  * Add ability to write I/O that has slashes in the names. Those look good on
+    MQTT.
+
+  [ Sven Sager ]
+  * Some additional MQTT updates
+  * Support wordorder for revpi-commander
+  * Reorder package to src-layout, switch to GPLv2 license.
+  * Add default files for installation or packaging.
+  * Replaces Master-Slave with Client-Server
+  * Bugfix of imports and wordorder for revpi commander
+  * fix: Set dependency of RevPiModIO to final version
+  * docs: Add new wordorder property to example file
+  * feat: Remove shell scripts from data files
+  * fix: Load all class attributes regardless of configuration
+  * feat: Rename obsolet config file values
+  * revert: XML-RPC protocol changes
+  * chore: Release 0.10.0
+  * packaging(deb): Start packaging branch
+
+ -- Sven Sager <akira@narux.de>  Fri, 01 Sep 2023 09:06:49 +0200
