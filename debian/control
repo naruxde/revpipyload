@@ -1,0 +1,31 @@
+Source: revpipyload
+Section: python
+Priority: optional
+Maintainer: Sven Sager <akira@narux.de>
+Rules-Requires-Root: no
+Homepage: https://revpimodio.org/revpipyplc/
+Vcs-Browser: https://github.com/naruxde/revpimodio2
+Vcs-Git: https://github.com/naruxde/revpimodio2.git
+Build-Depends:
+  debhelper-compat (= 12),
+  dh-python,
+  python3-all,
+  python3-revpimodio2 (>= 2.6.0),
+  python3-setuptools
+Standards-Version: 4.5.1
+
+Package: revpipyload
+Architecture: all
+Pre-Depends: ${misc:Pre-Depends}
+Depends:
+  ${python3:Depends},
+  ${misc:Depends},
+  lsb-base,
+  python3-paho-mqtt,
+  python3-revpimodio2 (>= 2.6.0)
+Description: PLC Loader for Python projects on the RevolutionPi
+ This program start a given Python PLC program on system boot. It monitors the
+ program and reistartes it if an error occures. On a crash the complete
+ /dev/piControl0 can be set to 0x00. It also provides a XML-RPX server. Software
+ can be transferred to the RevPi with this server. A tool can monitor the
+ process image on runtime.
