@@ -4,6 +4,8 @@ MAKEFLAGS     = --no-print-directory --no-builtin-rules
 
 # Variables
 PACKAGE = revpipyload
+APP_NAME = RevPiPyLoad
+APP_IDENT = org.revpimodio.revpipyload
 
 # Set path to create the virtual environment with package name
 ifdef PYTHON3_VENV
@@ -16,39 +18,60 @@ endif
 SYSTEM_PYTHON  = python3
 PYTHON         = $(or $(wildcard $(VENV_PATH)/bin/python), $(SYSTEM_PYTHON))
 
-all: build
+APP_VERSION = $(shell "$(PYTHON)" src/$(PACKAGE) --version | cut -d ' ' -f 2)
+
+all: test build
 
 .PHONY: all
 
 ## Environment
 venv-info:
-	echo Using path: "$(VENV_PATH)"
+	@echo Environment for $(APP_NAME) $(APP_VERSION)
+	@echo Using path: "$(VENV_PATH)"
 	exit 0
 
 venv:
-	$(SYSTEM_PYTHON) -m venv "$(VENV_PATH)"
-	source $(VENV_PATH)/bin/activate && \
+	# Start with empty environment
+	"$(SYSTEM_PYTHON)" -m venv "$(VENV_PATH)"
+	source "$(VENV_PATH)/bin/activate" && \
 		python3 -m pip install --upgrade pip && \
 		python3 -m pip install -r requirements.txt
 	exit 0
 
-.PHONY: venv-info venv
+venv-ssp:
+	# Include system installed site-packages and add just missing modules
+	"$(SYSTEM_PYTHON)" -m venv --system-site-packages "$(VENV_PATH)"
+	source "$(VENV_PATH)/bin/activate" && \
+		python3 -m pip install --upgrade pip && \
+		python3 -m pip install -r requirements.txt
+	exit 0
 
-## Build, install
+.PHONY: venv-info venv venv-ssp
+
+## Build steps
 build:
-	$(PYTHON) -m setup sdist
-	$(PYTHON) -m setup bdist_wheel
+	"$(PYTHON)" -m setup sdist
+	"$(PYTHON)" -m setup bdist_wheel
 
 install: build
-	$(PYTHON) -m pip install dist/$(PACKAGE)-*.whl
+	"$(PYTHON)" -m pip install dist/$(PACKAGE)-$(APP_VERSION)-*.whl
 
-.PHONY: build install
+uninstall:
+	"$(PYTHON)" -m pip uninstall --yes $(PACKAGE)
+
+.PHONY: test build install uninstall
 
 ## Clean
 clean:
-	rm -rf build dist src/*.egg-info *.spec
+	# PyTest caches
+	rm -rf .pytest_cache
+	# Build artifacts
+	rm -rf build dist src/*.egg-info
+	# PyInstaller created files
+	rm -rf *.spec
 
-clean-all: clean
-	rm -R $(VENV_PATH)
+distclean: clean
+	# Virtual environment
+	rm -rf "$(VENV_PATH)"
 
-.PHONY: clean clean-all
+.PHONY: clean distclean
