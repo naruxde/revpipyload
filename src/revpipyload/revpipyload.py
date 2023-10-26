@@ -1358,8 +1358,9 @@ class RevPiPyLoad:
                     "".format(self.xmlrpcacl.filename)
                 )
 
-        # RevPiPyLoad neu konfigurieren
-        self.evt_loadconfig.set()
+        if loadnow:
+            # RevPiPyLoad neu konfigurieren
+            self.evt_loadconfig.set()
 
         return True
 
