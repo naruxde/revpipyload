@@ -1294,8 +1294,9 @@ class RevPiPyLoad:
                 ("plcslaveport", "plcserverport"),
                 ("plcslavewatchdog", "plcserverwatchdog"),
         ):
-            dc[key_to] = dc[key_from]
-            del dc[key_from]
+            if key_from in dc:
+                dc[key_to] = dc[key_from]
+                del dc[key_from]
 
         # Werte übernehmen, die eine Definition in key haben (andere nicht)
         for sektion in keys:
