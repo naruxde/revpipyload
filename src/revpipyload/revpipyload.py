@@ -478,6 +478,8 @@ class RevPiPyLoad:
             self.xsrv.register_function(
                 4, self.xml_setconfig, "set_config")
             self.xsrv.register_function(
+                4, self.xml_setplcprogram, "set_plcprogram")
+            self.xsrv.register_function(
                 4, self.xml_setpictoryrsc, "set_pictoryrsc")
 
             proginit.logger.debug("created xmlrpc server")
@@ -1364,6 +1366,33 @@ class RevPiPyLoad:
             self.evt_loadconfig.set()
 
         return True
+
+    def xml_setplcprogram(self, plcprogram: str) -> int:
+        """
+        Set new plc program, without restart services.
+
+        :returns:  0 Erfolgreich
+                  -1 Programm lauft noch
+                  -2 Datei nicht gefunden
+        """
+        if type(plcprogram) is not str:
+            raise TypeError("The given plc program must be <class 'str'>")
+        if not plcprogram:
+            raise ValueError("Empty string not allowed for plc program")
+
+        stop_code = self.xml_plcstop()
+
+        # Set the new plc program setting to activ configuration
+        self.plcprogram = plcprogram
+
+        # Save the new value to config file without reload
+        self.xml_setconfig({"plcprogram": plcprogram}, False)
+
+        # Start the program, if it was running before change
+        if stop_code > -1:
+            return self.xml_plcstart()
+
+        return 0
 
     def xml_setpictoryrsc(self, filebytes, reset=False):
         """Schreibt die config.rsc Datei von piCotry.
