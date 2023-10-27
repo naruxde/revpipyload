@@ -1,3 +1,16 @@
+revpipyload (0.11.0~rc1-1) unstable; urgency=medium
+
+  * packaging(deb): Update control file to standards version 4.3.0
+  * chore: Release 0.11.0rc1
+  * build: Add environment variable to set alternative venv path
+  * build: Fix Makefile targets to match GNU coding standards
+  * fix: Fixes the error that setconfig always reloads the settings
+  * fix: Settings name translation has to check the existence of key
+  * feat: New XML-RPC function 'set_plcprogram'
+  * packaging(deb): Create debian release candidate packages
+
+ -- Sven Sager <akira@narux.de>  Thu, 26 Oct 2023 18:18:29 +0200
+
 revpipyload (0.10.0-1) stable; urgency=medium
 
   [ Sven Sager ]
