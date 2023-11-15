@@ -1,3 +1,11 @@
+revpipyload (0.11.0~rc2-1) unstable; urgency=medium
+
+  * chore: Release 0.11.0rc2
+  * feat: New XML-RPC function for async calls of piControl
+  * packaging(deb): Update dependency version of revpimodio2
+
+ -- Sven Sager <akira@narux.de>  Wed, 15 Nov 2023 08:50:13 +0100
+
 revpipyload (0.11.0~rc1-1) unstable; urgency=medium
 
   * packaging(deb): Update control file to standards version 4.3.0
