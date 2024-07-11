@@ -91,16 +91,24 @@ class RevPiPlc(Thread):
         """Setzt UID und GID fuer das PLC Programm."""
         proginit.logger.debug("enter RevPiPlc._setuppopen()")
 
-        proginit.logger.info("set uid {0} and gid {1} for plc program".format(self.uid, self.gid))
+        # If we are not root, the process is same uid / gid as daemon
+        if os.getuid() == 0:
+            proginit.logger.info("set uid {0} and gid {1} for plc program".format(self.uid, self.gid))
 
-        # Set user last to hold root right to do the group things
-        try:
-            name = getpwuid(self.uid).pw_name
-            os.initgroups(name, self.gid)
-        except Exception:
-            proginit.logger.warning("could not initialize the group access list with all groups")
-        os.setgid(self.gid)
-        os.setuid(self.uid)
+            # Set user last to hold root right to do the group things
+            try:
+                name = getpwuid(self.uid).pw_name
+                os.initgroups(name, self.gid)
+            except Exception:
+                proginit.logger.warning("could not initialize the group access list with all groups")
+            os.setgid(self.gid)
+            os.setuid(self.uid)
+        else:
+            proginit.logger.info(
+                "leave uid {0} and gid {1} for plc program, because not executed as root".format(
+                    os.getuid(), os.getgid()
+                )
+            )
 
         proginit.logger.debug("leave RevPiPlc._setuppopen()")
 
