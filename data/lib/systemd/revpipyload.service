@@ -9,5 +9,17 @@ PIDFile=/var/run/revpipyload.pid
 ExecStart=/usr/share/revpipyload/revpipyloadd -d $DAEMON_OPTS
 ExecReload=/bin/kill -HUP $MAINPID
 
+# systemd sandboxing process
+ProtectSystem=strict
+ProtectControlGroups=yes
+ProtectKernelModules=yes
+ProtectKernelTunables=yes
+
+# Allow write operations to the following destinations
+ReadWritePaths=/dev/piControl0 /etc/revpipyload/ /etc/revpi/config.rsc /home/ /var/lib/revpipyload/ /var/log/ /var/run/
+
+# Restrict file system access to the following directories
+InaccessiblePaths=/boot /root
+
 [Install]
 WantedBy=multi-user.target
