@@ -4,6 +4,7 @@ __author__ = "Sven Sager"
 __copyright__ = "Copyright (C) 2023 Sven Sager"
 __license__ = "GPLv2"
 
+import socket
 from xmlrpc.server import SimpleXMLRPCRequestHandler, SimpleXMLRPCServer
 
 from . import proginit
@@ -102,3 +103,44 @@ class SaveXMLRPCRequestHandler(SimpleXMLRPCRequestHandler):
             )
 
         return False
+
+
+class UnixStreamXMLRPCRequestHandler(SimpleXMLRPCRequestHandler):
+    """XML-RPC Request-Handler fuer Unix Domain Sockets."""
+
+    timeout = 2.0
+
+    def setup(self):
+        """Initialisiert die Verbindung ohne TCP-spezifische Socket-Optionen."""
+        self.connection = self.request
+        if self.timeout is not None:
+            self.connection.settimeout(self.timeout)
+        self.rfile = self.connection.makefile("rb", self.rbufsize)
+        self.wfile = self.connection.makefile("wb", self.wbufsize)
+
+    def address_string(self):
+        """Liefert einen Namen fuer Logging bei Unix Domain Sockets."""
+        return "localhost"
+
+
+class UnixStreamXMLRPCServer(SimpleXMLRPCServer):
+    """XML-RPC Server fuer Unix Domain Sockets."""
+    address_family = socket.AF_UNIX
+
+    def _dispatch(self, method, params):
+        """Prueft ACL Level fuer angeforderte Methode.
+
+        @param method Angeforderte Methode
+        @param params Argumente fuer Methode
+        @return Dispatched data
+
+        """
+        # ACL on a socket is always max level
+        if method == "xmlmodus":
+            params = (4,)
+
+        return super()._dispatch(method, params)
+
+    def register_function(self, acl_level, function, name=None):
+        """Override register_function to ignore acl_level for unix sockets."""
+        return super().register_function(function, name)

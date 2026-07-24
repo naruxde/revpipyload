@@ -31,6 +31,7 @@ __license__ = "GPLv2"
 import gzip
 import os
 import signal
+import socket
 import tarfile
 import zipfile
 from configparser import ConfigParser
@@ -51,7 +52,7 @@ from . import proginit
 from .helper import get_revpiled_address, pi_control_reset, refullmatch
 from .shared.ipaclmanager import IpAclManager
 from .watchdogs import ResetDriverWatchdog
-from .xrpcserver import SaveXMLRPCServer
+from .xrpcserver import SaveXMLRPCServer, UnixStreamXMLRPCServer
 
 min_revpimodio = "2.5.0"
 
@@ -314,10 +315,20 @@ class RevPiPyLoad:
         # Bind IP lesen und anpassen
         self.xmlrpcbindip = \
             self.globalconfig.get("XMLRPC", "bindip", fallback="127.0.0.1")
-        if self.xmlrpcbindip == "*":
-            self.xmlrpcbindip = ""
-        elif self.xmlrpcbindip == "":
-            self.xmlrpcbindip = "127.0.0.1"
+
+        if self.xmlrpcbindip.lower() == "socket":
+            # Unix Domain Socket mit festem Pfad
+            self.xmlrpcbindip = "/run/revpipyload/xmlrpc.socket"
+            self.xmlrpcisunix = True
+        elif self.xmlrpcbindip.startswith("/"):
+            # Unix Domain Socket
+            self.xmlrpcisunix = True
+        else:
+            self.xmlrpcisunix = False
+            if self.xmlrpcbindip == "*":
+                self.xmlrpcbindip = ""
+            elif self.xmlrpcbindip == "":
+                self.xmlrpcbindip = "127.0.0.1"
 
         self.xmlrpcport = self.globalconfig.getint("XMLRPC", "port", fallback=55123)
 
@@ -388,12 +399,35 @@ class RevPiPyLoad:
             self.xsrv = None
         else:
             proginit.logger.debug("create xmlrpc server")
-            self.xsrv = SaveXMLRPCServer(
-                (self.xmlrpcbindip, self.xmlrpcport),
-                logRequests=False,
-                allow_none=True,
-                ipacl=self.xmlrpcacl
-            )
+
+            if self.xmlrpcisunix:
+                # Unix Domain Socket Server
+                proginit.logger.info(
+                    "starting xmlrpc unix server on {0}".format(self.xmlrpcbindip)
+                )
+
+                # Vorherige Socket-Datei löschen
+                try:
+                    os.unlink(self.xmlrpcbindip)
+                except FileNotFoundError:
+                    pass
+
+                self.xsrv = UnixStreamXMLRPCServer(
+                    self.xmlrpcbindip,
+                    requestHandler=UnixStreamXMLRPCRequestHandler,
+                    logRequests=False,
+                    allow_none=True,
+                )
+
+            else:
+                # Standard IP Server
+                self.xsrv = SaveXMLRPCServer(
+                    (self.xmlrpcbindip, self.xmlrpcport),
+                    logRequests=False,
+                    allow_none=True,
+                    ipacl=self.xmlrpcacl
+                )
+
             self.xsrv.register_introspection_functions()
             self.xsrv.register_multicall_functions()
 
@@ -936,7 +970,16 @@ class RevPiPyLoad:
 
         if self.xsrv is not None:
             proginit.logger.info("close xmlrpc-server")
+            self.xsrv.shutdown()
             self.xsrv.server_close()
+
+            # Unix Socket aufräumen
+            if hasattr(self.xsrv, "address_family") and \
+                    self.xsrv.address_family == socket.AF_UNIX:
+                try:
+                    os.unlink(self.xsrv.server_address)
+                except (FileNotFoundError, AttributeError):
+                    pass
 
         proginit.logger.debug("leave RevPiPyLoad.stop_xmlrpcserver()")
 
