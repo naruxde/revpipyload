@@ -331,6 +331,7 @@ class RevPiPyLoad:
                 self.xmlrpcbindip = "127.0.0.1"
 
         self.xmlrpcport = self.globalconfig.getint("XMLRPC", "port", fallback=55123)
+        self.xmlrpcunixgroup = self.globalconfig.get("XMLRPC", "unixgroup", fallback="picontrol")
 
         # Workdirectory wechseln
         if not os.access(self.plcworkdir, os.R_OK | os.W_OK | os.X_OK):
@@ -414,9 +415,9 @@ class RevPiPyLoad:
 
                 self.xsrv = UnixStreamXMLRPCServer(
                     self.xmlrpcbindip,
-                    requestHandler=UnixStreamXMLRPCRequestHandler,
                     logRequests=False,
                     allow_none=True,
+                    unixgroup=self.xmlrpcunixgroup
                 )
 
             else:

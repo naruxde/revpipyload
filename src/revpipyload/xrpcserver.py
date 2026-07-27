@@ -4,6 +4,8 @@ __author__ = "Sven Sager"
 __copyright__ = "Copyright (C) 2023 Sven Sager"
 __license__ = "GPLv2"
 
+import grp
+import os
 import socket
 from xmlrpc.server import SimpleXMLRPCRequestHandler, SimpleXMLRPCServer
 
@@ -126,6 +128,54 @@ class UnixStreamXMLRPCRequestHandler(SimpleXMLRPCRequestHandler):
 class UnixStreamXMLRPCServer(SimpleXMLRPCServer):
     """XML-RPC Server fuer Unix Domain Sockets."""
     address_family = socket.AF_UNIX
+
+    def __init__(
+            self, addr, logRequests=True, allow_none=False, unixgroup="picontrol"):
+        """Init UnixStreamXMLRPCServer class."""
+        proginit.logger.debug("enter UnixStreamXMLRPCServer.__init__()")
+
+        self.timeout = 0.5
+        self.unixgroup = unixgroup
+
+        # Create subdirectories for Unix Domain Socket
+        socket_dir = os.path.dirname(addr)
+        if socket_dir:
+            os.makedirs(socket_dir, exist_ok=True)
+
+        super().__init__(
+            addr=addr,
+            requestHandler=UnixStreamXMLRPCRequestHandler,
+            logRequests=logRequests,
+            allow_none=allow_none,
+            encoding="utf-8",
+            bind_and_activate=False,
+        )
+
+        proginit.logger.debug("leave UnixStreamXMLRPCServer.__init__()")
+
+    def server_bind(self):
+        """Ueberschreibt server_bind um Berechtigungen zu setzen."""
+        super().server_bind()
+
+        # Gruppe setzen
+        try:
+            gid = grp.getgrnam(self.unixgroup).gr_gid
+            # -1 will leave the owner unchanged
+            os.chown(self.server_address, -1, gid)
+        except (KeyError, PermissionError):
+            proginit.logger.warning(
+                "can not set group of socket {0} to '{1}'"
+                "".format(self.server_address, self.unixgroup)
+            )
+
+        # Berechtigungen fuer restliche Benutzer entziehen
+        try:
+            os.chmod(self.server_address, 0o660)
+        except PermissionError:
+            proginit.logger.warning(
+                "can not set permissions of socket {0}"
+                "".format(self.server_address)
+            )
 
     def _dispatch(self, method, params):
         """Prueft ACL Level fuer angeforderte Methode.
