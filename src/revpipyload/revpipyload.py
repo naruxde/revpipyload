@@ -971,7 +971,6 @@ class RevPiPyLoad:
 
         if self.xsrv is not None:
             proginit.logger.info("close xmlrpc-server")
-            self.xsrv.shutdown()
             self.xsrv.server_close()
 
             # Unix Socket aufräumen
