@@ -69,7 +69,8 @@ class RevPiPyLoad:
         proginit.logger.debug("enter RevPiPyLoad.__init__()")
 
         # Klassenattribute
-        self._exit = True
+        self._evt_exit = Event()
+        self._evt_exit.set()
         self.evt_loadconfig = Event()
         self.globalconfig = ConfigParser()
         proginit.conf = self.globalconfig
@@ -343,7 +344,7 @@ class RevPiPyLoad:
             self.stop_plcmqtt()
             self.th_plcmqtt = self._plcmqtt()
 
-            if not self._exit and self.th_plcmqtt is not None:
+            if not self._evt_exit.is_set() and self.th_plcmqtt is not None:
                 proginit.logger.info("restart mqtt publisher after reload")
                 self.th_plcmqtt.start()
 
@@ -352,7 +353,7 @@ class RevPiPyLoad:
             self.stop_plcprogram()
             self.plc = self._plcthread()
 
-            if not self._exit and self.plc is not None and self.autostart:
+            if not self._evt_exit.is_set() and self.plc is not None and self.autostart:
                 proginit.logger.info("restart plc program after reload")
                 self.plc.start()
 
@@ -372,7 +373,7 @@ class RevPiPyLoad:
             self.stop_plcserver()
             self.th_plcserver = self._plcserver()
 
-            if not self._exit and self.th_plcserver is not None:
+            if not self._evt_exit.is_set() and self.th_plcserver is not None:
                 proginit.logger.info("restart plc server after reload")
                 self.th_plcserver.start()
 
@@ -485,7 +486,7 @@ class RevPiPyLoad:
             proginit.logger.debug("created xmlrpc server")
 
             # Neustart bei reload
-            if not self._exit:
+            if not self._evt_exit.is_set():
                 proginit.logger.info("bind xmlrpc-server")
                 self.xsrv.server_bind()
                 self.xsrv.server_activate()
@@ -762,7 +763,7 @@ class RevPiPyLoad:
         proginit.logger.debug("enter RevPiPyLoad.start()")
 
         proginit.logger.info("starting revpipyload")
-        self._exit = False
+        self._evt_exit.clear()
 
         if self.xmlrpc and self.xsrv is not None:
             proginit.logger.info("bind xmlrpc-server")
@@ -786,7 +787,7 @@ class RevPiPyLoad:
         pictory_reset_driver.register_call(self.xml_psstop)
 
         # mainloop
-        while not self._exit:
+        while not self._evt_exit.is_set():
             # Neue Konfiguration laden
             if self.evt_loadconfig.is_set():
                 proginit.logger.info("got reqeust to reload config")
@@ -887,7 +888,7 @@ class RevPiPyLoad:
     def stop(self):
         """Stop revpipyload."""
         proginit.logger.debug("enter RevPiPyLoad.stop()")
-        self._exit = True
+        self._evt_exit.set()
         proginit.logger.debug("leave RevPiPyLoad.stop()")
 
     def stop_plcmqtt(self):
