@@ -31,6 +31,7 @@ __license__ = "GPLv2"
 import gzip
 import os
 import signal
+import socket
 import tarfile
 import zipfile
 from configparser import ConfigParser
@@ -51,7 +52,7 @@ from . import proginit
 from .helper import get_revpiled_address, pi_control_reset, refullmatch
 from .shared.ipaclmanager import IpAclManager
 from .watchdogs import ResetDriverWatchdog
-from .xrpcserver import SaveXMLRPCServer
+from .xrpcserver import SaveXMLRPCServer, UnixStreamXMLRPCServer
 
 min_revpimodio = "2.5.0"
 
@@ -69,7 +70,8 @@ class RevPiPyLoad:
         proginit.logger.debug("enter RevPiPyLoad.__init__()")
 
         # Klassenattribute
-        self._exit = True
+        self._evt_exit = Event()
+        self._evt_exit.set()
         self.evt_loadconfig = Event()
         self.globalconfig = ConfigParser()
         proginit.conf = self.globalconfig
@@ -209,7 +211,9 @@ class RevPiPyLoad:
         proginit.logger.info(
             "loading config file: {0}".format(proginit.globalconffile)
         )
-        self.globalconfig.read(proginit.globalconffile)
+        if not self.globalconfig.read(proginit.globalconffile):
+            raise RuntimeError("can not access config file '{0}'".format(proginit.globalconffile))
+
         self.__translate_config()
         proginit.conf = self.globalconfig
 
@@ -313,12 +317,23 @@ class RevPiPyLoad:
         # Bind IP lesen und anpassen
         self.xmlrpcbindip = \
             self.globalconfig.get("XMLRPC", "bindip", fallback="127.0.0.1")
-        if self.xmlrpcbindip == "*":
-            self.xmlrpcbindip = ""
-        elif self.xmlrpcbindip == "":
-            self.xmlrpcbindip = "127.0.0.1"
+
+        if self.xmlrpcbindip.lower() == "socket":
+            # Unix Domain Socket mit festem Pfad
+            self.xmlrpcbindip = "/run/revpipyload/xmlrpc.socket"
+            self.xmlrpcisunix = True
+        elif self.xmlrpcbindip.startswith("/"):
+            # Unix Domain Socket
+            self.xmlrpcisunix = True
+        else:
+            self.xmlrpcisunix = False
+            if self.xmlrpcbindip == "*":
+                self.xmlrpcbindip = ""
+            elif self.xmlrpcbindip == "":
+                self.xmlrpcbindip = "127.0.0.1"
 
         self.xmlrpcport = self.globalconfig.getint("XMLRPC", "port", fallback=55123)
+        self.xmlrpcunixgroup = self.globalconfig.get("XMLRPC", "unixgroup", fallback="picontrol")
 
         # Workdirectory wechseln
         if not os.access(self.plcworkdir, os.R_OK | os.W_OK | os.X_OK):
@@ -343,7 +358,7 @@ class RevPiPyLoad:
             self.stop_plcmqtt()
             self.th_plcmqtt = self._plcmqtt()
 
-            if not self._exit and self.th_plcmqtt is not None:
+            if not self._evt_exit.is_set() and self.th_plcmqtt is not None:
                 proginit.logger.info("restart mqtt publisher after reload")
                 self.th_plcmqtt.start()
 
@@ -352,7 +367,7 @@ class RevPiPyLoad:
             self.stop_plcprogram()
             self.plc = self._plcthread()
 
-            if not self._exit and self.plc is not None and self.autostart:
+            if not self._evt_exit.is_set() and self.plc is not None and self.autostart:
                 proginit.logger.info("restart plc program after reload")
                 self.plc.start()
 
@@ -372,7 +387,7 @@ class RevPiPyLoad:
             self.stop_plcserver()
             self.th_plcserver = self._plcserver()
 
-            if not self._exit and self.th_plcserver is not None:
+            if not self._evt_exit.is_set() and self.th_plcserver is not None:
                 proginit.logger.info("restart plc server after reload")
                 self.th_plcserver.start()
 
@@ -387,12 +402,35 @@ class RevPiPyLoad:
             self.xsrv = None
         else:
             proginit.logger.debug("create xmlrpc server")
-            self.xsrv = SaveXMLRPCServer(
-                (self.xmlrpcbindip, self.xmlrpcport),
-                logRequests=False,
-                allow_none=True,
-                ipacl=self.xmlrpcacl
-            )
+
+            if self.xmlrpcisunix:
+                # Unix Domain Socket Server
+                proginit.logger.info(
+                    "starting xmlrpc unix server on {0}".format(self.xmlrpcbindip)
+                )
+
+                # Vorherige Socket-Datei löschen
+                try:
+                    os.unlink(self.xmlrpcbindip)
+                except FileNotFoundError:
+                    pass
+
+                self.xsrv = UnixStreamXMLRPCServer(
+                    self.xmlrpcbindip,
+                    logRequests=False,
+                    allow_none=True,
+                    unixgroup=self.xmlrpcunixgroup
+                )
+
+            else:
+                # Standard IP Server
+                self.xsrv = SaveXMLRPCServer(
+                    (self.xmlrpcbindip, self.xmlrpcport),
+                    logRequests=False,
+                    allow_none=True,
+                    ipacl=self.xmlrpcacl
+                )
+
             self.xsrv.register_introspection_functions()
             self.xsrv.register_multicall_functions()
 
@@ -485,7 +523,7 @@ class RevPiPyLoad:
             proginit.logger.debug("created xmlrpc server")
 
             # Neustart bei reload
-            if not self._exit:
+            if not self._evt_exit.is_set():
                 proginit.logger.info("bind xmlrpc-server")
                 self.xsrv.server_bind()
                 self.xsrv.server_activate()
@@ -762,7 +800,7 @@ class RevPiPyLoad:
         proginit.logger.debug("enter RevPiPyLoad.start()")
 
         proginit.logger.info("starting revpipyload")
-        self._exit = False
+        self._evt_exit.clear()
 
         if self.xmlrpc and self.xsrv is not None:
             proginit.logger.info("bind xmlrpc-server")
@@ -786,7 +824,7 @@ class RevPiPyLoad:
         pictory_reset_driver.register_call(self.xml_psstop)
 
         # mainloop
-        while not self._exit:
+        while not self._evt_exit.is_set():
             # Neue Konfiguration laden
             if self.evt_loadconfig.is_set():
                 proginit.logger.info("got reqeust to reload config")
@@ -887,7 +925,7 @@ class RevPiPyLoad:
     def stop(self):
         """Stop revpipyload."""
         proginit.logger.debug("enter RevPiPyLoad.stop()")
-        self._exit = True
+        self._evt_exit.set()
         proginit.logger.debug("leave RevPiPyLoad.stop()")
 
     def stop_plcmqtt(self):
@@ -936,6 +974,14 @@ class RevPiPyLoad:
         if self.xsrv is not None:
             proginit.logger.info("close xmlrpc-server")
             self.xsrv.server_close()
+
+            # Unix Socket aufräumen
+            if hasattr(self.xsrv, "address_family") and \
+                    self.xsrv.address_family == socket.AF_UNIX:
+                try:
+                    os.unlink(self.xsrv.server_address)
+                except (FileNotFoundError, AttributeError):
+                    pass
 
         proginit.logger.debug("leave RevPiPyLoad.stop_xmlrpcserver()")
 
@@ -1064,11 +1110,19 @@ class RevPiPyLoad:
         :param file_name: File with full path relative to work directory
         :return: True on success
         """
-        file_name = os.path.join(self.plcworkdir, file_name)
-        if os.path.exists(file_name):
-            os.remove(file_name)
-            dirname = os.path.dirname(file_name)
-            if dirname != self.plcworkdir:
+        plcworkdir = os.path.realpath(self.plcworkdir)
+        file_path = os.path.realpath(os.path.join(plcworkdir, file_name))
+
+        if os.path.commonpath([plcworkdir, file_path]) != plcworkdir:
+            proginit.logger.warning(
+                "file path is not in plc working directory"
+            )
+            return False
+
+        if os.path.exists(file_path):
+            os.remove(file_path)
+            dirname = os.path.dirname(file_path)
+            if dirname != plcworkdir:
                 try:
                     # Try to remove directory, which will work if it is empty
                     os.rmdir(dirname)
@@ -1104,9 +1158,17 @@ class RevPiPyLoad:
         :param file_name: File with full path relative to work directory
         :return: Binary object in gzip format
         """
-        file_name = os.path.join(self.plcworkdir, file_name)
-        if os.path.exists(file_name):
-            with open(file_name, "rb") as fh:
+        plcworkdir = os.path.realpath(self.plcworkdir)
+        file_path = os.path.realpath(os.path.join(plcworkdir, file_name))
+
+        if os.path.commonpath([plcworkdir, file_path]) != plcworkdir:
+            proginit.logger.warning(
+                "file path is not in plc working directory"
+            )
+            return Binary()
+
+        if os.path.exists(file_path):
+            with open(file_path, "rb") as fh:
                 xmldata = Binary(gzip.compress(fh.read()))
             return xmldata
         return Binary()
@@ -1169,7 +1231,7 @@ class RevPiPyLoad:
         else:
             return -1
 
-    def xml_plcupload(self, filedata, filename):
+    def xml_plcupload(self, filedata: Binary, filename:str):
         """Empfaengt Dateien fuer das PLC Programm einzeln.
 
         @param filedata GZIP Binary data der Datei
@@ -1185,13 +1247,17 @@ class RevPiPyLoad:
         # Windowszeichen prüfen
         filename = filename.replace("\\", "/")
 
-        # Build absolut path, join will return last element, if absolute
-        dirname = os.path.join(self.plcworkdir, os.path.dirname(filename))
-        if os.path.abspath(dirname).find(self.plcworkdir) != 0:
+
+        plcworkdir = os.path.realpath(self.plcworkdir)
+        file_path = os.path.realpath(os.path.join(plcworkdir, filename))
+
+        if os.path.commonpath([plcworkdir, file_path]) != plcworkdir:
             proginit.logger.warning(
                 "file path is not in plc working directory"
             )
             return False
+
+        dirname = os.path.dirname(file_path)
 
         set_uid = self.plcuid if self.plcworkdir_set_uid else 0
         set_gid = self.plcgid if self.plcworkdir_set_uid else 0
@@ -1210,9 +1276,9 @@ class RevPiPyLoad:
 
         # Datei erzeugen
         try:
-            with open(filename, "wb") as fh:
+            with open(file_path, "wb") as fh:
                 fh.write(gzip.decompress(filedata.data))
-            os.chown(filename, set_uid, set_gid)
+            os.chown(file_path, set_uid, set_gid)
             return True
         except Exception:
             return False
