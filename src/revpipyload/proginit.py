@@ -56,7 +56,7 @@ def configure():
     )
     parser.add_argument(
         "-c", "--conffile", dest="conffile",
-        default="revpipyload.conf",
+        default="/etc/revpipyload/revpipyload.conf",
         help="Application configuration file"
     )
     parser.add_argument(

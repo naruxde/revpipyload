@@ -211,7 +211,9 @@ class RevPiPyLoad:
         proginit.logger.info(
             "loading config file: {0}".format(proginit.globalconffile)
         )
-        self.globalconfig.read(proginit.globalconffile)
+        if not self.globalconfig.read(proginit.globalconffile):
+            raise RuntimeError("can not access config file '{0}'".format(proginit.globalconffile))
+
         self.__translate_config()
         proginit.conf = self.globalconfig
 
