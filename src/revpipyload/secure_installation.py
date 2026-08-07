@@ -107,12 +107,14 @@ def main() -> int:
         if cmd == "y":
             conf.set("XMLRPC", "xmlrpc", "1")
             conf.set("XMLRPC", "bindip", "socket")
+            xmlrpc_unix_socket = True
             xmlrpcacl.acl = ""
             save_xmlrpcacls()
 
-        elif input("\nDo you want to allow connections from remote hosts? (y/N) ").lower() == "y":
+        elif input("\nDo you want to allow native TCP connections from remote hosts? (y/N) ").lower() == "y":
             conf.set("XMLRPC", "xmlrpc", "1")
             conf.set("XMLRPC", "bindip", "*")
+            xmlrpc_unix_socket = False
 
             cmd = input("Reset the ACL file to allow all private networks? (y/N) ").lower()
             if cmd == "y":
@@ -145,12 +147,13 @@ def main() -> int:
                             stderr.write("Wrong format (0.0.0.0)\n")
 
         else:
-            cmd = input("Do you want to allow connections from localhost ONLY? (y/N) ").lower()
+            cmd = input("Do you want to allow TCP connections from localhost ONLY? (y/N) ").lower()
             if cmd == "y":
                 conf.set("XMLRPC", "xmlrpc", "1")
                 conf.set("XMLRPC", "bindip", "127.0.0.1")
+                xmlrpc_unix_socket = False
 
-                cmd = input("Reset the ACL file to allow localhost connections only? (y/N) ").lower()
+                cmd = input("Reset the ACL file to allow localhost TCP connections only? (y/N) ").lower()
                 if cmd == "y":
                     xmlrpcacl.acl = "127.*.*.*,4 "
                     save_xmlrpcacls()
@@ -163,6 +166,7 @@ def main() -> int:
                 if cmd == "y":
                     conf.set("XMLRPC", "xmlrpc", "0")
                     conf.set("XMLRPC", "bindip", "127.0.0.1")
+                    xmlrpc_unix_socket = False
                     xmlrpcacl.acl = ""
                     save_xmlrpcacls()
                 else:
