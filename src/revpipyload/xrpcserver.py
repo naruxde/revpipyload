@@ -151,6 +151,8 @@ class UnixStreamXMLRPCServer(SimpleXMLRPCServer):
             bind_and_activate=False,
         )
 
+        proginit.logger.warning("RevPi Commander 0.12.0 or greater is required to connect via Unix Domain Socket")
+
         proginit.logger.debug("leave UnixStreamXMLRPCServer.__init__()")
 
     def server_bind(self):
