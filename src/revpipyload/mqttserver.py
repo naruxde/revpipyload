@@ -10,6 +10,7 @@ from threading import Event, Thread
 
 import revpimodio2
 from paho.mqtt.client import Client, connack_string
+from paho.mqtt.enums import CallbackAPIVersion
 
 from . import proginit
 
@@ -90,7 +91,7 @@ class MqttServer(Thread):
         self._mqtt_senddata = join(basetopic, "get")
         self._mqtt_sendpictory = join(basetopic, "needpictory")
 
-        self._mq = Client(client_id)
+        self._mq = Client(CallbackAPIVersion.VERSION1, client_id)
         if username != "":
             self._mq.username_pw_set(username, password)
         if tls_set:
