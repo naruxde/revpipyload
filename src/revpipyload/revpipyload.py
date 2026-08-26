@@ -152,7 +152,7 @@ class RevPiPyLoad:
             return self.replace_ios_config != self.globalconfig["DEFAULT"].get("replace_ios", "") \
                 or self.mqtt != self.globalconfig["MQTT"].getboolean("mqtt", False) \
                 or self.mqttbasetopic != self.globalconfig["MQTT"].get("basetopic", "") \
-                or self.mqttsendinterval != self.globalconfig["MQTT"].getint("sendinterval", 30) \
+                or self.mqttsendinterval != self.globalconfig["MQTT"].getfloat("sendinterval", 30) \
                 or self.mqttbroker_address != self.globalconfig["MQTT"].get("broker_address", "localhost") \
                 or self.mqttport != self.globalconfig["MQTT"].getint("port", 1883) \
                 or self.mqtttls_set != self.globalconfig["MQTT"].getboolean("tls_set", False) \
@@ -273,7 +273,7 @@ class RevPiPyLoad:
         # Konfiguration verarbeiten [MQTT]
         self.mqtt = self.globalconfig.getboolean("MQTT", "mqtt", fallback=False)
         self.mqttbasetopic = self.globalconfig.get("MQTT", "basetopic", fallback="")
-        self.mqttsendinterval = self.globalconfig.getint("MQTT", "sendinterval", fallback=30)
+        self.mqttsendinterval = self.globalconfig.getint("MQTT", "sendinterval", fallback=30.0)
         self.mqttbroker_address = self.globalconfig.get("MQTT", "broker_address", fallback="localhost")
         self.mqttport = self.globalconfig.getint("MQTT", "port", fallback=1883)
         self.mqtttls_set = self.globalconfig.getboolean("MQTT", "tls_set", fallback=False)
@@ -1324,7 +1324,7 @@ class RevPiPyLoad:
             "MQTT": {
                 "mqtt": "[01]",
                 "mqttbasetopic": ".*",
-                "mqttsendinterval": "[0-9]+",
+                "mqttsendinterval": "[0-9]+(\.[0-9]+)?|(\.[0-9]+)",
                 "mqttbroker_address": ".+",
                 "mqttport": "[0-9]+",
                 "mqtttls_set": "[01]",

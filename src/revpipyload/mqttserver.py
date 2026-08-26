@@ -10,6 +10,7 @@ from threading import Event, Thread
 
 import revpimodio2
 from paho.mqtt.client import Client, connack_string
+from paho.mqtt.enums import CallbackAPIVersion
 
 from . import proginit
 
@@ -38,8 +39,8 @@ class MqttServer(Thread):
         """
         if not isinstance(basetopic, str):
             raise ValueError("parameter topic must be <class 'str'>")
-        if not (isinstance(sendinterval, int) and sendinterval >= 0):
-            raise ValueError("parameter sendinterval must be <class 'int'> and >= 0")
+        if not ((isinstance(sendinterval, int) or isinstance(sendinterval, float)) and sendinterval >= 0):
+            raise ValueError("parameter sendinterval must be <class 'int' or 'float'> and >= 0")
         if not (isinstance(broker_address, str) and broker_address != ""):
             raise ValueError("parameter broker_address must be <class 'str'> and not empty")
         if not (isinstance(port, int) and 0 < port < 65535):
@@ -90,7 +91,7 @@ class MqttServer(Thread):
         self._mqtt_senddata = join(basetopic, "get")
         self._mqtt_sendpictory = join(basetopic, "needpictory")
 
-        self._mq = Client(client_id)
+        self._mq = Client(CallbackAPIVersion.VERSION1, client_id)
         if username != "":
             self._mq.username_pw_set(username, password)
         if tls_set:
